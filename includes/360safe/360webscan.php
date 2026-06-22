@@ -91,11 +91,11 @@ HTML;
 function webscan_StopAttack($StrFiltKey,$StrFiltValue,$ArrFiltReq,$method) {
   $StrFiltValue=webscan_arr_foreach($StrFiltValue);
   if (preg_match("/".$ArrFiltReq."/is",$StrFiltValue)==1){
-    webscan_slog(array('ip' => $_SERVER["REMOTE_ADDR"],'time'=>strftime("%Y-%m-%d %H:%M:%S"),'page'=>$_SERVER["PHP_SELF"],'method'=>$method,'rkey'=>$StrFiltKey,'rdata'=>$StrFiltValue,'user_agent'=>$_SERVER['HTTP_USER_AGENT'],'request_url'=>$_SERVER["REQUEST_URI"]));
+    webscan_slog(array('ip' => $_SERVER["REMOTE_ADDR"],'time'=>date("Y-m-d H:i:s"),'page'=>$_SERVER["PHP_SELF"],'method'=>$method,'rkey'=>$StrFiltKey,'rdata'=>$StrFiltValue,'user_agent'=>$_SERVER['HTTP_USER_AGENT'],'request_url'=>$_SERVER["REQUEST_URI"]));
     exit(webscan_pape());
   }
   if (preg_match("/".$ArrFiltReq."/is",$StrFiltKey)==1){
-    webscan_slog(array('ip' => $_SERVER["REMOTE_ADDR"],'time'=>strftime("%Y-%m-%d %H:%M:%S"),'page'=>$_SERVER["PHP_SELF"],'method'=>$method,'rkey'=>$StrFiltKey,'rdata'=>$StrFiltKey,'user_agent'=>$_SERVER['HTTP_USER_AGENT'],'request_url'=>$_SERVER["REQUEST_URI"]));
+    webscan_slog(array('ip' => $_SERVER["REMOTE_ADDR"],'time'=>date("Y-m-d H:i:s"),'page'=>$_SERVER["PHP_SELF"],'method'=>$method,'rkey'=>$StrFiltKey,'rdata'=>$StrFiltKey,'user_agent'=>$_SERVER['HTTP_USER_AGENT'],'request_url'=>$_SERVER["REQUEST_URI"]));
     exit(webscan_pape());
   }
 

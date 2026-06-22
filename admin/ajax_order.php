@@ -152,7 +152,7 @@ case 'apirefund': //API退款操作
 	if(!is_numeric($money) || !preg_match('/^[0-9.]+$/', $money))exit('{"code":-1,"msg":"金额输入错误"}');
 	if($paypwd!=$conf['admin_paypwd'])
 		exit('{"code":-1,"msg":"支付密码输入错误！"}');
-	
+
 	$refund_no = date("YmdHis").rand(11111,99999);
 	$result = \lib\Order::refund($refund_no, $trade_no, $money, 1);
 	if($result['code'] == 0){
@@ -190,7 +190,7 @@ case 'fillorder': //手动补单
 		exit('{"code":-1,"msg":"当前订单不存在！"}');
 	if($row['status']>0)exit('{"code":-1,"msg":"当前订单不是未完成状态！"}');
 	if($DB->exec("update `pre_order` set `status` ='1' where `trade_no`='$trade_no'")){
-		$DB->exec("update `pre_order` set `endtime` ='$date',`date` =NOW() where `trade_no`='$trade_no'");
+		$DB->exec("update `pre_order` set `endtime` =NOW(),`date` =NOW() where `trade_no`='$trade_no'");
 		$channel=\lib\Channel::get($row['channel']);
 		processOrder($row);
 	}

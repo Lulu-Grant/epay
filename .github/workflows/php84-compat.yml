@@ -1,0 +1,126 @@
+name: PHP 8.4 Compatibility
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - 'upgrade/**'
+
+jobs:
+  static-checks:
+    name: PHP ${{ matrix.php-version }} static checks
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php-version: ['7.4', '8.1', '8.2', '8.3', '8.4']
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php-version }}
+          extensions: pdo_mysql, curl, openssl, json, mbstring, gd, fileinfo, session, gmp, bcmath, intl, zip, xml
+          coverage: none
+
+      - name: Check PHP environment
+        run: php tools/php84/check-env.php
+
+      - name: Lint PHP files
+        run: sh tools/php84/lint-all.sh
+
+      - name: Check blocked deprecated patterns
+        run: sh tools/php84/check-deprecated-patterns.sh
+
+      - name: Check PHP 7.4 compatibility floor
+        run: php tools/php84/check-php74-floor.php
+
+      - name: Check plugin metadata
+        run: php tools/php84/check-plugin-metadata.php
+
+      - name: Check payment signatures
+        run: php tools/php84/check-signatures.php
+
+      - name: Check download endpoint safety
+        run: php tools/php84/check-download-safety.php
+
+      - name: Check rewrite rules
+        run: php tools/php84/check-rewrite-rules.php
+
+      - name: HTTP smoke checks
+        run: sh tools/php84/http-smoke.sh
+
+      - name: Composer install and platform checks
+        run: sh tools/php84/composer-check.sh
+
+      - name: Composer security audit
+        run: composer audit --working-dir=includes --no-dev
+
+  database-fixture:
+    name: PHP ${{ matrix.php-version }} database fixture
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php-version: ['7.4', '8.4']
+    services:
+      mariadb:
+        image: mariadb:10.11
+        env:
+          MARIADB_ROOT_PASSWORD: epay_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mariadb-admin ping -h 127.0.0.1 -uroot -pepay_test"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php-version }}
+          extensions: pdo_mysql, curl, openssl, json, mbstring, gd, fileinfo, session, gmp, bcmath, intl, zip, xml
+          coverage: none
+
+      - name: Database fixture check
+        env:
+          EPAY_DB_HOST: 127.0.0.1
+          EPAY_DB_PORT: 3306
+          EPAY_DB_USER: root
+          EPAY_DB_PASSWORD: epay_test
+        run: php tools/php84/db-fixture-check.php
+
+      - name: Rollback rehearsal check
+        env:
+          EPAY_DB_HOST: 127.0.0.1
+          EPAY_DB_PORT: 3306
+          EPAY_DB_USER: root
+          EPAY_DB_PASSWORD: epay_test
+        run: php tools/php84/rollback-rehearsal-check.php
+
+      - name: Installed HTTP smoke checks
+        env:
+          EPAY_DB_HOST: 127.0.0.1
+          EPAY_DB_PORT: 3306
+          EPAY_DB_USER: root
+          EPAY_DB_PASSWORD: epay_test
+          EPAY_SMOKE_PORT: 8097
+        run: sh tools/php84/installed-http-smoke.sh
+
+      - name: Install and upgrade smoke checks
+        env:
+          EPAY_DB_HOST: 127.0.0.1
+          EPAY_DB_PORT: 3306
+          EPAY_DB_USER: root
+          EPAY_DB_PASSWORD: epay_test
+          EPAY_INSTALL_SMOKE_PORT: 8099
+        run: sh tools/php84/install-upgrade-smoke.sh

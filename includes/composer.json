@@ -1,8 +1,19 @@
 {
+    "name": "lulu-grant/epay",
+    "description": "Rainbow Easy Payment platform PHP dependencies",
+    "type": "project",
+    "license": "proprietary",
     "require": {
+        "php": ">=7.4 <8.5",
         "cccyun/alipay-sdk": "^1.1",
         "cccyun/wechatpay-sdk": "^1.0",
         "cccyun/qqpay-sdk": "^1.0",
-        "lpilp/guomi": "^1.0"
+        "lpilp/guomi": "^2.0"
+    },
+    "config": {
+        "platform": {
+            "php": "7.4.33"
+        },
+        "sort-packages": true
     }
 }

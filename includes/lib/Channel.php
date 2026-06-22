@@ -10,6 +10,7 @@ class Channel {
 		$channel = ['id'=>$value['id'], 'mode'=>$value['mode'], 'type'=>$value['type'], 'plugin'=>$value['plugin'], 'apptype'=>$value['apptype'], 'appwxmp'=>$value['appwxmp'], 'appwxa'=>$value['appwxa'], 'costrate'=>$value['costrate'], 'daytop'=>$value['daytop']];
 
 		$config = json_decode($value['config'], true);
+		if(!is_array($config)) $config = [];
 		if(!empty($channelinfo)){
 			$arr = json_decode($channelinfo, true);
 			foreach($config as $configkey => $configrow){
@@ -31,6 +32,7 @@ class Channel {
 		$channel = ['id'=>$value['id'], 'mode'=>$value['mode'], 'type'=>$value['type'], 'plugin'=>$value['plugin'], 'apptype'=>$value['apptype'], 'appwxmp'=>$value['appwxmp'], 'appwxa'=>$value['appwxa'], 'costrate'=>$value['costrate'], 'daytop'=>$value['daytop']];
 
 		$config = json_decode($value['config'], true);
+		if(!is_array($config)) $config = [];
 		if(!empty($value['info'])){
 			$arr = json_decode($value['info'], true);
 			foreach($config as $configkey => $configrow){

@@ -563,7 +563,7 @@ case 'notify':
 break;
 case 'settle_result':
 	$id=intval($_GET['id']);
-	$row=$DB->getRow("select result from pre_settle where id='$id' limit 1");
+	$row=$DB->getRow("select result from pre_settle where id=:id and uid=:uid limit 1", [':id'=>$id, ':uid'=>$uid]);
 	if(!$row)
 		exit('{"code":-1,"msg":"当前结算记录不存在！"}');
 	$result = ['code'=>0,'msg'=>$row['result']?$row['result']:'未知'];
@@ -780,7 +780,7 @@ break;
 
 case 'transfer_result':
 	$biz_no=trim($_GET['biz_no']);
-	$row=$DB->getRow("select result from pre_transfer where biz_no='$biz_no' limit 1");
+	$row=$DB->getRow("select result from pre_transfer where biz_no=:biz_no and uid=:uid limit 1", [':biz_no'=>$biz_no, ':uid'=>$uid]);
 	if(!$row)
 		exit('{"code":-1,"msg":"当前付款记录不存在！"}');
 	$result = ['code'=>0,'msg'=>$row['result']?$row['result']:'未知'];
@@ -788,11 +788,17 @@ case 'transfer_result':
 break;
 case 'transfer_query':
 	$biz_no=trim($_GET['biz_no']);
+	$row=$DB->getRow("select biz_no from pre_transfer where biz_no=:biz_no and uid=:uid limit 1", [':biz_no'=>$biz_no, ':uid'=>$uid]);
+	if(!$row)
+		exit('{"code":-1,"msg":"当前付款记录不存在！"}');
 	$result = \lib\Transfer::status($biz_no);
 	exit(json_encode($result));
 break;
 case 'transfer_proof':
 	$biz_no=trim($_POST['biz_no']);
+	$row=$DB->getRow("select biz_no from pre_transfer where biz_no=:biz_no and uid=:uid limit 1", [':biz_no'=>$biz_no, ':uid'=>$uid]);
+	if(!$row)
+		exit('{"code":-1,"msg":"当前付款记录不存在！"}');
 	$result = \lib\Transfer::proof($biz_no);
 	exit(json_encode($result));
 break;

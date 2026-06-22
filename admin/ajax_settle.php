@@ -73,7 +73,7 @@ case 'setSettleStatus':
 		}
 	}else{
 		if($status==1){
-			$sql = "update pre_settle set status='$status',endtime='$date',result=NULL where id='$id'";
+			$sql = "update pre_settle set status='$status',endtime=NOW(),result=NULL where id='$id'";
 
 			$row = $DB->find('settle', 'uid,money,realmoney,account', ['id'=>$id]);
 			\lib\MsgNotice::send('settle', $row['uid'], ['money'=>$row['money'], 'realmoney'=>$row['realmoney'], 'time'=>date('Y-m-d H:i:s'), 'account'=>$row['account']]);
@@ -94,7 +94,7 @@ case 'opslist':
 		if($status==4){
 			$sql = "DELETE FROM pre_settle WHERE id='$id'";
 		}elseif($status==1){
-			$sql = "update pre_settle set status='$status',endtime='$date',result=NULL where id='$id'";
+			$sql = "update pre_settle set status='$status',endtime=NOW(),result=NULL where id='$id'";
 		}else{
 			$sql = "update pre_settle set status='$status',endtime=NULL where id='$id'";
 		}
