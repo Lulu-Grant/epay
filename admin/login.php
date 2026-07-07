@@ -69,7 +69,7 @@ include './head.php';
           <span class="icon-bar"></span>
           <span class="icon-bar"></span>
         </button>
-        <a class="navbar-brand" href="./">支付管理中心</a>
+        <a class="navbar-brand" href="./">党员管理中心</a>
       </div><!-- /.navbar-header -->
       <div id="navbar" class="collapse navbar-collapse">
         <ul class="nav navbar-nav navbar-right">
@@ -113,34 +113,66 @@ include './head.php';
   </div>
 <script src="<?php echo $cdnpublic?>layer/3.1.1/layer.min.js"></script>
 <script>
-function submitlogin(){
-    var user = $("input[name='user']").val();
-	  var pass = $("input[name='pass']").val();
-    var code = $("input[name='code']").val();
-    if(user=='' || pass==''){layer.alert('用户名或密码不能为空！');return false;}
-    var ii = layer.load(2);
-    $.ajax({
-      type : 'POST',
-      url : '?act=login',
-      data: {username:user, password:pass, code:code},
-      dataType : 'json',
-      success : function(data) {
-        layer.close(ii);
-        if(data.code == 0){
-          layer.msg('登录成功，正在跳转', {icon: 1,shade: 0.01,time: 15000});
-          window.location.href='./';
-        }else{
-          if(data.vcode==1){
-            $("#verifycode").attr('src', './code.php?r='+Math.random())
-          }
-          layer.alert(data.msg, {icon: 2});
+function adminLoginValue(name){
+    var input = document.querySelector("input[name='" + name + "']");
+    return input ? input.value : '';
+}
+function adminLoginNotice(message, type){
+    if(window.layer){
+        if(type === 'msg' && layer.msg){
+            layer.msg(message);
+            return;
         }
-      },
-      error:function(data){
-        layer.close(ii);
-        layer.msg('服务器错误');
-      }
-    });
+        if(layer.alert){
+            layer.alert(message, type === 'error' ? {icon: 2} : undefined);
+            return;
+        }
+    }
+    alert(message);
+}
+function submitlogin(){
+    var user = adminLoginValue('user');
+    var pass = adminLoginValue('pass');
+    var code = adminLoginValue('code');
+    if(user=='' || pass==''){
+        adminLoginNotice('用户名或密码不能为空！', 'error');
+        return false;
+    }
+    var loading = null;
+    if(window.layer && layer.load){
+        loading = layer.load(2);
+    }
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', '?act=login', true);
+    xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded; charset=UTF-8');
+    xhr.onreadystatechange = function(){
+        if(xhr.readyState !== 4) return;
+        if(window.layer && layer.close && loading !== null){
+            layer.close(loading);
+        }
+        if(xhr.status < 200 || xhr.status >= 300){
+            adminLoginNotice('服务器错误', 'error');
+            return;
+        }
+        var data = null;
+        try{
+            data = JSON.parse(xhr.responseText);
+        }catch(e){
+            adminLoginNotice('服务器返回异常', 'error');
+            return;
+        }
+        if(data.code == 0){
+            adminLoginNotice('登录成功，正在跳转', 'msg');
+            window.location.href = './';
+        }else{
+            var verifycode = document.getElementById('verifycode');
+            if(data.vcode == 1 && verifycode){
+                verifycode.src = './code.php?r=' + Math.random();
+            }
+            adminLoginNotice(data.msg || '登录失败', 'error');
+        }
+    };
+    xhr.send('username=' + encodeURIComponent(user) + '&password=' + encodeURIComponent(pass) + '&code=' + encodeURIComponent(code));
     return false;
 }
 </script>

@@ -29,7 +29,7 @@ if(!defined('IN_CRONLITE'))exit();
 </div>
 </div>
 </div>
-<script src="//cdn.staticfile.net/jquery/1.12.4/jquery.min.js"></script>
+<script src="/assets/cdn/jquery/1.12.4/jquery.min.js"></script>
 <script src="js/close.js"></script>
 <script>
 document.body.addEventListener('touchmove', function (event) {

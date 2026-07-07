@@ -7,11 +7,11 @@ class Channel {
 		global $DB;
 		$value=$DB->getRow("SELECT * FROM pre_channel WHERE id='$id' LIMIT 1");
 		if(!$value) return null;
-		$channel = ['id'=>$value['id'], 'mode'=>$value['mode'], 'type'=>$value['type'], 'plugin'=>$value['plugin'], 'apptype'=>$value['apptype'], 'appwxmp'=>$value['appwxmp'], 'appwxa'=>$value['appwxa'], 'costrate'=>$value['costrate'], 'daytop'=>$value['daytop']];
+		$channel = ['id'=>$value['id'], 'name'=>$value['name'], 'mode'=>$value['mode'], 'type'=>$value['type'], 'plugin'=>$value['plugin'], 'apptype'=>$value['apptype'], 'appwxmp'=>$value['appwxmp'], 'appwxa'=>$value['appwxa'], 'costrate'=>$value['costrate'], 'daytop'=>$value['daytop']];
 
 		$config = json_decode($value['config'], true);
 		if(!is_array($config)) $config = [];
-		if(!empty($channelinfo)){
+		if(!empty($channelinfo) && !empty($config)){
 			$arr = json_decode($channelinfo, true);
 			foreach($config as $configkey => $configrow){
 				if($configrow && substr($configrow, 0, 1) == '['){
@@ -21,19 +21,21 @@ class Channel {
 			}
 		}
 		
-		$channel = array_merge($channel, $config);
+		if(!empty($config)){
+			$channel = array_merge($channel, $config);
+		}
 		return $channel;
 	}
 
 	static public function getSub($id){
 		global $DB;
-		$value=$DB->getRow("SELECT A.*,B.info FROM pre_subchannel B INNER JOIN pre_channel A ON B.channel=A.id WHERE B.id='$id'");
+		$value=$DB->getRow("SELECT A.*,B.info,B.id subid FROM pre_subchannel B INNER JOIN pre_channel A ON B.channel=A.id WHERE B.id='$id'");
 		if(!$value) return null;
-		$channel = ['id'=>$value['id'], 'mode'=>$value['mode'], 'type'=>$value['type'], 'plugin'=>$value['plugin'], 'apptype'=>$value['apptype'], 'appwxmp'=>$value['appwxmp'], 'appwxa'=>$value['appwxa'], 'costrate'=>$value['costrate'], 'daytop'=>$value['daytop']];
+		$channel = ['id'=>$value['id'], 'subid'=>$value['subid'], 'name'=>$value['name'], 'mode'=>$value['mode'], 'type'=>$value['type'], 'plugin'=>$value['plugin'], 'apptype'=>$value['apptype'], 'appwxmp'=>$value['appwxmp'], 'appwxa'=>$value['appwxa'], 'costrate'=>$value['costrate'], 'daytop'=>$value['daytop']];
 
 		$config = json_decode($value['config'], true);
 		if(!is_array($config)) $config = [];
-		if(!empty($value['info'])){
+		if(!empty($value['info']) && !empty($config)){
 			$arr = json_decode($value['info'], true);
 			foreach($config as $configkey => $configrow){
 				if($configrow && substr($configrow, 0, 1) == '['){
@@ -53,7 +55,9 @@ class Channel {
 				$channel['subappwxa'] = 1;
 			}
 		}
-		$channel = array_merge($channel, $config);
+		if(!empty($config)){
+			$channel = array_merge($channel, $config);
+		}
 		return $channel;
 	}
 
@@ -110,7 +114,7 @@ class Channel {
 		}else{
 			$sqls = " AND (device=0 OR device=1)";
 		}
-		$paytype=$DB->getRow("SELECT id,name,status FROM pre_type WHERE name='$type'{$sqls} LIMIT 1");
+		$paytype=$DB->getRow("SELECT id,name,status FROM pre_type WHERE name=:type{$sqls} LIMIT 1", [':type'=>$type]);
 		if(!$paytype || $paytype['status']==0)sysmsg('支付方式(type)不存在');
 		$typeid = $paytype['id'];
 		$typename = $paytype['name'];
@@ -229,46 +233,86 @@ class Channel {
 				if(!isset($paytype[$id]))continue;
 				if($row['channel']==0){
 					unset($paytype[$id]);
-				}elseif($row['channel']==-1){
-					$channel=$DB->getRow("SELECT rate,status FROM pre_channel WHERE type='$id' AND status=1 LIMIT 1");
-					if(!$channel){
-						unset($paytype[$id]);
-					}elseif(empty($row['rate'])){
-						$paytype[$id]['rate']=$channel['rate'];
+					}elseif($row['channel']==-1){
+						$channel=$DB->getRow("SELECT rate,status FROM pre_channel WHERE type='$id' AND status=1 LIMIT 1");
+						if(!$channel){
+							unset($paytype[$id]);
+						}elseif(empty($row['rate'])){
+							$paytype[$id]['rate']=self::normalizeRate($channel['rate']);
+						}else{
+							$paytype[$id]['rate']=self::normalizeRate($row['rate']);
+						}
+					}elseif($row['channel']==-2){
+						$channel=$DB->getRow("SELECT A.id,A.status,rate FROM pre_subchannel B INNER JOIN pre_channel A ON B.channel=A.id WHERE B.uid='$uid' AND A.type='$id' AND A.status=1 AND B.status=1 LIMIT 1");
+						if(!$channel){
+							unset($paytype[$id]);
+						}elseif(empty($row['rate'])){
+							$paytype[$id]['rate']=self::normalizeRate($channel['rate']);
+						}else{
+							$paytype[$id]['rate']=self::normalizeRate($row['rate']);
+						}
 					}else{
-						$paytype[$id]['rate']=$row['rate'];
+						if($row['type']=='roll'){
+							$status=$DB->getColumn("SELECT status FROM pre_roll WHERE id='{$row['channel']}' LIMIT 1");
+						}else{
+							$status=$DB->getColumn("SELECT status FROM pre_channel WHERE id='{$row['channel']}' LIMIT 1");
+						}
+						if(!$status || $status==0)unset($paytype[$id]);
+						else{
+							$rate = $row['rate'];
+							if(empty($rate)){
+								$rate = $row['type']=='roll' ? self::getRateFromRoll($row['channel'], $id) : self::getRateFromChannel($row['channel'], $id);
+							}
+							$paytype[$id]['rate']=self::normalizeRate($rate);
+						}
 					}
-				}elseif($row['channel']==-2){
-					$channel=$DB->getRow("SELECT A.id,A.status,rate FROM pre_subchannel B INNER JOIN pre_channel A ON B.channel=A.id WHERE B.uid='$uid' AND A.type='$id' AND A.status=1 AND B.status=1 LIMIT 1");
-					if(!$channel){
-						unset($paytype[$id]);
-					}elseif(empty($row['rate'])){
-						$paytype[$id]['rate']=$channel['rate'];
-					}else{
-						$paytype[$id]['rate']=$row['rate'];
-					}
-				}else{
-					if($row['type']=='roll'){
-						$status=$DB->getColumn("SELECT status FROM pre_roll WHERE id='{$row['channel']}' LIMIT 1");
-					}else{
-						$status=$DB->getColumn("SELECT status FROM pre_channel WHERE id='{$row['channel']}' LIMIT 1");
-					}
+				}
+			}else{
+				foreach($paytype as $id=>$row){
+					$status=$DB->getColumn("SELECT status FROM pre_channel WHERE type='$id' AND status=1 limit 1");
 					if(!$status || $status==0)unset($paytype[$id]);
-					else $paytype[$id]['rate']=$row['rate'];
+					else{
+						$paytype[$id]['rate']=self::normalizeRate($DB->getColumn("SELECT rate FROM pre_channel WHERE type='$id' AND status=1 limit 1"));
+					}
 				}
 			}
-		}else{
 			foreach($paytype as $id=>$row){
-				$status=$DB->getColumn("SELECT status FROM pre_channel WHERE type='$id' AND status=1 limit 1");
-				if(!$status || $status==0)unset($paytype[$id]);
-				else{
-					$paytype[$id]['rate']=$DB->getColumn("SELECT rate FROM pre_channel WHERE type='$id' AND status=1 limit 1");
-				}
+				$paytype[$id]['rate'] = self::normalizeRate($row['rate']);
 			}
+			return $paytype;
 		}
-		return $paytype;
+
+	static private function normalizeRate($rate){
+		return is_numeric($rate) ? $rate : '100.00';
 	}
 
+	static private function getRateFromChannel($channel, $typeid){
+		global $DB;
+		$channel = intval($channel);
+		$typeid = intval($typeid);
+		if($channel <= 0 || $typeid <= 0)return null;
+		return $DB->getColumn("SELECT rate FROM pre_channel WHERE id='$channel' AND type='$typeid' AND status=1 LIMIT 1");
+	}
+
+	static private function getRateFromRoll($rollid, $typeid){
+		global $DB;
+		$rollid = intval($rollid);
+		$typeid = intval($typeid);
+		if($rollid <= 0 || $typeid <= 0)return null;
+		$roll = $DB->getRow("SELECT status,info FROM pre_roll WHERE id='$rollid' LIMIT 1");
+		if(!$roll || $roll['status']==0 || empty($roll['info']))return null;
+		$info = self::rollinfo_decode($roll['info']);
+		$channelids = [];
+		foreach($info as $row){
+			if(isset($row['name']) && is_numeric($row['name'])){
+				$channelids[] = intval($row['name']);
+			}
+		}
+		if(empty($channelids))return null;
+		$ids = implode(',', $channelids);
+		return $DB->getColumn("SELECT rate FROM pre_channel WHERE id IN ($ids) AND type='$typeid' AND status=1 AND daystatus=0 ORDER BY FIELD(id,$ids) LIMIT 1");
+	}
+	
 	//根据轮询组ID获取支付通道ID
 	static private function getChannelFromRoll($channel, $money){
 		global $DB;

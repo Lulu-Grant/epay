@@ -20,6 +20,15 @@
 
 Version: 3075
 
+### 使用文档
+
+- [用户使用文档](docs/user-manual.md)
+- [商户快速上手指南](docs/merchant-quickstart.md)
+- [管理员日常运维手册](docs/admin-operations-runbook.md)
+- [支付系统故障排查手册](docs/troubleshooting-guide.md)
+- [PHP 8.4 升级计划](docs/php84-upgrade-plan.md)
+- [PHP 8.4 验收标准](docs/php84-acceptance-criteria.md)
+
 ### 其他信息
 
 - [Docker](https://github.com/monlor/dockerfiles/tree/main/epay)

@@ -487,6 +487,12 @@ if ($trade_status === "TRADE_SUCCESS" && round((float)$total_amount, 2) == round
 echo "fail";
 PHP
 
+cat > "$APP_DIR/.php84-merchant-notify-success.php" <<'PHP'
+<?php
+header("Content-Type: text/plain; charset=utf-8");
+echo "success";
+PHP
+
 cat > "$APP_DIR/.php84-alipay-return.php" <<'PHP'
 <?php
 $nosession = true;
@@ -3330,6 +3336,104 @@ if [ -n "$trade_no" ]; then
     printf '[OK] payment_notify_duplicate: idempotent\n'
   else
     printf '[FAIL] payment_notify_duplicate: expected idempotent success\n'
+    failures=$((failures + 1))
+  fi
+
+  if EPAY_DB_HOST="$DB_HOST" EPAY_DB_PORT="$DB_PORT" EPAY_DB_SOCKET="$DB_SOCKET" \
+    EPAY_DB_USER="$DB_USER" EPAY_DB_PASSWORD="$DB_PASSWORD" EPAY_DB_NAME="$DB_NAME" \
+    EPAY_DB_PREFIX="$DB_PREFIX" EPAY_TRADE_NO="$trade_no" "$PHP_BIN" -r '
+      $prefix = getenv("EPAY_DB_PREFIX");
+      $socket = getenv("EPAY_DB_SOCKET");
+      if ($socket !== false && $socket !== "") {
+          $dsn = "mysql:unix_socket=".$socket.";dbname=".getenv("EPAY_DB_NAME").";charset=utf8mb4";
+      } else {
+          $dsn = "mysql:host=".getenv("EPAY_DB_HOST").";port=".getenv("EPAY_DB_PORT").";dbname=".getenv("EPAY_DB_NAME").";charset=utf8mb4";
+      }
+      $pass = getenv("EPAY_DB_PASSWORD");
+      if ($pass === false) {
+          $pass = "";
+      }
+      $pdo = new PDO($dsn, getenv("EPAY_DB_USER"), $pass, array(PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION));
+      $stmt = $pdo->prepare("SELECT `notify`, `notifytime` FROM `".$prefix."_order` WHERE `trade_no`=? LIMIT 1");
+      $stmt->execute(array(getenv("EPAY_TRADE_NO")));
+      $row = $stmt->fetch(PDO::FETCH_ASSOC);
+      exit($row && (string)$row["notify"] === "1" && !empty($row["notifytime"]) && $row["notifytime"] !== "0000-00-00 00:00:00" ? 0 : 1);
+    '; then
+    printf '[OK] merchant_notify_failure_queued: failed merchant notify scheduled for retry\n'
+  else
+    printf '[FAIL] merchant_notify_failure_queued: expected notify=1 and notifytime set\n'
+    failures=$((failures + 1))
+  fi
+
+  if EPAY_DB_HOST="$DB_HOST" EPAY_DB_PORT="$DB_PORT" EPAY_DB_SOCKET="$DB_SOCKET" \
+    EPAY_DB_USER="$DB_USER" EPAY_DB_PASSWORD="$DB_PASSWORD" EPAY_DB_NAME="$DB_NAME" \
+    EPAY_DB_PREFIX="$DB_PREFIX" EPAY_TRADE_NO="$trade_no" \
+    EPAY_NOTIFY_URL="$BASE_URL/.php84-merchant-notify-success.php" "$PHP_BIN" -r '
+      $prefix = getenv("EPAY_DB_PREFIX");
+      $socket = getenv("EPAY_DB_SOCKET");
+      if ($socket !== false && $socket !== "") {
+          $dsn = "mysql:unix_socket=".$socket.";dbname=".getenv("EPAY_DB_NAME").";charset=utf8mb4";
+      } else {
+          $dsn = "mysql:host=".getenv("EPAY_DB_HOST").";port=".getenv("EPAY_DB_PORT").";dbname=".getenv("EPAY_DB_NAME").";charset=utf8mb4";
+      }
+      $pass = getenv("EPAY_DB_PASSWORD");
+      if ($pass === false) {
+          $pass = "";
+      }
+      $pdo = new PDO($dsn, getenv("EPAY_DB_USER"), $pass, array(PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION));
+      $stmt = $pdo->prepare("UPDATE `".$prefix."_order` SET `notify_url`=?, `notifytime`=DATE_SUB(NOW(), INTERVAL 1 MINUTE) WHERE `trade_no`=? AND `notify`=1");
+      $stmt->execute(array(getenv("EPAY_NOTIFY_URL"), getenv("EPAY_TRADE_NO")));
+      exit($stmt->rowCount() === 1 ? 0 : 1);
+    '; then
+    printf '[OK] merchant_notify_retry_prepared: retry URL and due time prepared\n'
+  else
+    printf '[FAIL] merchant_notify_retry_prepared: expected queued notify row to be updated\n'
+    failures=$((failures + 1))
+  fi
+
+  merchant_retry_body="$WORK_DIR/merchant_notify_retry.body"
+  if "$CURL_BIN" -sS -o "$merchant_retry_body" "$BASE_URL/cron.php?key=fixture-cron-key&do=notify" &&
+    grep -q "重新通知成功" "$merchant_retry_body" &&
+    grep -q "ok!" "$merchant_retry_body" &&
+    EPAY_DB_HOST="$DB_HOST" EPAY_DB_PORT="$DB_PORT" EPAY_DB_SOCKET="$DB_SOCKET" \
+      EPAY_DB_USER="$DB_USER" EPAY_DB_PASSWORD="$DB_PASSWORD" EPAY_DB_NAME="$DB_NAME" \
+      EPAY_DB_PREFIX="$DB_PREFIX" EPAY_TRADE_NO="$trade_no" \
+      EPAY_USER_MONEY_BEFORE="$user_money_before" EPAY_GETMONEY="$getmoney" "$PHP_BIN" -r '
+        $prefix = getenv("EPAY_DB_PREFIX");
+        $socket = getenv("EPAY_DB_SOCKET");
+        if ($socket !== false && $socket !== "") {
+            $dsn = "mysql:unix_socket=".$socket.";dbname=".getenv("EPAY_DB_NAME").";charset=utf8mb4";
+        } else {
+            $dsn = "mysql:host=".getenv("EPAY_DB_HOST").";port=".getenv("EPAY_DB_PORT").";dbname=".getenv("EPAY_DB_NAME").";charset=utf8mb4";
+        }
+        $pass = getenv("EPAY_DB_PASSWORD");
+        if ($pass === false) {
+            $pass = "";
+        }
+        $pdo = new PDO($dsn, getenv("EPAY_DB_USER"), $pass, array(PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION));
+        $order = $pdo->prepare("SELECT `status`, `notify`, `notifytime` FROM `".$prefix."_order` WHERE `trade_no`=? LIMIT 1");
+        $order->execute(array(getenv("EPAY_TRADE_NO")));
+        $row = $order->fetch(PDO::FETCH_ASSOC);
+        $userMoney = $pdo->query("SELECT `money` FROM `".$prefix."_user` WHERE `uid`=1000")->fetchColumn();
+        $records = $pdo->prepare("SELECT COUNT(*) FROM `".$prefix."_record` WHERE `uid`=1000 AND `type`=\"订单收入\" AND `trade_no`=?");
+        $records->execute(array(getenv("EPAY_TRADE_NO")));
+        $expectedMoney = number_format(round((float)getenv("EPAY_USER_MONEY_BEFORE") + (float)getenv("EPAY_GETMONEY"), 2), 2, ".", "");
+        if (!$row || (string)$row["status"] !== "1" || (string)$row["notify"] !== "0") {
+            exit(1);
+        }
+        if ($row["notifytime"] !== null && $row["notifytime"] !== "") {
+            exit(1);
+        }
+        if (number_format((float)$userMoney, 2, ".", "") !== $expectedMoney) {
+            exit(1);
+        }
+        if ((int)$records->fetchColumn() !== 1) {
+            exit(1);
+        }
+      '; then
+    printf '[OK] merchant_notify_retry_success: cron retry clears notify state without duplicate income\n'
+  else
+    printf '[FAIL] merchant_notify_retry_success: expected cron retry success and cleared notify state\n'
     failures=$((failures + 1))
   fi
 fi

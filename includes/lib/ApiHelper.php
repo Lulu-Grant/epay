@@ -8,7 +8,8 @@ class ApiHelper
     //无需签名验证的接口
     private static $exclude_list = [
         'pay/submit',
-        'pay/create'
+        'pay/create',
+        'complain/image'
     ];
 
     public static function load_api($s){

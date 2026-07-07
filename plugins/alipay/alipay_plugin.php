@@ -69,6 +69,10 @@ class alipay_plugin
 		}
 		
 		if($isMobile && in_array('2',$channel['apptype'])){
+			$alipay_wap_qrcode = isset($conf['alipay_wap_qrcode']) && $conf['alipay_wap_qrcode'] == 1;
+			if($alipay_wap_qrcode && !$isAlipay){
+				return ['type'=>'jump','url'=>'/pay/qrcode/'.TRADE_NO.'/'];
+			}
 			if($conf['alipay_wappaylogin']==1){
 				if($isAlipay){
 					return ['type'=>'jump','url'=>'/pay/submitwap/'.TRADE_NO.'/'];

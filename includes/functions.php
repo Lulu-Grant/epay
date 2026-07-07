@@ -1,39 +1,75 @@
 <?php
-function curl_get($url)
+function curl_get($url, $follow = false)
 {
 	global $conf;
-	$ch=curl_init($url);
-	if($conf['proxy'] == 1){
-		$proxy_server = $conf['proxy_server'];
-		$proxy_port = intval($conf['proxy_port']);
-		$proxy_userpwd = $conf['proxy_user'].':'.$conf['proxy_pwd'];
-		if($conf['proxy_type'] == 'https'){
-			$proxy_type = CURLPROXY_HTTPS;
-		}elseif($conf['proxy_type'] == 'sock4'){
-			$proxy_type = CURLPROXY_SOCKS4;
-		}elseif($conf['proxy_type'] == 'sock5'){
-			$proxy_type = CURLPROXY_SOCKS5;
-		}else{
-			$proxy_type = CURLPROXY_HTTP;
+	$redirects = $follow ? 3 : 0;
+	$current_url = $url;
+	$content = false;
+	for($i = 0; $i <= $redirects; $i++){
+		$ch=curl_init($current_url);
+		if($conf['proxy'] == 1){
+			$proxy_server = $conf['proxy_server'];
+			$proxy_port = intval($conf['proxy_port']);
+			$proxy_userpwd = $conf['proxy_user'].':'.$conf['proxy_pwd'];
+			if($conf['proxy_type'] == 'https'){
+				$proxy_type = CURLPROXY_HTTPS;
+			}elseif($conf['proxy_type'] == 'sock4'){
+				$proxy_type = CURLPROXY_SOCKS4;
+			}elseif($conf['proxy_type'] == 'sock5'){
+				$proxy_type = CURLPROXY_SOCKS5;
+			}else{
+				$proxy_type = CURLPROXY_HTTP;
+			}
+			curl_setopt($ch, CURLOPT_PROXYAUTH, CURLAUTH_BASIC);
+			curl_setopt($ch, CURLOPT_PROXY, $proxy_server);
+			curl_setopt($ch, CURLOPT_PROXYPORT, $proxy_port);
+			curl_setopt($ch, CURLOPT_PROXYUSERPWD, $proxy_userpwd);
+			curl_setopt($ch, CURLOPT_PROXYTYPE, $proxy_type);
 		}
-		curl_setopt($ch, CURLOPT_PROXYAUTH, CURLAUTH_BASIC);
-		curl_setopt($ch, CURLOPT_PROXY, $proxy_server);
-		curl_setopt($ch, CURLOPT_PROXYPORT, $proxy_port);
-		curl_setopt($ch, CURLOPT_PROXYUSERPWD, $proxy_userpwd);
-		curl_setopt($ch, CURLOPT_PROXYTYPE, $proxy_type);
+		$httpheader = [];
+		$httpheader[] = "Accept: */*";
+		$httpheader[] = "Accept-Language: zh-CN,zh;q=0.8";
+		$httpheader[] = "Connection: close";
+		curl_setopt($ch, CURLOPT_HTTPHEADER, $httpheader);
+		curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+		curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+		curl_setopt($ch, CURLOPT_HEADER, $follow);
+		curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/78.0.3904.108 Safari/537.36');
+		curl_setopt($ch, CURLOPT_TIMEOUT, 5);
+		$content=curl_exec($ch);
+		if(!$follow || $content === false){
+			curl_close($ch);
+			return $content;
+		}
+		$http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+		$header_size = curl_getinfo($ch, CURLINFO_HEADER_SIZE);
+		$header = substr($content, 0, $header_size);
+		$body = substr($content, $header_size);
+		curl_close($ch);
+		if($http_code >= 300 && $http_code < 400 && preg_match('/^Location:\s*(.+)$/mi', $header, $match)){
+			$current_url = get_redirect_url($current_url, trim($match[1]));
+			continue;
+		}
+		return $body;
 	}
-	$httpheader[] = "Accept: */*";
-	$httpheader[] = "Accept-Language: zh-CN,zh;q=0.8";
-	$httpheader[] = "Connection: close";
-	curl_setopt($ch, CURLOPT_HTTPHEADER, $httpheader);
-	curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-	curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
-	curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-	curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/78.0.3904.108 Safari/537.36');
-	curl_setopt($ch, CURLOPT_TIMEOUT, 5);
-	$content=curl_exec($ch);
-	curl_close($ch);
 	return $content;
+}
+
+function get_redirect_url($base_url, $location)
+{
+	if(parse_url($location, PHP_URL_SCHEME)){
+		return $location;
+	}
+	$base = parse_url($base_url);
+	$scheme = isset($base['scheme']) ? $base['scheme'] : 'http';
+	$host = isset($base['host']) ? $base['host'] : '';
+	$port = isset($base['port']) ? ':'.$base['port'] : '';
+	if(substr($location, 0, 1) == '/'){
+		return $scheme.'://'.$host.$port.$location;
+	}
+	$path = isset($base['path']) ? dirname($base['path']) : '';
+	return $scheme.'://'.$host.$port.rtrim($path, '/').'/'.$location;
 }
 function get_curl($url, $post=0, $referer=0, $cookie=0, $header=0, $ua=0, $nobaody=0, $addheader=0, $location=0)
 {
@@ -512,7 +548,7 @@ function get_main_host($url){
 }
 
 function do_notify($url){
-	$return = curl_get($url);
+	$return = curl_get($url, true);
 	if(strpos($return,'success')!==false || strpos($return,'SUCCESS')!==false || strpos($return,'Success')!==false){
 		return true;
 	}else{

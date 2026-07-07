@@ -15,12 +15,13 @@ if(isset($_GET['logout'])){
 }
 $csrf_token = md5(mt_rand(0,999).time());
 $_SESSION['csrf_token'] = $csrf_token;
+$login_display_name = '社区建党服务登录中心';
 ?>
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8" />
-<title>登录 | <?php echo $conf['sitename']?></title>
+<title>登录 | <?php echo $login_display_name?></title>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
 <link rel="stylesheet" href="<?php echo $cdnpublic?>twitter-bootstrap/3.4.1/css/bootstrap.min.css" type="text/css" />
 <link rel="stylesheet" href="<?php echo $cdnpublic?>animate.css/3.5.2/animate.min.css" type="text/css" />
@@ -34,10 +35,10 @@ $_SESSION['csrf_token'] = $csrf_token;
 <body>
 <div class="app app-header-fixed  ">
 <div class="container w-xxl w-auto-xs" ng-controller="SigninFormController" ng-init="app.settings.container = false;">
-<span class="navbar-brand block m-t"><?php echo $conf['sitename']?></span>
+<span class="navbar-brand block m-t"><?php echo $login_display_name?></span>
 <div class="m-b-lg">
 <div class="wrapper text-center">
-<strong>请输入您的商户信息</strong>
+<strong>请输入您的社员登录信息</strong>
 </div>
 <form name="form" class="form-validation" method="post" action="login.php">
 <input type="hidden" name="csrf_token" value="<?php echo $csrf_token?>">
@@ -112,7 +113,7 @@ $_SESSION['csrf_token'] = $csrf_token;
 </div>
 <div class="text-center">
 <p>
-<small class="text-muted"><a href="/"><?php echo $conf['sitename']?></a><br>&copy; 2016~<?php echo date("Y")?></small>
+<small class="text-muted"><a href="/"><?php echo $login_display_name?></a><br>&copy; 2016~<?php echo date("Y")?></small>
 </p>
 </div>
 </div>
@@ -120,7 +121,7 @@ $_SESSION['csrf_token'] = $csrf_token;
 <script src="<?php echo $cdnpublic?>jquery/3.4.1/jquery.min.js"></script>
 <script src="<?php echo $cdnpublic?>twitter-bootstrap/3.4.1/js/bootstrap.min.js"></script>
 <script src="<?php echo $cdnpublic?>layer/3.1.1/layer.min.js"></script>
-<script src="//static.geetest.com/static/tools/gt.js"></script>
+<script src="/assets/cdn/geetest/static/tools/gt.js"></script>
 <script>
 var captcha_open = 0;
 var handlerEmbed = function (captchaObj) {

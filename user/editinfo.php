@@ -386,7 +386,7 @@ if($group_settings){
 <?php include 'foot.php';?>
 <script src="<?php echo $cdnpublic?>layer/3.1.1/layer.min.js"></script>
 <script src="<?php echo $cdnpublic?>jquery.qrcode/1.0/jquery.qrcode.min.js"></script>
-<script src="//static.geetest.com/static/tools/gt.js"></script>
+<script src="/assets/cdn/geetest/static/tools/gt.js"></script>
 <script>
 function invokeSettime(obj){
     var countdown=60;

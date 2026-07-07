@@ -116,7 +116,7 @@ $_SESSION['csrf_token'] = $csrf_token;
 <script src="<?php echo $cdnpublic?>twitter-bootstrap/3.4.1/js/bootstrap.min.js"></script>
 <script src="<?php echo $cdnpublic?>jquery-cookie/1.4.1/jquery.cookie.min.js"></script>
 <script src="<?php echo $cdnpublic?>layer/3.1.1/layer.min.js"></script>
-<script src="//static.geetest.com/static/tools/gt.js"></script>
+<script src="/assets/cdn/geetest/static/tools/gt.js"></script>
 <script>
 function invokeSettime(obj){
     var countdown=60;

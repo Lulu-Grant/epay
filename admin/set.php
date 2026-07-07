@@ -425,6 +425,42 @@ $(document).ready(function(){
 	  <div class="col-sm-9"><select class="form-control" name="alipay_wappaylogin" default="<?php echo $conf['alipay_wappaylogin']?>"><option value="0">关闭</option><option value="1">开启</option></select><font color="green">开启后，可在支付前获取用户支付宝userid，用于黑名单屏蔽</font></div>
 	</div><br/>
 	<div class="form-group">
+	  <label class="col-sm-3 control-label">支付宝手机网站支付使用二维码中转</label>
+	  <div class="col-sm-9"><select class="form-control" name="alipay_wap_qrcode" default="<?php echo isset($conf['alipay_wap_qrcode'])?$conf['alipay_wap_qrcode']:0?>"><option value="0">关闭</option><option value="1">开启</option></select><font color="green">关闭后，手机浏览器发起支付宝手机网站支付时直接进入支付宝原生H5流程；开启后才先显示二维码中转页</font></div>
+	</div><br/>
+	<div class="form-group">
+	  <label class="col-sm-3 control-label">开启交易投诉处理</label>
+	  <div class="col-sm-9"><select class="form-control" name="complain_open" default="<?php echo isset($conf['complain_open'])?$conf['complain_open']:0?>"><option value="0">关闭</option><option value="1">开启</option></select><font color="green">开启后，商户后台显示交易投诉入口，后台可拉取并处理支持通道的投诉记录</font></div>
+	</div><br/>
+	<div class="form-group">
+	  <label class="col-sm-3 control-label">交易投诉记录范围</label>
+	  <div class="col-sm-9"><select class="form-control" name="complain_range" default="<?php echo isset($conf['complain_range'])?$conf['complain_range']:0?>"><option value="0">只保存本站订单投诉</option><option value="1">保存通道全部投诉</option></select><font color="green">建议保持“只保存本站订单投诉”，避免混入同一通道下其他业务订单</font></div>
+	</div><br/>
+	<div class="form-group">
+	  <label class="col-sm-3 control-label">投诉自动冻结订单</label>
+	  <div class="col-sm-9"><select class="form-control" name="complain_freeze_order" default="<?php echo isset($conf['complain_freeze_order'])?$conf['complain_freeze_order']:0?>"><option value="0">关闭</option><option value="1">开启</option></select><font color="green">开启后，未处理投诉会冻结关联订单，投诉完成后尝试解冻</font></div>
+	</div><br/>
+	<div class="form-group">
+	  <label class="col-sm-3 control-label">投诉自动拉黑支付账号</label>
+	  <div class="col-sm-9"><select class="form-control" name="complain_auto_black" default="<?php echo isset($conf['complain_auto_black'])?$conf['complain_auto_black']:0?>"><option value="0">关闭</option><option value="1">开启</option></select></div>
+	</div><br/>
+	<div class="form-group">
+	  <label class="col-sm-3 control-label">投诉自动回复</label>
+	  <div class="col-sm-9"><select class="form-control" name="complain_auto_reply" default="<?php echo isset($conf['complain_auto_reply'])?$conf['complain_auto_reply']:0?>"><option value="0">关闭</option><option value="1">开启</option></select></div>
+	</div><br/>
+	<div class="form-group">
+	  <label class="col-sm-3 control-label">投诉自动回复内容</label>
+	  <div class="col-sm-9"><textarea name="complain_auto_reply_con" class="form-control" rows="3" placeholder="自动回复开启后使用"><?php echo isset($conf['complain_auto_reply_con'])?$conf['complain_auto_reply_con']:''; ?></textarea></div>
+	</div><br/>
+	<div class="form-group">
+	  <label class="col-sm-3 control-label">投诉自动退款</label>
+	  <div class="col-sm-9"><select class="form-control" name="complain_auto_refund" default="<?php echo isset($conf['complain_auto_refund'])?$conf['complain_auto_refund']:0?>"><option value="0">关闭</option><option value="1">开启</option></select><font color="green">高风险功能，建议确认业务规则后再开启</font></div>
+	</div><br/>
+	<div class="form-group">
+	  <label class="col-sm-3 control-label">投诉自动退款金额上限</label>
+	  <div class="col-sm-9"><input type="text" name="complain_auto_refund_money" value="<?php echo isset($conf['complain_auto_refund_money'])?$conf['complain_auto_refund_money']:''; ?>" class="form-control" placeholder="留空不限制"/></div>
+	</div><br/>
+	<div class="form-group">
 	  <label class="col-sm-3 control-label">开启商户后台自助退款</label>
 	  <div class="col-sm-9"><select class="form-control" name="user_refund" default="<?php echo $conf['user_refund']?>"><option value="0">关闭</option><option value="1">开启</option></select></div>
 	</div><br/>

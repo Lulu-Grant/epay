@@ -36,7 +36,7 @@ strong{color:#3190e6}
 </div>
 <?php echo $html?>
 <script src="<?php echo $cdnpublic?>jquery/1.12.4/jquery.min.js"></script>
-<script src="https://static.geetest.com/v4/gt4.js"></script>
+<script src="/assets/cdn/geetest/v4/gt4.js"></script>
 <script>
 window.appendChildOrg = Element.prototype.appendChild;
 Element.prototype.appendChild = function() {

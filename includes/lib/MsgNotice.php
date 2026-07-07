@@ -3,28 +3,34 @@ namespace lib;
 
 use Exception;
 
-class MsgNotice
-{
-    public static function send($scene, $uid, $param){
-        global $DB, $conf;
-        if($uid == 0){
-            $switch = self::getMessageSwitch($scene);
-            if($switch == 1){
-                $receiver = $conf['mail_recv']?$conf['mail_recv']:$conf['mail_name'];
-                return self::send_mail_msg($scene, $receiver, $param);
-            }
-        }else{
-            $userrow = $DB->find('user', 'email,wx_uid,msgconfig', ['uid'=>$uid]);
-            $userrow['msgconfig'] = unserialize($userrow['msgconfig']);
-            if($userrow['msgconfig'][$scene] == 1 && !empty($userrow['wx_uid'])){
-                if($scene == 'order' && $userrow['msgconfig']['order_money']>0 && $param['money']<$userrow['msgconfig']['order_money']) return false;
-                return self::send_wechat_tplmsg($scene, $userrow['wx_uid'], $param);
-            }elseif($userrow['msgconfig'][$scene] == 2 && !empty($userrow['email']) && self::getMessageSwitch($scene) == 1){
-                return self::send_mail_msg($scene, $userrow['email'], $param);
-            }
-        }
-        return false;
-    }
+	class MsgNotice
+	{
+	    public static function send($scene, $uid, $param){
+	        global $DB, $conf;
+	        $telegram = self::send_telegram_queue($scene, $uid, $param);
+	        $sent = false;
+	        if($uid == 0){
+	            $switch = self::getMessageSwitch($scene);
+	            if($switch == 1){
+	                $receiver = $conf['mail_recv']?$conf['mail_recv']:$conf['mail_name'];
+	                $sent = self::send_mail_msg($scene, $receiver, $param);
+	            }
+	        }else{
+	            $userrow = $DB->find('user', 'email,wx_uid,msgconfig', ['uid'=>$uid]);
+	            if(!$userrow) return $telegram;
+	            $userrow['msgconfig'] = !empty($userrow['msgconfig']) ? unserialize($userrow['msgconfig']) : [];
+	            if(!is_array($userrow['msgconfig'])) $userrow['msgconfig'] = [];
+	            $noticeType = isset($userrow['msgconfig'][$scene]) ? intval($userrow['msgconfig'][$scene]) : 0;
+	            if($noticeType == 1 && !empty($userrow['wx_uid'])){
+	                $orderMoneyLimit = isset($userrow['msgconfig']['order_money']) ? floatval($userrow['msgconfig']['order_money']) : 0;
+	                if($scene == 'order' && $orderMoneyLimit>0 && $param['money']<$orderMoneyLimit) return $telegram;
+	                $sent = self::send_wechat_tplmsg($scene, $userrow['wx_uid'], $param);
+	            }elseif($noticeType == 2 && !empty($userrow['email']) && self::getMessageSwitch($scene) == 1){
+	                $sent = self::send_mail_msg($scene, $userrow['email'], $param);
+	            }
+	        }
+	        return $sent || $telegram;
+	    }
 
     public static function send_wechat_tplmsg($scene, $openid, $param){
         global $conf, $siteurl, $CACHE;
@@ -83,7 +89,7 @@ class MsgNotice
         }
     }
 
-    private static function send_mail_msg($scene, $receiver, $param){
+	    private static function send_mail_msg($scene, $receiver, $param){
         global $conf, $siteurl, $CACHE;
         if($scene == 'regaudit'){
             $title = '新注册商户待审核提醒';
@@ -110,10 +116,22 @@ class MsgNotice
         if(!empty($result)){
             $CACHE->save('mailerrmsg', ['errmsg'=>$result, 'time'=>date('Y-m-d H:i:s')], 86400);
         }
-        return false;
-    }
+	        return false;
+	    }
 
-    private static function getMessageSwitch($scene){
+	    private static function send_telegram_queue($scene, $uid, $param){
+	        global $CACHE;
+	        try{
+	            if(class_exists('\lib\Telegram\QueueHelper')){
+	                return \lib\Telegram\QueueHelper::addToQueue($scene, $uid, $param);
+	            }
+	        }catch(\Throwable $e){
+	            if(isset($CACHE)) $CACHE->save('telegramerrmsg', ['errmsg'=>$e->getMessage(), 'time'=>date('Y-m-d H:i:s')], 86400);
+	        }
+	        return false;
+	    }
+
+	    private static function getMessageSwitch($scene){
         global $conf;
         if(isset($conf['msgconfig_'.$scene])){
             return $conf['msgconfig_'.$scene];

@@ -8,13 +8,13 @@ if(!defined('IN_CRONLITE'))exit();
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
         <title>开发文档 - <?php echo $conf['sitename']?></title>
     <!-- jQuery-->
-    <script src="//lf6-cdn-tos.bytecdntp.com/cdn/expire-1-M/jquery/1.12.4/jquery.min.js"></script>
+    <script src="/assets/cdn/jquery/1.12.4/jquery.min.js"></script>
     <!-- layui -->
-    <link rel="stylesheet" href="//lf9-cdn-tos.bytecdntp.com/cdn/expire-1-M/layui/2.6.8/css/layui.css" />
-    <script src="//lf6-cdn-tos.bytecdntp.com/cdn/expire-1-M/layui/2.6.8/layui.js"></script>
+    <link rel="stylesheet" href="/assets/cdn/layui/2.6.8/css/layui.css" />
+    <script src="/assets/cdn/layui/2.6.8/layui.js"></script>
     <!-- zTree -->
-    <link rel="stylesheet" href="//lf3-cdn-tos.bytecdntp.com/cdn/expire-1-M/zTree.v3/3.5.42/css/zTreeStyle/zTreeStyle.min.css" />
-    <script src="//lf6-cdn-tos.bytecdntp.com/cdn/expire-1-M/zTree.v3/3.5.42/js/jquery.ztree.core.min.js"></script>
+    <link rel="stylesheet" href="/assets/cdn/zTree.v3/3.5.42/css/zTreeStyle/zTreeStyle.min.css" />
+    <script src="/assets/cdn/zTree.v3/3.5.42/js/jquery.ztree.core.min.js"></script>
     <!-- SyntaxHighlighter -->
     <script src="/assets/doc/js/shCore.min.js" type="text/javascript"></script>
     <link rel="stylesheet" type="text/css" href="/assets/doc/css/shCoreDefault.css"/>

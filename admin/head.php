@@ -1,16 +1,7 @@
 <?php
 @header('Content-Type: text/html; charset=UTF-8');
 
-$admin_cdnpublic = 4;
-if($admin_cdnpublic==1){
-	$cdnpublic = '//lib.baomitu.com/';
-}elseif($admin_cdnpublic==2){
-	$cdnpublic = 'https://s4.zstatic.net/ajax/libs/';
-}elseif($admin_cdnpublic==4){
-	$cdnpublic = '//lf26-cdn-tos.bytecdntp.com/cdn/expire-1-M/';
-}else{
-	$cdnpublic = '//mirrors.sustech.edu.cn/cdnjs/ajax/libs/';
-}
+$cdnpublic = '/assets/cdn/';
 ?>
 <!DOCTYPE html>
 <html lang="zh-cn">
@@ -25,7 +16,10 @@ if($admin_cdnpublic==1){
   <link href="<?php echo $cdnpublic?>font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet"/>
   <script src="<?php echo $cdnpublic?>modernizr/2.8.3/modernizr.min.js"></script>
   <script src="<?php echo $cdnpublic?>jquery/2.1.4/jquery.min.js"></script>
+  <script>window.jQuery || document.write('<script src="/assets/cdn/jquery/2.1.4/jquery.min.js"><\/script>')</script>
   <script src="<?php echo $cdnpublic?>twitter-bootstrap/3.4.1/js/bootstrap.min.js"></script>
+  <script>window.jQuery && window.jQuery.fn && window.jQuery.fn.modal || document.write('<script src="/assets/cdn/twitter-bootstrap/3.4.1/js/bootstrap.min.js"><\/script>')</script>
+  <script src="../assets/js/admin-layer-fallback.js"></script>
   <!--[if lt IE 9]>
     <script src="<?php echo $cdnpublic?>html5shiv/3.7.3/html5shiv.min.js"></script>
     <script src="<?php echo $cdnpublic?>respond.js/1.4.2/respond.min.js"></script>
@@ -55,7 +49,7 @@ if($admin_cdnpublic==1){
 		  <li class="<?php echo checkIfActive('settle,slist')?>">
             <a href="./slist.php"><i class="fa fa-cloud"></i> 结算管理</a>
           </li>
-		  <li class="<?php echo checkIfActive('ulist,glist,group,record,uset,domain,ustat,invitecode')?>">
+		  <li class="<?php echo checkIfActive('ulist,glist,group,record,uset,domain,ustat,income_stat,invitecode')?>">
             <a href="#" class="dropdown-toggle" data-toggle="dropdown"><i class="fa fa-user"></i> 商户管理<b class="caret"></b></a>
             <ul class="dropdown-menu">
               <li><a href="./ulist.php">用户列表</a></li>
@@ -63,6 +57,7 @@ if($admin_cdnpublic==1){
 			  <li><a href="./group.php">用户组购买</a></li>
 			  <li><a href="./record.php">资金明细</a></li>
         <li><a href="./ustat.php">支付统计</a></li>
+        <li><a href="./income_stat.php">收入看板</a></li>
         <?php if($conf['pay_domain_forbid']==1 || $conf['pay_domain_open']==1){?><li><a href="./domain.php">授权域名</a></li><?php }?>
         <?php if($conf['reg_open']==2){?><li><a href="./invitecode.php">邀请码管理</a></li><?php }?>
             </ul>
@@ -77,7 +72,7 @@ if($admin_cdnpublic==1){
         <li><a href="./pay_weixin.php">公众号小程序</a></li>
             </ul>
           </li>
-		  <li class="<?php echo checkIfActive('set,gonggao,set_wxkf')?>">
+			  <li class="<?php echo checkIfActive('set,gonggao,set_wxkf,telegram_set')?>">
             <a href="#" class="dropdown-toggle" data-toggle="dropdown"><i class="fa fa-cog"></i> 系统设置<b class="caret"></b></a>
             <ul class="dropdown-menu">
               <li><a href="./set.php?mod=site">网站信息配置</a></li>
@@ -92,9 +87,10 @@ if($admin_cdnpublic==1){
 			  <li><a href="./set.php?mod=mail">邮箱与短信配置</a><li>
 			  <li><a href="./set.php?mod=upimg">网站Logo上传</a><li>
 			  <li><a href="./set.php?mod=cron">计划任务配置</a><li>
-        <li><a href="./set_wxkf.php">H5跳转微信客服支付</a></li>
-            </ul>
-          </li>
+	        <li><a href="./set_wxkf.php">H5跳转微信客服支付</a></li>
+	        <li><a href="./telegram_set.php">Telegram通知设置</a></li>
+	            </ul>
+	          </li>
 		  <li class="<?php echo checkIfActive('clean,log,transfer,transfer_add,risk,alipayrisk,export,ps_receiver,ps_order,gettoken,blacklist,complain,complain_info')?>">
             <a href="#" class="dropdown-toggle" data-toggle="dropdown"><i class="fa fa-cube"></i> 其他功能<b class="caret"></b></a>
             <ul class="dropdown-menu">
@@ -108,6 +104,8 @@ if($admin_cdnpublic==1){
         <li><a href="./ps_order.php">分账记录</a><li>
         <li><a href="./gettoken.php">获取用户标识</a><li>
         <li><a href="./blacklist.php">黑名单管理</a></li>
+        <li><a href="./complain.php">交易投诉</a></li>
+        <li><a href="./help.php?doc=user-manual" target="_blank">使用文档</a></li>
             </ul>
           </li>
           <li><a href="./login.php?logout" onclick="return confirm('是否确定退出登录？')"><i class="fa fa-power-off"></i> 退出登录</a></li>

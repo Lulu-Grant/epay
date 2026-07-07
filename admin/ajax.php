@@ -44,70 +44,87 @@ case 'getcount':
 	}
 	unset($rs);
 
-	$tongji_cachetime=getSetting('tongji_cachetime', true);
-	$tongji_cache = $CACHE->read('tongji');
-	if($tongji_cachetime+3600>=time() && $tongji_cache && !isset($_GET['getnew'])){
-		$array = unserialize($tongji_cache);
-		$result=["code"=>0,"type"=>"cache","paytype"=>$paytype,"channel"=>$channel,"count1"=>$count1,"count2"=>$count2,"usermoney"=>round($array['usermoney'],2),"settlemoney"=>round($array['settlemoney'],2),"success_rate"=>$success_rate,"order_today"=>$array['order_today'],"order"=>[]];
-	}else{
-		$usermoney=$DB->getColumn("SELECT SUM(money) FROM pre_user WHERE money!='0.00'");
-		$settlemoney=$DB->getColumn("SELECT SUM(money) FROM pre_settle");
+		$all_paytype = [];
+		$rs = $DB->getAll("SELECT id,name,showname FROM pre_type ORDER BY id ASC");
+		foreach($rs as $row){
+			$all_paytype[$row['id']] = $row['showname'];
+		}
+		unset($rs);
+		$all_channel = [];
+		$rs = $DB->getAll("SELECT id,name FROM pre_channel ORDER BY id ASC");
+		foreach($rs as $row){
+			$all_channel[$row['id']] = $row['name'];
+		}
+		unset($rs);
 
-		$today=date("Y-m-d");
-		$rs=$DB->query("SELECT type,channel,realmoney,profitmoney from pre_order where status=1 and date>='$today'");
-		foreach($paytype as $id=>$type){
-			$order_paytype[$id]=0;
-			$profit_paytype[$id]=0;
+		$init_stat = function() use ($paytype, $channel) {
+			$stat = ['all'=>0, 'profit_all'=>0, 'paytype'=>[], 'channel'=>[], 'profit_paytype'=>[]];
+			foreach($paytype as $id=>$name){
+				$stat['paytype'][$id] = 0;
+				$stat['profit_paytype'][$id] = 0;
+			}
+			foreach($channel as $id=>$name){
+				$stat['channel'][$id] = 0;
+			}
+			return $stat;
+		};
+
+		$days = [];
+		for($i=0;$i<7;$i++){
+			$date_key = date("Y-m-d", strtotime("-{$i} day"));
+			$days[$date_key] = $init_stat();
 		}
-		foreach($channel as $id=>$type){
-			$order_channel[$id]=0;
-		}
-		while($row = $rs->fetch())
-		{
-			$order_paytype[$row['type']]+=$row['realmoney'];
-			$order_channel[$row['channel']]+=$row['realmoney'];
-			if(!empty($row['profitmoney'])){
-				$profit_paytype[$row['type']]+=$row['profitmoney'];
+		$startday = date("Y-m-d", strtotime("-6 day"));
+		$today = date("Y-m-d");
+		$rs=$DB->getAll("SELECT date,type,channel,ROUND(SUM(COALESCE(realmoney,0)),2) realmoney,ROUND(SUM(COALESCE(profitmoney,0)),2) profitmoney FROM pre_order WHERE status=1 AND date>=:startday AND date<=:today GROUP BY date,type,channel ORDER BY date DESC,type ASC,channel ASC", [':startday'=>$startday, ':today'=>$today]);
+		if($rs){
+			foreach($rs as $row){
+				if(!isset($days[$row['date']]))continue;
+				$typeid = $row['type'];
+				$channelid = $row['channel'];
+				if(!isset($paytype[$typeid]))$paytype[$typeid] = isset($all_paytype[$typeid]) ? $all_paytype[$typeid] : '支付方式'.$typeid;
+				if(!isset($channel[$channelid]))$channel[$channelid] = isset($all_channel[$channelid]) ? $all_channel[$channelid] : '通道'.$channelid;
+				$realmoney = round((float)$row['realmoney'], 2);
+				$profitmoney = round((float)$row['profitmoney'], 2);
+				if(!isset($days[$row['date']]['paytype'][$typeid]))$days[$row['date']]['paytype'][$typeid] = 0;
+				if(!isset($days[$row['date']]['profit_paytype'][$typeid]))$days[$row['date']]['profit_paytype'][$typeid] = 0;
+				if(!isset($days[$row['date']]['channel'][$channelid]))$days[$row['date']]['channel'][$channelid] = 0;
+				$days[$row['date']]['paytype'][$typeid] += $realmoney;
+				$days[$row['date']]['channel'][$channelid] += $realmoney;
+				$days[$row['date']]['profit_paytype'][$typeid] += $profitmoney;
+				$days[$row['date']]['all'] += $realmoney;
+				$days[$row['date']]['profit_all'] += $profitmoney;
 			}
 		}
-		foreach($order_paytype as $k=>$v){
-			$order_paytype[$k] = round($v,2);
+		foreach($days as $date_key=>$stat){
+			$days[$date_key]['all'] = round($stat['all'], 2);
+			$days[$date_key]['profit_all'] = round($stat['profit_all'], 2);
+			foreach($stat['paytype'] as $k=>$v)$days[$date_key]['paytype'][$k] = round($v, 2);
+			foreach($stat['channel'] as $k=>$v)$days[$date_key]['channel'][$k] = round($v, 2);
+			foreach($stat['profit_paytype'] as $k=>$v)$days[$date_key]['profit_paytype'][$k] = round($v, 2);
 		}
-		foreach($order_channel as $k=>$v){
-			$order_channel[$k] = round($v,2);
-		}
-		foreach($profit_paytype as $k=>$v){
-			$profit_paytype[$k] = round($v,2);
-		}
-		$allmoney=0;
-		foreach($order_paytype as $order){
-			$allmoney+=$order;
-		}
-		$allprofit=0;
-		foreach($profit_paytype as $money){
-			$allprofit+=$money;
-		}
-	
-		$order_today['all']=round($allmoney,2);
-		$order_today['profit_all']=round($allprofit,2);
-		$order_today['paytype']=$order_paytype;
-		$order_today['channel']=$order_channel;
-		$order_today['profit_paytype']=$profit_paytype;
 
-		saveSetting('tongji_cachetime',time());
-		$CACHE->save('tongji',serialize(["usermoney"=>$usermoney,"settlemoney"=>$settlemoney,"order_today"=>$order_today]));
-
-		$result=["code"=>0,"type"=>"online","paytype"=>$paytype,"channel"=>$channel,"count1"=>$count1,"count2"=>$count2,"usermoney"=>round($usermoney,2),"settlemoney"=>round($settlemoney,2),"success_rate"=>$success_rate,"order_today"=>$order_today,"order"=>[]];
-	}
-	for($i=1;$i<7;$i++){
-		$day = date("Ymd", strtotime("-{$i} day"));
-		if($order_tongji = $CACHE->read('order_'.$day)){
-			$result["order"][$day] = unserialize($order_tongji);
+		$tongji_cachetime=getSetting('tongji_cachetime', true);
+		$tongji_cache = $CACHE->read('tongji');
+		if($tongji_cachetime+3600>=time() && $tongji_cache && !isset($_GET['getnew'])){
+			$array = unserialize($tongji_cache);
+			$usermoney = $array['usermoney'];
+			$settlemoney = $array['settlemoney'];
+			$result_type = 'cache';
 		}else{
-			break;
+			$usermoney=$DB->getColumn("SELECT SUM(money) FROM pre_user WHERE money!='0.00'");
+			$settlemoney=$DB->getColumn("SELECT SUM(money) FROM pre_settle");
+			saveSetting('tongji_cachetime',time());
+			$CACHE->save('tongji',serialize(["usermoney"=>$usermoney,"settlemoney"=>$settlemoney,"order_today"=>$days[$today]]));
+			$result_type = 'online';
 		}
-	}
-	exit(json_encode($result));
+		$result=["code"=>0,"type"=>$result_type,"paytype"=>$paytype,"channel"=>$channel,"count1"=>$count1,"count2"=>$count2,"usermoney"=>round($usermoney,2),"settlemoney"=>round($settlemoney,2),"success_rate"=>$success_rate,"order_today"=>$days[$today],"order"=>[]];
+		for($i=1;$i<7;$i++){
+			$date_key = date("Y-m-d", strtotime("-{$i} day"));
+			$day = date("Ymd", strtotime($date_key));
+			$result["order"][$day] = $days[$date_key];
+		}
+		exit(json_encode($result));
 break;
 
 case 'set':

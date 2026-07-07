@@ -253,6 +253,12 @@ $conf = array_merge($conf, $groupconfig);
                   <span>开发文档</span>
                 </a>
               </li>
+              <li>
+                <a href="help_center.php?doc=merchant-quickstart" target="_blank">
+                  <i class="fa fa-question-circle"></i>
+                  <span>使用帮助</span>
+                </a>
+              </li>
 			  <?php if(!empty($conf['qqqun'])){?>
               <li>
                 <a href="<?php echo $conf['qqqun']?>" target="blank">

@@ -42,7 +42,7 @@ body{background-color:#fff}
 <a class="app-download-btn" id="J_BtnDowanloadApp">点此继续访问</a>
 <a style="display: none;" href="" id="vurl" rel="noreferrer"></a>
 
-<script src="//lib.baomitu.com/jquery/1.12.4/jquery.min.js"></script>
+<script src="/assets/cdn/jquery/1.12.4/jquery.min.js"></script>
 <script>
 function openu(u){
 document.getElementById("vurl").href= u;

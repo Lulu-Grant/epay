@@ -136,7 +136,7 @@ if(empty($userrow['pwd'])){
 			    <div class="top text-right w-full"><i class="fa fa-caret-down text-warning m-r-sm"></i></div>
 			  <div class="row">
 			  <div class="col-xs-3"><div class="round"><i class="fa fa-cart-plus fa-fw"></i></div></div>
-			  <div class="col-xs-9"><div class="h1 text-info-dk font-thin h1"><span id="orders_today"></span><span class="text-muted text-md">个</span></div><span class="text-muted">今日订单</span></div>
+			  <div class="col-xs-9"><div class="h1 text-info-dk font-thin h1"><span id="orders_today"></span><span class="text-muted text-md">个</span></div><span class="text-muted">今日订单</span><div class="text-muted text-sm m-t-xs">昨日：<span id="orders_lastday">0</span> 个</div></div>
 			  </div>
 			  </div>
             </div>
@@ -234,6 +234,7 @@ $(document).ready(function(){
 		success : function(data) {
 			$('#orders').html(data.orders);
 			$('#orders_today').html(data.orders_today);
+			$('#orders_lastday').html(data.orders_lastday);
 			$('#settle_money').html(data.settle_money);
 			$('#order_today_all').html(data.order_today_all);
 			$('#order_lastday_all').html(data.order_lastday_all);

@@ -46,7 +46,7 @@ body{background-color:#f5f5f5}
 .container .message p{font-size:14px;color:#666;word-break:break-all}
 .container .btn a{width:100px;height:30px;margin:35px 0;font-size:14px;color:#fff;text-decoration:none;background-color:#07c160;border-radius:3px;display:flex;justify-content:center;align-items:center;padding:5px 15px}
     </style>
-    <script type="text/javascript" charset="UTF-8" src="https://wx.gtimg.com/pay_h5/goldplan/js/jgoldplan-1.0.0.js"></script>
+    <script type="text/javascript" charset="UTF-8" src="/assets/cdn/wechatpay/goldplan/js/jgoldplan-1.0.0.js"></script>
 </head>
 <body>
 <?php if($errmsg){?>

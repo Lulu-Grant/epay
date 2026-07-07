@@ -14,6 +14,7 @@ case 'getcount':
 
 	$orders=$DB->getColumn("SELECT count(*) FROM pre_order WHERE uid={$uid} AND status=1");
 	$orders_today=$DB->getColumn("SELECT count(*) from pre_order WHERE uid={$uid} AND status=1 AND date='$today'");
+	$orders_lastday=$DB->getColumn("SELECT count(*) from pre_order WHERE uid={$uid} AND status=1 AND date='$lastday'");
 
 	$settle_money=$DB->getColumn("SELECT sum(realmoney) FROM pre_settle WHERE uid={$uid} and status=1");
 	$settle_money=round($settle_money,2);
@@ -26,10 +27,11 @@ case 'getcount':
 	foreach($types as $row){
 		$order_today = round($DB->getColumn("SELECT sum(money) FROM pre_order WHERE uid={$uid} AND status=1 AND date='$today' AND type={$row['id']}"),2);
 		$order_lastday = round($DB->getColumn("SELECT sum(money) FROM pre_order WHERE uid={$uid} AND status=1 AND date='$lastday' AND type={$row['id']}"),2);
-		$channels[] = ['name'=>$row['name'], 'showname'=>$row['showname'], 'rate'=>round(100-$row['rate'], 2), 'order_today'=>$order_today, 'order_lastday'=>$order_lastday];
+		$rate = isset($row['rate']) && is_numeric($row['rate']) ? (float)$row['rate'] : 100.00;
+		$channels[] = ['name'=>$row['name'], 'showname'=>$row['showname'], 'rate'=>round(100-$rate, 2), 'order_today'=>$order_today, 'order_lastday'=>$order_lastday];
 	}
 
-	$result=['code'=>0, 'orders'=>$orders, 'orders_today'=>$orders_today, 'settle_money'=>$settle_money, 'order_today_all'=>$order_today_all, 'order_lastday_all'=>$order_lastday_all, 'channels'=>$channels];
+	$result=['code'=>0, 'orders'=>$orders, 'orders_today'=>$orders_today, 'orders_lastday'=>$orders_lastday, 'settle_money'=>$settle_money, 'order_today_all'=>$order_today_all, 'order_lastday_all'=>$order_lastday_all, 'channels'=>$channels];
 	exit(json_encode($result));
 break;
 case 'sendcode':
