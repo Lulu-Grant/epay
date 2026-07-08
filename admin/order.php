@@ -24,6 +24,11 @@ unset($rs);
 }
 }
 .type-logo{width: 18px;margin-top: -2px;padding-right: 4px;}
+.order-summary-box{padding:10px 15px 0;}
+.order-summary-table{margin-bottom:0;}
+.order-summary-table td{font-size:15px;line-height:28px;}
+.order-summary-table b{font-size:16px;}
+.order-summary-note{padding:12px 0 2px;color:#777;}
 </style>
 <link href="../assets/css/datepicker.css" rel="stylesheet">
   <div class="container-fluid" style="padding-top:70px;">
@@ -57,6 +62,7 @@ unset($rs);
   </div>
   <button type="submit" class="btn btn-primary">&nbsp;搜索&nbsp;</button>
   <a href="javascript:searchClear()" class="btn btn-default" title="刷新订单列表"><i class="fa fa-refresh"></i></a>
+  <a href="javascript:showOrderSummary()" class="btn btn-info" title="按当前筛选条件统计订单概况"><i class="fa fa-bar-chart"></i> 统计概况</a>
   <div class="btn-group" role="group">
 	<button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">批量操作 <span class="caret"></span></button>
 	<ul class="dropdown-menu"><li><a href="javascript:operation(0)">改未完成</a></li><li><a href="javascript:operation(1)">改已完成</a></li><li><a href="javascript:operation(2)">冻结订单</a></li><li><a href="javascript:operation(3)">解冻订单</a></li><li><a href="javascript:operation(4)">删除订单</a></li></ul>
@@ -235,6 +241,67 @@ $(document).ready(function(){
 
 function openlink(full_link){ 
 	window.open('javascript:window.name;', '<script>location.replace("'+full_link+'")<\/script>');
+}
+
+function getOrderSearchParams(){
+	var params = {};
+	$('#searchToolbar').find(':input[name]').each(function() {
+		params[$(this).attr('name')] = $(this).val();
+	});
+	return params;
+}
+function moneyText(value){
+	var number = parseFloat(value);
+	if(isNaN(number)) number = 0;
+	return '￥' + number.toFixed(2);
+}
+function countText(value){
+	var number = parseInt(value, 10);
+	if(isNaN(number)) number = 0;
+	return number;
+}
+function percentText(value){
+	var number = parseFloat(value);
+	if(isNaN(number)) number = 0;
+	return number.toFixed(2) + '%';
+}
+function showOrderSummary(){
+	var ii = layer.load(2, {shade:[0.1,'#fff']});
+	$.ajax({
+		type : 'POST',
+		url : 'ajax_order.php?act=orderSummary',
+		data : getOrderSearchParams(),
+		dataType : 'json',
+		success : function(ret) {
+			layer.close(ii);
+			if(ret.code != 0){
+				layer.alert(ret.msg || '统计失败');
+				return;
+			}
+			var data = ret.data;
+			var content = '<div class="order-summary-box">';
+			content += '<table class="table table-bordered order-summary-table">';
+			content += '<tr><td>订单总金额：<b>'+moneyText(data.total_money)+'</b></td><td>已支付金额：<b>'+moneyText(data.paid_money)+'</b></td><td>未支付金额：<b>'+moneyText(data.unpaid_money)+'</b></td></tr>';
+			content += '<tr><td>已退款金额：<b>'+moneyText(data.refund_money)+'</b></td><td>冻结金额：<b>'+moneyText(data.frozen_money)+'</b></td><td>总收入利润：<b>'+moneyText(data.profit_money)+'</b></td></tr>';
+			content += '<tr><td>订单总数：<b>'+countText(data.total_count)+'</b></td><td>已支付订单：<b>'+countText(data.paid_count)+'</b></td><td>未支付订单：<b>'+countText(data.unpaid_count)+'</b></td></tr>';
+			content += '<tr><td>已退款订单：<b>'+countText(data.refund_count)+'</b></td><td>冻结订单：<b>'+countText(data.frozen_count)+'</b></td><td>预授权订单：<b>'+countText(data.preauth_count)+'</b></td></tr>';
+			content += '<tr><td>通知异常订单：<b>'+countText(data.notify_bad_count)+'</b></td><td colspan="2">订单成功率：<b>'+percentText(data.success_rate)+'</b></td></tr>';
+			content += '</table>';
+			content += '<div class="order-summary-note">统计范围：当前订单列表筛选条件；时间筛选按订单创建时间计算。</div>';
+			content += '</div>';
+			layer.open({
+				type: 1,
+				area: [$(window).width() > 768 ? '760px' : '96%'],
+				title: '订单统计概况',
+				skin: 'layui-layer-rim',
+				content: content
+			});
+		},
+		error:function(){
+			layer.close(ii);
+			layer.msg('服务器错误');
+		}
+	});
 }
 
 function operation(status){

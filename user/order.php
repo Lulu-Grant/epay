@@ -19,6 +19,11 @@ unset($rs);
 #orderItem .orderContent{word-break:break-all;}
 .dates{max-width: 120px;}
 .fixed-table-toolbar,.fixed-table-pagination{padding: 15px;}
+.order-summary-box{padding:10px 15px 0;}
+.order-summary-table{margin-bottom:0;}
+.order-summary-table td{font-size:15px;line-height:28px;}
+.order-summary-table b{font-size:16px;}
+.order-summary-note{padding:12px 0 2px;color:#777;}
 </style>
 <link href="../assets/css/datepicker.css" rel="stylesheet">
  <div id="content" class="app-content" role="main">
@@ -68,6 +73,7 @@ unset($rs);
 			</div>
 			<button class="btn btn-primary" type="submit"><i class="fa fa-search"></i> 搜索</button>
 			<a href="javascript:searchClear()" class="btn btn-default"><i class="fa fa-refresh"></i> 重置</a>
+			<a href="javascript:showOrderSummary()" class="btn btn-info"><i class="fa fa-bar-chart"></i> 统计概况</a>
 		</form>
       <table id="listTable">
 	  </table>
@@ -165,8 +171,69 @@ $(document).ready(function(){
 		autoclose: true,
         clearBtn: true,
         language: 'zh-CN'
-    });
+	});
 })
+
+function getOrderSearchParams(){
+	var params = {};
+	$('#searchToolbar').find(':input[name]').each(function() {
+		params[$(this).attr('name')] = $(this).val();
+	});
+	return params;
+}
+function moneyText(value){
+	var number = parseFloat(value);
+	if(isNaN(number)) number = 0;
+	return '￥' + number.toFixed(2);
+}
+function countText(value){
+	var number = parseInt(value, 10);
+	if(isNaN(number)) number = 0;
+	return number;
+}
+function percentText(value){
+	var number = parseFloat(value);
+	if(isNaN(number)) number = 0;
+	return number.toFixed(2) + '%';
+}
+function showOrderSummary(){
+	var ii = layer.load(2, {shade:[0.1,'#fff']});
+	$.ajax({
+		type : 'POST',
+		url : 'ajax2.php?act=orderSummary',
+		data : getOrderSearchParams(),
+		dataType : 'json',
+		success : function(ret) {
+			layer.close(ii);
+			if(ret.code != 0){
+				layer.alert(ret.msg || '统计失败');
+				return;
+			}
+			var data = ret.data;
+			var content = '<div class="order-summary-box">';
+			content += '<table class="table table-bordered order-summary-table">';
+			content += '<tr><td>订单总金额：<b>'+moneyText(data.total_money)+'</b></td><td>已支付金额：<b>'+moneyText(data.paid_money)+'</b></td><td>未支付金额：<b>'+moneyText(data.unpaid_money)+'</b></td></tr>';
+			content += '<tr><td>已退款金额：<b>'+moneyText(data.refund_money)+'</b></td><td>冻结金额：<b>'+moneyText(data.frozen_money)+'</b></td><td>商户分成金额：<b>'+moneyText(data.get_money)+'</b></td></tr>';
+			content += '<tr><td>订单总数：<b>'+countText(data.total_count)+'</b></td><td>已支付订单：<b>'+countText(data.paid_count)+'</b></td><td>未支付订单：<b>'+countText(data.unpaid_count)+'</b></td></tr>';
+			content += '<tr><td>已退款订单：<b>'+countText(data.refund_count)+'</b></td><td>冻结订单：<b>'+countText(data.frozen_count)+'</b></td><td>预授权订单：<b>'+countText(data.preauth_count)+'</b></td></tr>';
+			content += '<tr><td>通知异常订单：<b>'+countText(data.notify_bad_count)+'</b></td><td colspan="2">订单成功率：<b>'+percentText(data.success_rate)+'</b></td></tr>';
+			content += '</table>';
+			content += '<div class="order-summary-note">统计范围：当前订单列表筛选条件；时间筛选按订单创建时间计算。</div>';
+			content += '</div>';
+			layer.open({
+				type: 1,
+				area: [$(window).width() > 768 ? '760px' : '96%'],
+				title: '订单统计概况',
+				skin: 'layui-layer-rim',
+				content: content
+			});
+		},
+		error:function(){
+			layer.close(ii);
+			layer.msg('服务器错误');
+		}
+	});
+}
 
 function callnotify(trade_no){
 	var ii = layer.load(2, {shade:[0.1,'#fff']});

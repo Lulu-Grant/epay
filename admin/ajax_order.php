@@ -7,17 +7,8 @@ if(!checkRefererHost())exit('{"code":403}');
 
 @header('Content-Type: application/json; charset=UTF-8');
 
-switch($act){
-case 'orderList':
-	$paytype = [];
-	$paytypes = [];
-	$rs = $DB->getAll("SELECT * FROM pre_type");
-	foreach($rs as $row){
-		$paytype[$row['id']] = $row['showname'];
-		$paytypes[$row['id']] = $row['name'];
-	}
-	unset($rs);
-
+function buildOrderWhere(){
+	$allow_columns = ['trade_no', 'out_trade_no', 'api_trade_no', 'name', 'money', 'realmoney', 'getmoney', 'domain', 'buyer', 'ip'];
 	$sql=" 1=1";
 	if(isset($_POST['uid']) && !empty($_POST['uid'])) {
 		$uid = intval($_POST['uid']);
@@ -47,13 +38,32 @@ case 'orderList':
 			$sql.=" AND A.addtime<='{$endtime} 23:59:59'";
 		}
 	}
-	if(isset($_POST['value']) && !empty($_POST['value'])) {
-		if($_POST['column']=='name'){
-			$sql.=" AND A.`{$_POST['column']}` like '%{$_POST['value']}%'";
-		}else{
-			$sql.=" AND A.`{$_POST['column']}`='{$_POST['value']}'";
+	if(isset($_POST['value']) && $_POST['value'] !== '') {
+		$column = isset($_POST['column']) ? $_POST['column'] : '';
+		if(in_array($column, $allow_columns, true)){
+			$value = daddslashes($_POST['value']);
+			if($column == 'name'){
+				$sql.=" AND A.`{$column}` like '%{$value}%'";
+			}else{
+				$sql.=" AND A.`{$column}`='{$value}'";
+			}
 		}
 	}
+	return $sql;
+}
+
+switch($act){
+case 'orderList':
+	$paytype = [];
+	$paytypes = [];
+	$rs = $DB->getAll("SELECT * FROM pre_type");
+	foreach($rs as $row){
+		$paytype[$row['id']] = $row['showname'];
+		$paytypes[$row['id']] = $row['name'];
+	}
+	unset($rs);
+
+	$sql = buildOrderWhere();
 	$offset = intval($_POST['offset']);
 	$limit = intval($_POST['limit']);
 	$total = $DB->getColumn("SELECT count(*) from pre_order A WHERE{$sql}");
@@ -66,6 +76,29 @@ case 'orderList':
 	}
 
 	exit(json_encode(['total'=>$total, 'rows'=>$list2]));
+break;
+
+case 'orderSummary':
+	$sql = buildOrderWhere();
+	$row = $DB->getRow("SELECT
+		COUNT(*) total_count,
+		ROUND(COALESCE(SUM(A.money),0),2) total_money,
+		ROUND(COALESCE(SUM(CASE WHEN A.status=1 THEN COALESCE(A.realmoney,A.money,0) ELSE 0 END),0),2) paid_money,
+		ROUND(COALESCE(SUM(CASE WHEN A.status=0 THEN COALESCE(A.money,0) ELSE 0 END),0),2) unpaid_money,
+		ROUND(COALESCE(SUM(CASE WHEN A.status=2 THEN COALESCE(A.refundmoney,A.realmoney,A.money,0) ELSE 0 END),0),2) refund_money,
+		ROUND(COALESCE(SUM(CASE WHEN A.status=3 THEN COALESCE(A.realmoney,A.money,0) ELSE 0 END),0),2) frozen_money,
+		ROUND(COALESCE(SUM(CASE WHEN A.status=1 THEN COALESCE(A.profitmoney,0) ELSE 0 END),0),2) profit_money,
+		SUM(CASE WHEN A.status=1 THEN 1 ELSE 0 END) paid_count,
+		SUM(CASE WHEN A.status=0 THEN 1 ELSE 0 END) unpaid_count,
+		SUM(CASE WHEN A.status=2 THEN 1 ELSE 0 END) refund_count,
+		SUM(CASE WHEN A.status=3 THEN 1 ELSE 0 END) frozen_count,
+		SUM(CASE WHEN A.status=4 THEN 1 ELSE 0 END) preauth_count,
+		SUM(CASE WHEN A.status>0 AND A.notify<>0 THEN 1 ELSE 0 END) notify_bad_count
+		FROM pre_order A WHERE{$sql}");
+	$total_count = intval($row['total_count']);
+	$paid_count = intval($row['paid_count']);
+	$row['success_rate'] = $total_count > 0 ? round($paid_count / $total_count * 100, 2) : 0;
+	exit(json_encode(['code'=>0, 'data'=>$row]));
 break;
 
 case 'riskList':

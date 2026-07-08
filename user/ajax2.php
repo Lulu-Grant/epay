@@ -7,6 +7,57 @@ if(!checkRefererHost())exit('{"code":403}');
 
 @header('Content-Type: application/json; charset=UTF-8');
 
+function buildUserOrderWhere(){
+	global $uid;
+	$sql=" A.uid=$uid";
+	if(isset($_POST['paytype']) && !empty($_POST['paytype'])) {
+		$type = intval($_POST['paytype']);
+		$sql.=" AND A.`type`='$type'";
+	}elseif(isset($_POST['channel']) && !empty($_POST['channel'])) {
+		$channel = intval($_POST['channel']);
+		$sql.=" AND A.`channel`='$channel'";
+	}elseif(isset($_POST['subchannel']) && !empty($_POST['subchannel'])) {
+		$subchannel = intval($_POST['subchannel']);
+		$sql.=" AND A.`subchannel`='$subchannel'";
+	}
+	if(isset($_POST['dstatus']) && $_POST['dstatus']>-1) {
+		$dstatus = intval($_POST['dstatus']);
+		$sql.=" AND A.status='{$dstatus}'";
+	}
+	if(!empty($_POST['starttime']) || !empty($_POST['endtime'])){
+		if(!empty($_POST['starttime'])){
+			$starttime = daddslashes($_POST['starttime']);
+			$sql.=" AND A.addtime>='{$starttime} 00:00:00'";
+		}
+		if(!empty($_POST['endtime'])){
+			$endtime = daddslashes($_POST['endtime']);
+			$sql.=" AND A.addtime<='{$endtime} 23:59:59'";
+		}
+	}
+	if(isset($_POST['kw']) && $_POST['kw'] !== '') {
+		$kw=daddslashes($_POST['kw']);
+		$type = isset($_POST['type']) ? intval($_POST['type']) : 0;
+		if($type==1){
+			$sql.=" AND A.`trade_no`='{$kw}'";
+		}elseif($type==2){
+			$sql.=" AND A.`out_trade_no`='{$kw}'";
+		}elseif($type==3){
+			$sql.=" AND A.`name` like '%{$kw}%'";
+		}elseif($type==4){
+			$sql.=" AND A.`money`='{$kw}'";
+		}elseif($type==5){
+			$sql.=" AND A.`realmoney`='{$kw}'";
+		}elseif($type==6){
+			$sql.=" AND A.`domain`='{$kw}'";
+		}elseif($type==7){
+			$sql.=" AND A.`ip`='{$kw}'";
+		}elseif($type==8){
+			$sql.=" AND A.`buyer`='{$kw}'";
+		}
+	}
+	return $sql;
+}
+
 switch($act){
 case 'getcount':
 	$lastday=date("Y-m-d",strtotime("-1 day"));
@@ -668,51 +719,7 @@ case 'orderList':
 	}
 	unset($rs);
 
-	$sql=" uid=$uid";
-	if(isset($_POST['paytype']) && !empty($_POST['paytype'])) {
-		$type = intval($_POST['paytype']);
-		$sql.=" AND A.`type`='$type'";
-	}elseif(isset($_POST['channel']) && !empty($_POST['channel'])) {
-		$channel = intval($_POST['channel']);
-		$sql.=" AND A.`channel`='$channel'";
-	}elseif(isset($_POST['subchannel']) && !empty($_POST['subchannel'])) {
-		$subchannel = intval($_POST['subchannel']);
-		$sql.=" AND A.`subchannel`='$subchannel'";
-	}
-	if(isset($_POST['dstatus']) && $_POST['dstatus']>-1) {
-		$dstatus = intval($_POST['dstatus']);
-		$sql.=" AND A.status='{$dstatus}'";
-	}
-	if(!empty($_POST['starttime']) || !empty($_POST['endtime'])){
-		if(!empty($_POST['starttime'])){
-			$starttime = daddslashes($_POST['starttime']);
-			$sql.=" AND A.addtime>='{$starttime} 00:00:00'";
-		}
-		if(!empty($_POST['endtime'])){
-			$endtime = daddslashes($_POST['endtime']);
-			$sql.=" AND A.addtime<='{$endtime} 23:59:59'";
-		}
-	}
-	if(isset($_POST['kw']) && !empty($_POST['kw'])) {
-		$kw=daddslashes($_POST['kw']);
-		if($_POST['type']==1){
-			$sql.=" AND A.`trade_no`='{$kw}'";
-		}elseif($_POST['type']==2){
-			$sql.=" AND A.`out_trade_no`='{$kw}'";
-		}elseif($_POST['type']==3){
-			$sql.=" AND A.`name` like '%{$kw}%'";
-		}elseif($_POST['type']==4){
-			$sql.=" AND A.`money`='{$kw}'";
-		}elseif($_POST['type']==5){
-			$sql.=" AND A.`realmoney`='{$kw}'";
-		}elseif($_POST['type']==6){
-			$sql.=" AND A.`domain`='{$kw}'";
-		}elseif($_POST['type']==7){
-			$sql.=" AND A.`ip`='{$kw}'";
-		}elseif($_POST['type']==8){
-			$sql.=" AND A.`buyer`='{$kw}'";
-		}
-	}
+	$sql = buildUserOrderWhere();
 	$offset = intval($_POST['offset']);
 	$limit = intval($_POST['limit']);
 	$total = $DB->getColumn("SELECT count(*) from pre_order A WHERE{$sql}");
@@ -725,6 +732,28 @@ case 'orderList':
 	}
 
 	exit(json_encode(['total'=>$total, 'rows'=>$list2]));
+break;
+case 'orderSummary':
+	$sql = buildUserOrderWhere();
+	$row = $DB->getRow("SELECT
+		COUNT(*) total_count,
+		ROUND(COALESCE(SUM(A.money),0),2) total_money,
+		ROUND(COALESCE(SUM(CASE WHEN A.status=1 THEN COALESCE(A.realmoney,A.money,0) ELSE 0 END),0),2) paid_money,
+		ROUND(COALESCE(SUM(CASE WHEN A.status=0 THEN COALESCE(A.money,0) ELSE 0 END),0),2) unpaid_money,
+		ROUND(COALESCE(SUM(CASE WHEN A.status=2 THEN COALESCE(A.refundmoney,A.realmoney,A.money,0) ELSE 0 END),0),2) refund_money,
+		ROUND(COALESCE(SUM(CASE WHEN A.status=3 THEN COALESCE(A.realmoney,A.money,0) ELSE 0 END),0),2) frozen_money,
+		ROUND(COALESCE(SUM(CASE WHEN A.status=1 THEN COALESCE(A.getmoney,0) ELSE 0 END),0),2) get_money,
+		SUM(CASE WHEN A.status=1 THEN 1 ELSE 0 END) paid_count,
+		SUM(CASE WHEN A.status=0 THEN 1 ELSE 0 END) unpaid_count,
+		SUM(CASE WHEN A.status=2 THEN 1 ELSE 0 END) refund_count,
+		SUM(CASE WHEN A.status=3 THEN 1 ELSE 0 END) frozen_count,
+		SUM(CASE WHEN A.status=4 THEN 1 ELSE 0 END) preauth_count,
+		SUM(CASE WHEN A.status>0 AND A.notify<>0 THEN 1 ELSE 0 END) notify_bad_count
+		FROM pre_order A WHERE{$sql}");
+	$total_count = intval($row['total_count']);
+	$paid_count = intval($row['paid_count']);
+	$row['success_rate'] = $total_count > 0 ? round($paid_count / $total_count * 100, 2) : 0;
+	exit(json_encode(['code'=>0, 'data'=>$row]));
 break;
 case 'recordList':
 	$sql=" uid=$uid";
