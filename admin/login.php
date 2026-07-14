@@ -6,11 +6,20 @@ $verifycode = 0;//管理域已有 HTTP 基础认证，关闭容易产生会话�
 $login_limit_count = 5;//登录失败次数
 $login_limit_file = '@login.lock';
 
+function checkLoginRequestHost(){
+  if(checkRefererHost()) return true;
+  if(empty($_SERVER['HTTP_ORIGIN'])) return false;
+  $originHost = parse_url($_SERVER['HTTP_ORIGIN'], PHP_URL_HOST);
+  $requestHost = $_SERVER['HTTP_HOST'];
+  if(strpos($requestHost, ':') !== false) $requestHost = substr($requestHost, 0, strpos($requestHost, ':'));
+  return is_string($originHost) && hash_equals(strtolower($requestHost), strtolower($originHost));
+}
+
 if(!function_exists("imagecreate") || !file_exists('code.php'))$verifycode=0;
 include("../includes/common.php");
 
 if(isset($_GET['act']) && $_GET['act']=='login'){
-  if(!checkRefererHost())exit('{"code":403}');
+  if(!checkLoginRequestHost())exit('{"code":403}');
   $username = trim($_POST['username']);
   $password = trim($_POST['password']);
   $code = trim($_POST['code']);
