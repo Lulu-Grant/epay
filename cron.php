@@ -131,34 +131,36 @@ elseif($_GET['do']=='order'){
 	exit($day.'订单统计与清理任务执行成功');
 }
 elseif($_GET['do']=='notify'){
+	$lockname = 'epay_merchant_notify_retry';
+	$locked = $DB->getColumn("SELECT GET_LOCK(:lockname, 0)", [':lockname'=>$lockname]);
+	if(intval($locked) !== 1) exit('notify task locked');
+
 	$limit = 20; //每次重试的订单数量
-	for($i=0;$i<$limit;$i++){
-		$srow=$DB->getRow("SELECT * FROM pre_order WHERE (TO_DAYS(NOW()) - TO_DAYS(endtime) <= 1) AND notify>0 AND notifytime<NOW() LIMIT 1");
-		if(!$srow)break;
+	try{
+		for($i=0;$i<$limit;$i++){
+			$srow=$DB->getRow("SELECT * FROM pre_order WHERE endtime>=DATE_SUB(NOW(), INTERVAL 1 DAY) AND notify BETWEEN 1 AND 5 AND notifytime<=NOW() ORDER BY notifytime ASC, trade_no ASC LIMIT 1");
+			if(!$srow)break;
 
-		//通知时间：1分钟，3分钟，20分钟，1小时，2小时
-		$notify = $srow['notify'] + 1;
-		if($notify == 2){
-			$interval = '2 minute';
-		}elseif($notify == 3){
-			$interval = '16 minute';
-		}elseif($notify == 4){
-			$interval = '36 minute';
-		}elseif($notify == 5){
-			$interval = '1 hour';
-		}else{
-			$DB->exec("UPDATE pre_order SET notify=-1,notifytime=NULL WHERE trade_no='{$srow['trade_no']}'");
-			continue;
+			$attempt = intval($srow['notify']);
+			$url=creat_callback($srow);
+			if(do_notify($url['notify'])){
+				$DB->update('order', ['notify'=>0, 'notifytime'=>null], ['trade_no'=>$srow['trade_no']]);
+				echo $srow['trade_no'].' 重新通知成功（第'.$attempt.'次）<br/>';
+			}else{
+				if($attempt >= 5){
+					$DB->update('order', ['notify'=>-1, 'notifytime'=>null], ['trade_no'=>$srow['trade_no']]);
+					logPaymentCallbackEvent('merchant_notify_exhausted', $srow['trade_no'], $srow['channel'], 'retry attempt 5 failed');
+				}else{
+					if(!scheduleMerchantNotifyRetry($srow, $attempt + 1)){
+						logPaymentCallbackEvent('merchant_notify_schedule_failed', $srow['trade_no'], $srow['channel'], 'next retry could not be scheduled');
+						break;
+					}
+				}
+				echo $srow['trade_no'].' 重新通知失败（第'.$attempt.'次）<br/>';
+			}
 		}
-		$DB->exec("UPDATE pre_order SET notify={$notify},notifytime=date_add(now(), interval {$interval}) WHERE trade_no='{$srow['trade_no']}'");
-
-		$url=creat_callback($srow);
-		if(do_notify($url['notify'])){
-			$DB->exec("UPDATE pre_order SET notify=0,notifytime=NULL WHERE trade_no='{$srow['trade_no']}'");
-			echo $srow['trade_no'].' 重新通知成功<br/>';
-		}else{
-			echo $srow['trade_no'].' 重新通知失败（第'.$notify.'次）<br/>';
-		}
+	}finally{
+		$DB->getColumn("SELECT RELEASE_LOCK(:lockname)", [':lockname'=>$lockname]);
 	}
 	echo 'ok!';
 }

@@ -77,6 +77,12 @@ class alipay_plugin
 		return str_replace($script, $fallback.$script, $html);
 	}
 
+	private static function notifyFailure($reason){
+		global $channel;
+		logPaymentCallbackEvent('alipay_notify_rejected', defined('TRADE_NO') ? TRADE_NO : null, isset($channel['id']) ? $channel['id'] : null, $reason);
+		return ['type'=>'html','data'=>'fail'];
+	}
+
 	private static function createWapResult($alipay_config, $bizContent){
 		$redirect = self::isH5RedirectEnabled();
 		if($redirect){
@@ -593,38 +599,38 @@ class alipay_plugin
 	static public function notify(){
 		global $channel, $order;
 
-		$alipay_config = require(PAY_ROOT.'inc/config.php');
-		$aop = new \Alipay\AlipayTradeService($alipay_config);
-
-		$verify_result = $aop->check($_POST);
-
-		if($verify_result) {//验证成功
-			//商户订单号
-			$out_trade_no = $_POST['out_trade_no'];
-
-			//支付宝交易号
-			$trade_no = $_POST['trade_no'];
-
-			//买家支付宝
-			$buyer_id = $_POST['buyer_id'];
-			if(empty($buyer_id))$buyer_id = $_POST['buyer_open_id'];
-
-			//交易金额
-			$total_amount = $_POST['total_amount'];
-
-			if($_POST['trade_status'] == 'TRADE_FINISHED') {
-				//退款日期超过可退款期限后（如三个月可退款），支付宝系统发送该交易状态通知
+		foreach(['out_trade_no', 'trade_no', 'total_amount', 'trade_status', 'sign'] as $field){
+			if(!isset($_POST[$field]) || $_POST[$field] === ''){
+				return self::notifyFailure('missing field '.$field);
 			}
-			else if ($_POST['trade_status'] == 'TRADE_SUCCESS') {
-				if($out_trade_no == TRADE_NO && round($total_amount,2)==round($order['realmoney'],2)){
-					processNotify($order, $trade_no, $buyer_id);
-				}
-			}
-			return ['type'=>'html','data'=>'success'];
 		}
-		else {
-			//验证失败
-			return ['type'=>'html','data'=>'fail'];
+
+		try{
+			$alipay_config = require(PAY_ROOT.'inc/config.php');
+			$aop = new \Alipay\AlipayTradeService($alipay_config);
+			if(!$aop->check($_POST)){
+				return self::notifyFailure('signature verification failed');
+			}
+
+			if($_POST['trade_status'] !== 'TRADE_SUCCESS'){
+				return ['type'=>'html','data'=>'success'];
+			}
+
+			if((string)$_POST['out_trade_no'] !== (string)TRADE_NO){
+				return self::notifyFailure('out_trade_no mismatch');
+			}
+			$paid_cents = paymentAmountToCents($_POST['total_amount']);
+			$order_cents = paymentAmountToCents($order['realmoney']);
+			if($paid_cents === false || $order_cents === false || $paid_cents !== $order_cents){
+				return self::notifyFailure('total_amount mismatch');
+			}
+
+			$buyer_id = isset($_POST['buyer_id']) ? $_POST['buyer_id'] : null;
+			if(empty($buyer_id) && isset($_POST['buyer_open_id'])) $buyer_id = $_POST['buyer_open_id'];
+			processNotify($order, $_POST['trade_no'], $buyer_id);
+			return ['type'=>'html','data'=>'success'];
+		}catch(\Throwable $e){
+			return self::notifyFailure('processing exception: '.$e->getMessage());
 		}
 	}
 
@@ -646,8 +652,10 @@ class alipay_plugin
 
 			//交易金额
 			$total_amount = $_GET['total_amount'];
+			$total_cents = paymentAmountToCents($total_amount);
+			$order_cents = paymentAmountToCents($order['realmoney']);
 
-			if($out_trade_no == TRADE_NO && round($total_amount,2)==round($order['realmoney'],2)){
+			if($out_trade_no == TRADE_NO && $total_cents !== false && $order_cents !== false && $total_cents === $order_cents){
 				processReturn($order, $trade_no);
 			}else{
 				return ['type'=>'error','msg'=>'订单信息校验失败'];

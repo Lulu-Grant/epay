@@ -549,11 +549,68 @@ function get_main_host($url){
 
 function do_notify($url){
 	$return = curl_get($url, true);
-	if(strpos($return,'success')!==false || strpos($return,'SUCCESS')!==false || strpos($return,'Success')!==false){
+	if(merchantNotifyResponseSucceeded($return)){
 		return true;
 	}else{
 		return false;
 	}
+}
+
+function merchantNotifyResponseSucceeded($response){
+	return is_string($response) && (strpos($response,'success')!==false || strpos($response,'SUCCESS')!==false || strpos($response,'Success')!==false);
+}
+
+function paymentAmountToCents($value){
+	$value = trim((string)$value);
+	if(!preg_match('/^\d+(?:\.(\d{1,2}))?$/D', $value, $matches)){
+		return false;
+	}
+	$parts = explode('.', $value, 2);
+	if(strlen($parts[0]) > 12){
+		return false;
+	}
+	$fraction = isset($parts[1]) ? str_pad($parts[1], 2, '0') : '00';
+	return (int)$parts[0] * 100 + (int)$fraction;
+}
+
+function getMerchantNotifyRetryTime($endtime, $attempt, $now = null){
+	$delays = [1=>1, 2=>3, 3=>20, 4=>60, 5=>120];
+	$attempt = intval($attempt);
+	if(!isset($delays[$attempt])){
+		return false;
+	}
+	$now = $now === null ? time() : intval($now);
+	$base = !empty($endtime) ? strtotime($endtime) : false;
+	if($base === false){
+		$base = $now;
+	}
+	$target = $base + $delays[$attempt] * 60;
+	if($target < $now + 60){
+		$target = $now + 60;
+	}
+	return date('Y-m-d H:i:s', $target);
+}
+
+function scheduleMerchantNotifyRetry($order, $attempt){
+	global $DB;
+	if(!is_array($order) || empty($order['trade_no'])){
+		return false;
+	}
+	$notifytime = getMerchantNotifyRetryTime(isset($order['endtime']) ? $order['endtime'] : null, $attempt);
+	if($notifytime === false){
+		return false;
+	}
+	return $DB->update('order', ['notify'=>intval($attempt), 'notifytime'=>$notifytime], ['trade_no'=>$order['trade_no']]);
+}
+
+function logPaymentCallbackEvent($event, $trade_no = null, $channel_id = null, $reason = null){
+	$data = [
+		'event' => preg_replace('/[^a-z0-9_.-]/i', '', (string)$event),
+		'trade_no' => preg_replace('/[^0-9]/', '', (string)$trade_no),
+		'channel' => intval($channel_id),
+		'reason' => str_replace(["\r", "\n"], ' ', (string)$reason),
+	];
+	error_log('[payment-callback] '.json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
 }
 
 function checkBlockUser($openid, $trade_no){
@@ -642,13 +699,13 @@ function processOrder($srow,$notify=true){
 					error_log('商城订单状态同步失败 trade_no='.$srow['trade_no'].' '.$e->getMessage());
 				}
 			}
-			$url=creat_callback($srow);
-			if(do_notify($url['notify'])){
-				$DB->exec("UPDATE pre_order SET notify=0 WHERE trade_no='{$srow['trade_no']}'");
-			}elseif($notify==true){
-				//通知时间：1分钟，3分钟，20分钟，1小时，2小时
-				$DB->exec("UPDATE pre_order SET notify=1,notifytime=date_add(now(), interval 1 minute) WHERE trade_no='{$srow['trade_no']}'");
-			}
+				$url=creat_callback($srow);
+				if($notify==true && !scheduleMerchantNotifyRetry($srow, 1)){
+					logPaymentCallbackEvent('merchant_notify_schedule_failed', $srow['trade_no'], $srow['channel'], 'initial retry could not be scheduled');
+				}
+				if(do_notify($url['notify'])){
+					$DB->update('order', ['notify'=>0, 'notifytime'=>null], ['trade_no'=>$srow['trade_no']]);
+				}
 	}
 	if($srow['tid']==0 || $srow['tid']==3){
 		//发送订单通知

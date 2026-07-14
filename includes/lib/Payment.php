@@ -247,7 +247,8 @@ class Payment {
                 $DB->update('order', $data, ['trade_no'=>$order['trade_no']]);
                 $order['api_trade_no'] = $api_trade_no;
 
-                processOrder($order, $isnotify);
+                // 同步返回先到达时，商户通知失败也必须进入重试队列。
+                processOrder($order, true);
             }
         }elseif(empty($order['api_trade_no']) && !empty($api_trade_no)){
             $data = ['api_trade_no'=>$api_trade_no];
