@@ -2,7 +2,7 @@
 /**
  * 登录
 **/
-$verifycode = 1;//验证码开关
+$verifycode = 0;//管理域已有 HTTP 基础认证，关闭容易产生会话问题的图片验证码
 $login_limit_count = 5;//登录失败次数
 $login_limit_file = '@login.lock';
 
