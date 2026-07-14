@@ -5,6 +5,19 @@ use Exception;
 
 class Payment {
 
+    static private function normalizePayJumpUrl($url){
+        global $conf;
+        if(!is_string($url) || strpos($url, '/pay/') !== 0 || empty($conf['payurl'])){
+            return $url;
+        }
+        $payurl = rtrim($conf['payurl'], '/');
+        $parts = parse_url($payurl);
+        if($parts === false || empty($parts['scheme']) || empty($parts['host']) || !in_array(strtolower($parts['scheme']), ['http', 'https'], true)){
+            return $url;
+        }
+        return $payurl.$url;
+    }
+
     static private function isSafeRedirectUrl($url){
         if(!is_string($url) || $url === '' || strlen($url) > 7000 || preg_match('/[\r\n]/', $url)){
             return false;
@@ -88,7 +101,8 @@ class Payment {
                 header('Location: '.$url, true, 303);
                 exit;
             case 'jump': //跳转
-                $html_text = '<script>window.location.replace(\''.$result['url'].'\');</script>';
+                $jumpUrl = self::normalizePayJumpUrl($result['url']);
+                $html_text = '<script>window.location.replace('.json_encode($jumpUrl, JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE).');</script>';
                 if(isset($result['submit']) && $result['submit']){
                     submitTemplate($html_text);
                 }else{
