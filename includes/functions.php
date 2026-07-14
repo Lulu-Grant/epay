@@ -635,13 +635,20 @@ function processOrder($srow,$notify=true){
 		}else{
 			changeUserMoney($srow['uid'], $addmoney, true, '订单收入', $srow['trade_no']);
 		}
-		$url=creat_callback($srow);
-		if(do_notify($url['notify'])){
-			$DB->exec("UPDATE pre_order SET notify=0 WHERE trade_no='{$srow['trade_no']}'");
-		}elseif($notify==true){
-			//通知时间：1分钟，3分钟，20分钟，1小时，2小时
-			$DB->exec("UPDATE pre_order SET notify=1,notifytime=date_add(now(), interval 1 minute) WHERE trade_no='{$srow['trade_no']}'");
-		}
+			if(\lib\Shop\OrderService::isShopPaymentOrder($srow) || \lib\Shop\ConfigService::shouldRecordMerchant($srow['uid'])){
+				try{
+					\lib\Shop\OrderService::reconcilePaymentOrder($srow['trade_no']);
+				}catch(Exception $e){
+					error_log('商城订单状态同步失败 trade_no='.$srow['trade_no'].' '.$e->getMessage());
+				}
+			}
+			$url=creat_callback($srow);
+			if(do_notify($url['notify'])){
+				$DB->exec("UPDATE pre_order SET notify=0 WHERE trade_no='{$srow['trade_no']}'");
+			}elseif($notify==true){
+				//通知时间：1分钟，3分钟，20分钟，1小时，2小时
+				$DB->exec("UPDATE pre_order SET notify=1,notifytime=date_add(now(), interval 1 minute) WHERE trade_no='{$srow['trade_no']}'");
+			}
 	}
 	if($srow['tid']==0 || $srow['tid']==3){
 		//发送订单通知

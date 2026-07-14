@@ -119,6 +119,21 @@ class Pay
             if(!$DB->exec("INSERT INTO `pre_order` (`trade_no`,`out_trade_no`,`uid`,`addtime`,`name`,`money`,`notify_url`,`return_url`,`param`,`domain`,`ip`,`status`,`version`) VALUES (:trade_no, :out_trade_no, :uid, NOW(), :name, :money, :notify_url, :return_url, :param, :domain, :clientip, 0, :version)", [':trade_no'=>$trade_no, ':out_trade_no'=>$out_trade_no, ':uid'=>$pid, ':name'=>$name, ':money'=>$money, ':notify_url'=>$notify_url, ':return_url'=>$return_url, ':domain'=>$domain, ':clientip'=>$clientip, ':param'=>$param, ':version'=>$version]))sysmsg('创建订单失败，请返回重试！');
         }
 
+        if(\lib\Shop\ConfigService::shouldRecordMerchant($pid)){
+            try{
+                $shopOrder = \lib\Shop\OrderService::recordPaymentOrder($trade_no, $type);
+                if($shopOrder && \lib\Shop\ConfigService::shouldUseCheckout($pid)){
+                    echo '<script>window.location.replace('.json_encode($shopOrder['checkout_url'], JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE).');</script>';
+                    exit;
+                }
+            }catch(Exception $e){
+                if(\lib\Shop\ConfigService::shouldUseCheckout($pid)){
+                    sysmsg($e->getMessage());
+                }
+                error_log('shop_shadow_create_failed trade_no='.$trade_no.' uid='.$pid.' '.$e->getMessage());
+            }
+        }
+
 
         if(empty($type)){
             echo "<script>window.location.replace('./cashier.php?trade_no={$trade_no}&sitename={$sitename}');</script>";
@@ -177,6 +192,11 @@ class Pay
             if(!empty($conf['pay_payaddstart'])&&$conf['pay_payaddstart']!=0&&!empty($conf['pay_payaddmin'])&&$conf['pay_payaddmin']!=0&&!empty($conf['pay_payaddmax'])&&$conf['pay_payaddmax']!=0&&$realmoney>=$conf['pay_payaddstart'])$realmoney = round($realmoney + randomFloat(round($conf['pay_payaddmin'],2),round($conf['pay_payaddmax'],2)), 2);
 
             $DB->update('order', ['type'=>$submitData['typeid'], 'channel'=>$submitData['channel'], 'subchannel'=>$submitData['subchannel'], 'realmoney'=>$realmoney, 'getmoney'=>$getmoney], ['trade_no'=>$trade_no]);
+            try{
+                \lib\Shop\OrderService::syncPaymentRoute($trade_no);
+            }catch(Exception $e){
+                error_log('shop_shadow_route_sync_failed trade_no='.$trade_no.' '.$e->getMessage());
+            }
         }
 
 
@@ -326,9 +346,24 @@ class Pay
             if(!$DB->exec("INSERT INTO `pre_order` (`trade_no`,`out_trade_no`,`uid`,`addtime`,`name`,`money`,`notify_url`,`return_url`,`param`,`domain`,`ip`,`status`,`version`) VALUES (:trade_no, :out_trade_no, :uid, NOW(), :name, :money, :notify_url, :return_url, :param, :domain, :clientip, 0, :version)", [':trade_no'=>$trade_no, ':out_trade_no'=>$out_trade_no, ':uid'=>$pid, ':name'=>$name, ':money'=>$money, ':notify_url'=>$notify_url, ':return_url'=>$return_url, ':domain'=>$domain, ':clientip'=>$clientip, ':param'=>$param, ':version'=>$version]))echojsonmsg('创建订单失败，请返回重试！');
         }
 
+        if(\lib\Shop\ConfigService::shouldRecordMerchant($pid)){
+            try{
+                $shopOrder = \lib\Shop\OrderService::recordPaymentOrder($trade_no, $type);
+                if($shopOrder && \lib\Shop\ConfigService::shouldUseCheckout($pid)){
+                    define("TRADE_NO", $trade_no);
+                    \lib\Payment::echoJson(['type'=>'jump','url'=>$shopOrder['checkout_url']]);
+                }
+            }catch(Exception $e){
+                if(\lib\Shop\ConfigService::shouldUseCheckout($pid)){
+                    echojsonmsg($e->getMessage());
+                }
+                error_log('shop_shadow_create_failed trade_no='.$trade_no.' uid='.$pid.' '.$e->getMessage());
+            }
+        }
+
         if(empty($type)){
             define("TRADE_NO", $trade_no);
-            \lib\Payment::echoJson(['type'=>'jump','url'=>$siteurl.'cashier.php?trade_no='.$trade_no.'&sitename='.$sitename]);
+            \lib\Payment::echoJson(['type'=>'jump','url'=>$conf['payurl'].'cashier.php?trade_no='.$trade_no.'&sitename='.$sitename]);
         }
 
         // 获取订单支付方式ID、支付插件、支付通道、支付费率
@@ -336,7 +371,7 @@ class Pay
             $submitData = \lib\Channel::submit($type, $userrow['uid'], $userrow['gid'], $money);
             if(!$submitData){
                 define("TRADE_NO", $trade_no);
-                \lib\Payment::echoJson(['type'=>'jump','url'=>$siteurl.'cashier.php?trade_no='.$trade_no.'&sitename='.$sitename.'&other=1']);
+                \lib\Payment::echoJson(['type'=>'jump','url'=>$conf['payurl'].'cashier.php?trade_no='.$trade_no.'&sitename='.$sitename.'&other=1']);
             }
             if($userrow['mode']==1){ //订单加费模式
                 $realmoney = round($money*(100+100-$submitData['rate'])/100,2);
@@ -383,6 +418,11 @@ class Pay
             if(!empty($conf['pay_payaddstart'])&&$conf['pay_payaddstart']!=0&&!empty($conf['pay_payaddmin'])&&$conf['pay_payaddmin']!=0&&!empty($conf['pay_payaddmax'])&&$conf['pay_payaddmax']!=0&&$realmoney>=$conf['pay_payaddstart'])$realmoney = $realmoney + randomFloat(round($conf['pay_payaddmin'],2),round($conf['pay_payaddmax'],2));
 
             $DB->update('order', ['type'=>$submitData['typeid'], 'channel'=>$submitData['channel'], 'subchannel'=>$submitData['subchannel'], 'realmoney'=>$realmoney, 'getmoney'=>$getmoney], ['trade_no'=>$trade_no]);
+            try{
+                \lib\Shop\OrderService::syncPaymentRoute($trade_no);
+            }catch(Exception $e){
+                error_log('shop_shadow_route_sync_failed trade_no='.$trade_no.' '.$e->getMessage());
+            }
         }
 
         $order['trade_no'] = $trade_no;
@@ -403,7 +443,7 @@ class Pay
 
         if($method == 'jump'){
             define("TRADE_NO", $trade_no);
-            \lib\Payment::echoJson(['type'=>'jump','url'=>$siteurl.'pay/submit/'.$trade_no.'/']);
+            \lib\Payment::echoJson(['type'=>'jump','url'=>$conf['payurl'].'pay/submit/'.$trade_no.'/']);
         }
 
         try{

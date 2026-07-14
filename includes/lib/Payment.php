@@ -5,6 +5,23 @@ use Exception;
 
 class Payment {
 
+    static private function isSafeRedirectUrl($url){
+        if(!is_string($url) || $url === '' || strlen($url) > 7000 || preg_match('/[\r\n]/', $url)){
+            return false;
+        }
+        $parts = parse_url($url);
+        if($parts === false || !isset($parts['scheme']) || strtolower($parts['scheme']) !== 'https' || empty($parts['host'])){
+            return false;
+        }
+        if(isset($parts['user']) || isset($parts['pass']) || isset($parts['fragment'])){
+            return false;
+        }
+        if(isset($parts['port']) && intval($parts['port']) !== 443){
+            return false;
+        }
+        return filter_var($url, FILTER_VALIDATE_URL) !== false;
+    }
+
     //生成待签名字符串
     static private function getSignContent($data){
         ksort($data);
@@ -57,6 +74,19 @@ class Payment {
         $type = $result['type'];
         if(!$type) return false;
         switch($type){
+            case 'redirect': //HTTP顶层跳转
+                $url = isset($result['url']) ? trim($result['url']) : '';
+                if(!self::isSafeRedirectUrl($url)){
+                    sysmsg('支付跳转地址异常，请返回重试');
+                }
+                if(headers_sent()){
+                    sysmsg('支付页面已输出，无法完成安全跳转，请返回重试');
+                }
+                header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+                header('Pragma: no-cache');
+                header('Referrer-Policy: no-referrer');
+                header('Location: '.$url, true, 303);
+                exit;
             case 'jump': //跳转
                 $html_text = '<script>window.location.replace(\''.$result['url'].'\');</script>';
                 if(isset($result['submit']) && $result['submit']){
@@ -117,6 +147,7 @@ class Payment {
         if(defined('API_INIT')){
             $json = ['code'=>0, 'trade_no'=>TRADE_NO];
             switch($type){
+                case 'redirect': //HTTP跳转在API中按跳转URL返回
                 case 'jump': //跳转URL
                     $json['pay_type'] = 'jump';
                     $json['pay_info'] = $result['url'];
@@ -164,6 +195,7 @@ class Payment {
         }else{
             $json = ['code'=>1, 'trade_no'=>TRADE_NO];
             switch($type){
+                case 'redirect': //HTTP跳转在API中按跳转URL返回
                 case 'jump': //跳转URL
                     $json['payurl'] = $result['url'];
                     break;

@@ -71,6 +71,7 @@ $CACHE=new \lib\Cache();
 $conf=$CACHE->pre_fetch();
 define('SYS_KEY', $conf['syskey']);
 if(!$conf['localurl'])$conf['localurl'] = $siteurl;
+if(empty($conf['payurl']))$conf['payurl'] = $siteurl;
 $password_hash='!@#%!s!0';
 
 if ($conf['version'] < DB_VERSION) {

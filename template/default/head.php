@@ -53,6 +53,9 @@ if(!defined('IN_CRONLITE'))exit();
 <?php if($conf['test_open']){?>
 <li><a href="/user/test.php">支付测试</a></li>
 <?php }?>
+<?php if(class_exists('\\lib\\Shop\\ConfigService') && \lib\Shop\ConfigService::isEnabled()){?>
+<li><a href="/shopping.php">商城</a></li>
+<?php }?>
 <li><a href="/user/">用户中心</a></li>
                     
                 </ul>

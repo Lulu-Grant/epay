@@ -53,3 +53,18 @@ CREATE TABLE IF NOT EXISTS `pre_telegram_admin_settings` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `chat_id` (`chat_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+CREATE TABLE IF NOT EXISTS `pre_telegram_bind_code` (
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
+  `uid` int(11) unsigned NOT NULL,
+  `code` varchar(32) NOT NULL,
+  `chat_id` varchar(64) DEFAULT NULL,
+  `status` tinyint(1) NOT NULL DEFAULT '0',
+  `addtime` datetime DEFAULT NULL,
+  `expiretime` datetime DEFAULT NULL,
+  `usetime` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `code` (`code`),
+  KEY `uid` (`uid`),
+  KEY `status_expiretime` (`status`,`expiretime`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;

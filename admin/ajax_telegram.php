@@ -7,7 +7,7 @@ if(!checkRefererHost())exit('{"code":403}');
 
 @header('Content-Type: application/json; charset=UTF-8');
 
-if(empty($conf['addon_telegram']) || intval($conf['addon_telegram']) < 1000){
+if(empty($conf['addon_telegram']) || intval($conf['addon_telegram']) < 1100){
 	\lib\Telegram\Installer::install();
 	$conf=$CACHE->pre_fetch();
 }
@@ -78,6 +78,29 @@ case 'processQueue':
 	$result = \lib\Telegram\QueueHelper::processQueue(50);
 	\lib\Telegram\QueueHelper::cleanOldNotifications(7);
 	exit(json_encode(['code'=>0, 'msg'=>$result['message'], 'data'=>$result], JSON_UNESCAPED_UNICODE));
+break;
+
+case 'setCommands':
+	if(empty($conf['telegram_bot_token']))exit('{"code":-1,"msg":"请先填写 Bot Token"}');
+	$service = new \lib\Telegram\BotService($DB, $conf);
+	$result = $service->setDefaultCommands();
+	if($result !== false)exit('{"code":0,"msg":"Bot 命令列表已设置"}');
+	$errmsg = $service->getBotAPI()->getLastError();
+	$CACHE->save('telegramerrmsg', ['errmsg'=>$errmsg, 'time'=>date('Y-m-d H:i:s')], 86400);
+	exit(json_encode(['code'=>-1, 'msg'=>'设置失败：'.$errmsg], JSON_UNESCAPED_UNICODE));
+break;
+
+case 'workerStatus':
+	$status = $CACHE->read('telegram_worker_status');
+	$status = $status ? @unserialize($status) : [];
+	if(!is_array($status))$status = [];
+	$status['last_update_id'] = (new \lib\Telegram\BotService($DB, $conf))->getLastUpdateId();
+	exit(json_encode(['code'=>0, 'msg'=>'succ', 'data'=>$status], JSON_UNESCAPED_UNICODE));
+break;
+
+case 'clearError':
+	$CACHE->delete('telegramerrmsg');
+	exit('{"code":0,"msg":"已清理 Telegram 错误缓存"}');
 break;
 
 default:

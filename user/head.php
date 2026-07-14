@@ -121,7 +121,7 @@ $conf = array_merge($conf, $groupconfig);
                   <span class="font-bold">用户中心</span>
                 </a>
               </li>
-              <li class="<?php echo checkIfActive('userinfo,editinfo,certificate')?>">
+              <li class="<?php echo checkIfActive('userinfo,editinfo,certificate,telegram')?>">
                 <a href class="auto">      
                   <span class="pull-right text-muted">
                     <i class="fa fa-fw fa-angle-right text"></i>
@@ -144,6 +144,11 @@ $conf = array_merge($conf, $groupconfig);
 				  <li>
                     <a href="userinfo.php?mod=account">
                       <span>修改密码</span>
+                    </a>
+                  </li>
+				  <li>
+                    <a href="telegram.php">
+                      <span>Telegram通知</span>
                     </a>
                   </li>
 				  <?php if($conf['cert_open']>0){?>

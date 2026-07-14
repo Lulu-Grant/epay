@@ -68,6 +68,11 @@ if(!empty($paytype) && isset($_SESSION['paypage_typeid']) && isset($_SESSION['pa
 		if(!empty($conf['pay_payaddstart'])&&$conf['pay_payaddstart']!=0&&!empty($conf['pay_payaddmin'])&&$conf['pay_payaddmin']!=0&&!empty($conf['pay_payaddmax'])&&$conf['pay_payaddmax']!=0&&$realmoney>=$conf['pay_payaddstart'])$realmoney = round($realmoney + randomFloat(round($conf['pay_payaddmin'],2),round($conf['pay_payaddmax'],2)), 2);
 
 		$DB->update('order', ['type'=>$typeid, 'channel'=>$channelid, 'subchannel'=>$subchannelid, 'realmoney'=>$realmoney, 'getmoney'=>$getmoney], ['trade_no'=>$trade_no]);
+		try{
+			\lib\Shop\OrderService::syncPaymentRoute($trade_no);
+		}catch(Exception $e){
+			error_log('shop_shadow_route_sync_failed trade_no='.$trade_no.' '.$e->getMessage());
+		}
 
 		$ordername = 'onlinepay'.time();
 		if(!empty($userrow['ordername']))$conf['ordername']=$userrow['ordername'];

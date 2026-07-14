@@ -55,6 +55,12 @@
   - `telegram_admin_chat_id`
   - `telegram_bot_name`
   - `telegram_notice`
+  - `telegram_proxy`
+  - `telegram_proxy_server`
+  - `telegram_proxy_port`
+  - `telegram_proxy_user`
+  - `telegram_proxy_pwd`
+  - `telegram_proxy_type`
 - 在 `MsgNotice::send()` 中最小化加入 Telegram 入队逻辑，不覆盖原有微信/邮件逻辑。
 - 新增 Bootstrap 3 风格的后台配置页。
 - 商户绑定先用后台手工绑定 Chat ID，或用户中心生成一次性绑定码。
@@ -78,15 +84,21 @@
 
 1. 进入后台 `Telegram通知设置` 页面，页面会自动初始化所需数据表。
 2. 填写 `Bot Token`、`管理员 Chat ID`、机器人用户名，并开启 Telegram 通知。
-3. 点击“发送测试消息”，确认服务器可访问 Telegram API。
-4. 在绑定区域填写商户号和 Telegram Chat ID。
-5. 增加计划任务：
+3. 服务器无法直连 Telegram 时，开启“Telegram专用代理”，填写代理地址、端口和认证信息，并优先选择 `SOCKS5H` 让代理端解析域名。该配置只作用于 Telegram Bot API，不影响支付通道和商户回调。
+4. 点击“发送测试消息”，确认服务器可访问 Telegram API。
+5. 在绑定区域填写商户号和 Telegram Chat ID。
+6. 增加计划任务：
 
 ```bash
 * * * * * cd /www/wwwroot/epay.tianlupay.com && php telegram_notify_cron.php >/dev/null 2>&1
 ```
 
 第二阶段再接入完整机器人交互。
+
+第二阶段开发与验收文档：
+
+- [Telegram 长驻交互机器人开发文档](telegram-long-running-bot-development-plan.md)
+- [Telegram 长驻交互机器人验收标准](telegram-long-running-bot-acceptance-criteria.md)
 
 - 修复 `user/telegram.php` 的 403 判断。
 - 适配 `user/ajax2.php?act=saveTelegramNotify`。
@@ -102,5 +114,7 @@
 - 队列脚本能成功发送消息，并记录失败次数与错误信息。
 - 管理员后台可以保存 Bot Token、管理员 Chat ID，并能发送测试消息。
 - 商户绑定后可以按通知类型开关 Telegram 通知。
+- Telegram 专用代理启用后，Bot API 请求使用专用代理，支付通道与商户异步通知保持原网络路径。
+- `SOCKS5H` 模式由代理服务器解析 `api.telegram.org`，避免本机 DNS 或网络策略导致连接超时。
 - 原有微信模板消息和邮件通知行为不变。
-- PHP 7.4 与 PHP 8.4 下 `php -l` 全部通过。
+- PHP 8.4 下 `php -l` 全部通过。

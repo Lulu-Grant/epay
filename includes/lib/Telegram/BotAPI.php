@@ -48,7 +48,11 @@ class BotAPI
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
         curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+        $requestTimeout = 30;
+        if ($method === 'getUpdates' && !empty($params['timeout'])) {
+            $requestTimeout = max(30, intval($params['timeout']) + 10);
+        }
+        curl_setopt($ch, CURLOPT_TIMEOUT, $requestTimeout);
         
         curl_setopt($ch, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
         
@@ -56,32 +60,24 @@ class BotAPI
         curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
         
         global $conf;
-        $proxyUsed = false;
-        if (isset($conf['proxy']) && $conf['proxy'] == 1) {
-            $proxy_server = $conf['proxy_server'];
-            $proxy_port = intval($conf['proxy_port']);
-            if (!empty($proxy_server) && $proxy_port > 0) {
-                if ($conf['proxy_type'] == 'https') {
-                    $proxy_type = CURLPROXY_HTTPS;
-                } elseif ($conf['proxy_type'] == 'sock4') {
-                    $proxy_type = CURLPROXY_SOCKS4;
-                } elseif ($conf['proxy_type'] == 'sock5') {
-                    $proxy_type = CURLPROXY_SOCKS5;
-                } elseif ($conf['proxy_type'] == 'sock5h') {
-                    $proxy_type = CURLPROXY_SOCKS5_HOSTNAME;
-                } else {
-                    $proxy_type = CURLPROXY_HTTP;
-                }
-                curl_setopt($ch, CURLOPT_PROXYAUTH, CURLAUTH_BASIC);
-                curl_setopt($ch, CURLOPT_PROXY, $proxy_server);
-                curl_setopt($ch, CURLOPT_PROXYPORT, $proxy_port);
-                if (!empty($conf['proxy_user']) && !empty($conf['proxy_pwd'])) {
-                    $proxy_userpwd = $conf['proxy_user'] . ':' . $conf['proxy_pwd'];
-                    curl_setopt($ch, CURLOPT_PROXYUSERPWD, $proxy_userpwd);
-                }
-                curl_setopt($ch, CURLOPT_PROXYTYPE, $proxy_type);
-                $proxyUsed = true;
+        $proxyLabel = '';
+        $proxyConfig = $this->getProxyConfig(is_array($conf) ? $conf : []);
+        if (isset($proxyConfig['error'])) {
+            if (PHP_VERSION_ID < 80500) {
+                curl_close($ch);
             }
+            $this->lastError = $proxyConfig['error'];
+            return false;
+        }
+        if (!empty($proxyConfig)) {
+            curl_setopt($ch, CURLOPT_PROXY, $proxyConfig['server']);
+            curl_setopt($ch, CURLOPT_PROXYPORT, $proxyConfig['port']);
+            curl_setopt($ch, CURLOPT_PROXYTYPE, $proxyConfig['type']);
+            if ($proxyConfig['user'] !== '' && $proxyConfig['password'] !== '') {
+                curl_setopt($ch, CURLOPT_PROXYAUTH, CURLAUTH_BASIC);
+                curl_setopt($ch, CURLOPT_PROXYUSERPWD, $proxyConfig['user'] . ':' . $proxyConfig['password']);
+            }
+            $proxyLabel = $proxyConfig['label'];
         }
         
         $response = curl_exec($ch);
@@ -93,7 +89,7 @@ class BotAPI
         }
 
         if ($error !== '') {
-            $this->lastError = 'CURL Error: ' . $error . ($proxyUsed ? ' (使用代理)' : ' (直连)');
+            $this->lastError = 'CURL Error: ' . $error . ($proxyLabel !== '' ? ' (' . $proxyLabel . ')' : ' (直连)');
             return false;
         }
 
@@ -115,6 +111,47 @@ class BotAPI
         }
 
         return $result['result'];
+    }
+
+    private function getProxyConfig($config)
+    {
+        if (!empty($config['telegram_proxy'])) {
+            return $this->buildProxyConfig($config, 'telegram_proxy_', 'Telegram专用代理', true);
+        }
+        if (!empty($config['proxy'])) {
+            return $this->buildProxyConfig($config, 'proxy_', '全局代理', false);
+        }
+        return [];
+    }
+
+    private function buildProxyConfig($config, $prefix, $label, $strict)
+    {
+        $server = isset($config[$prefix . 'server']) ? trim((string)$config[$prefix . 'server']) : '';
+        $port = isset($config[$prefix . 'port']) ? intval($config[$prefix . 'port']) : 0;
+        $typeName = isset($config[$prefix . 'type']) ? strtolower(trim((string)$config[$prefix . 'type'])) : 'http';
+        if ($server === '' || $port < 1 || $port > 65535) {
+            return $strict ? ['error' => 'Telegram专用代理配置不完整'] : [];
+        }
+
+        $types = [
+            'http' => CURLPROXY_HTTP,
+            'https' => defined('CURLPROXY_HTTPS') ? constant('CURLPROXY_HTTPS') : CURLPROXY_HTTP,
+            'sock4' => CURLPROXY_SOCKS4,
+            'sock5' => CURLPROXY_SOCKS5,
+            'sock5h' => defined('CURLPROXY_SOCKS5_HOSTNAME') ? constant('CURLPROXY_SOCKS5_HOSTNAME') : 7,
+        ];
+        if (!isset($types[$typeName])) {
+            return $strict ? ['error' => 'Telegram专用代理协议不受支持'] : [];
+        }
+
+        return [
+            'server' => $server,
+            'port' => $port,
+            'type' => $types[$typeName],
+            'user' => isset($config[$prefix . 'user']) ? (string)$config[$prefix . 'user'] : '',
+            'password' => isset($config[$prefix . 'pwd']) ? (string)$config[$prefix . 'pwd'] : '',
+            'label' => $label,
+        ];
     }
 
     public function getMe()

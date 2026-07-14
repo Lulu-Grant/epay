@@ -41,6 +41,58 @@ class alipay_plugin
 		'bindwxa' => false, //是否支持绑定微信小程序
 	];
 
+	private static function isH5RedirectEnabled(){
+		global $conf;
+		return isset($conf['alipay_h5_redirect_mode']) && intval($conf['alipay_h5_redirect_mode']) === 1;
+	}
+
+	private static function isValidH5GatewayUrl($url){
+		if(!is_string($url) || $url === '' || strlen($url) > 7000 || preg_match('/[\r\n]/', $url)){
+			return false;
+		}
+		$parts = parse_url($url);
+		if($parts === false || !isset($parts['scheme'], $parts['host'], $parts['path'], $parts['query'])){
+			return false;
+		}
+		if(strtolower($parts['scheme']) !== 'https' || strtolower($parts['host']) !== 'openapi.alipay.com' || $parts['path'] !== '/gateway.do'){
+			return false;
+		}
+		if(isset($parts['user']) || isset($parts['pass']) || isset($parts['fragment']) || (isset($parts['port']) && intval($parts['port']) !== 443)){
+			return false;
+		}
+		parse_str($parts['query'], $query);
+		return isset($query['method'], $query['sign_type'], $query['sign'], $query['biz_content'])
+			&& $query['method'] === 'alipay.trade.wap.pay'
+			&& $query['sign_type'] === 'RSA2'
+			&& $query['sign'] !== ''
+			&& $query['biz_content'] !== '';
+	}
+
+	private static function addManualSubmitFallback($html){
+		$script = "<script>document.forms['alipaysubmit'].submit();</script>";
+		if(!is_string($html) || strpos($html, $script) === false){
+			return $html;
+		}
+		$fallback = '<style>#alipay-manual-submit{position:fixed;z-index:10;left:50%;top:calc(50% + 58px);transform:translateX(-50%);min-width:160px;height:42px;padding:0 18px;border:0;border-radius:4px;background:#1677ff;color:#fff;font:16px/42px "Helvetica Neue",Helvetica,Arial,sans-serif;cursor:pointer}</style><button id="alipay-manual-submit" type="submit" form="alipaysubmit">继续支付</button>';
+		return str_replace($script, $fallback.$script, $html);
+	}
+
+	private static function createWapResult($alipay_config, $bizContent){
+		$redirect = self::isH5RedirectEnabled();
+		if($redirect){
+			$alipay_config['pageMethod'] = '1';
+		}
+		$aop = new \Alipay\AlipayTradeService($alipay_config);
+		$result = $aop->wapPay($bizContent);
+		if($redirect){
+			if(!self::isValidH5GatewayUrl($result)){
+				throw new Exception('支付宝网关跳转地址校验失败');
+			}
+			return ['type'=>'redirect', 'url'=>$result];
+		}
+		return ['type'=>'html', 'data'=>self::addManualSubmitFallback($result)];
+	}
+
 	static public function submit(){
 		global $siteurl, $channel, $order, $ordername, $sitename, $submit2, $conf, $clientip;
 
@@ -90,13 +142,10 @@ class alipay_plugin
 			];
 			$bizContent['business_params'] = ['mc_create_trade_ip' => $clientip];
 			try{
-				$aop = new \Alipay\AlipayTradeService($alipay_config);
-				$html = $aop->wapPay($bizContent);
+				return self::createWapResult($alipay_config, $bizContent);
 			}catch(Exception $e){
 				return ['type'=>'error','msg'=>'支付宝下单失败！'.$e->getMessage()];
 			}
-			
-			return ['type'=>'html','data'=>$html];
 		}elseif(in_array('1',$channel['apptype'])){
 			if($conf['alipay_paymode'] == 1 || $isMobile){
 				return ['type'=>'jump','url'=>'/pay/qrcodepc/'.TRADE_NO.'/'];
@@ -252,13 +301,10 @@ class alipay_plugin
 		];
 		$bizContent['business_params'] = ['mc_create_trade_ip' => $clientip];
 		try{
-			$aop = new \Alipay\AlipayTradeService($alipay_config);
-			$html = $aop->wapPay($bizContent);
+			return self::createWapResult($alipay_config, $bizContent);
 		}catch(Exception $e){
 			return ['type'=>'error','msg'=>'支付宝下单失败！'.$e->getMessage()];
 		}
-
-		return ['type'=>'html','data'=>$html];
 	}
 
 	//扫码支付

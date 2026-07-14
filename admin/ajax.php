@@ -134,8 +134,28 @@ case 'set':
 	if(isset($_POST['apiurl'])){
 		if(!empty($_POST['apiurl']) && (substr($_POST['apiurl'],0,4)!='http' || substr($_POST['apiurl'],-1)!='/'))exit('{"code":-1,"msg":"用户对接网址格式错误"}');
 	}
+	if(isset($_POST['payurl'])){
+		if(!empty($_POST['payurl']) && (substr($_POST['payurl'],0,4)!='http' || substr($_POST['payurl'],-1)!='/'))exit('{"code":-1,"msg":"支付页面网址格式错误"}');
+	}
 	if(isset($_POST['login_apiurl'])){
 		if(!empty($_POST['login_apiurl']) && (substr($_POST['login_apiurl'],0,4)!='http' || substr($_POST['login_apiurl'],-1)!='/'))exit('{"code":-1,"msg":"聚合登录API接口地址格式错误"}');
+	}
+	if(isset($_POST['telegram_proxy'])){
+		if(!in_array((string)$_POST['telegram_proxy'], ['0', '1'], true))exit('{"code":-1,"msg":"Telegram代理开关参数错误"}');
+		$type = isset($_POST['telegram_proxy_type']) ? strtolower(trim((string)$_POST['telegram_proxy_type'])) : '';
+		if(!in_array($type, ['http', 'https', 'sock4', 'sock5', 'sock5h'], true))exit('{"code":-1,"msg":"Telegram代理协议不受支持"}');
+		$_POST['telegram_proxy_type'] = $type;
+		if((string)$_POST['telegram_proxy'] === '1'){
+			$server = isset($_POST['telegram_proxy_server']) ? trim((string)$_POST['telegram_proxy_server']) : '';
+			$port = isset($_POST['telegram_proxy_port']) ? intval($_POST['telegram_proxy_port']) : 0;
+			$isIp = filter_var($server, FILTER_VALIDATE_IP) !== false;
+			$isHost = preg_match('/^(?=.{1,253}$)(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)*[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$/D', $server) === 1;
+			if(!$isIp && !$isHost)exit('{"code":-1,"msg":"Telegram代理地址格式错误"}');
+			if($port < 1 || $port > 65535)exit('{"code":-1,"msg":"Telegram代理端口格式错误"}');
+			$_POST['telegram_proxy_server'] = $server;
+			$_POST['telegram_proxy_port'] = (string)$port;
+		}
+		if(isset($_POST['telegram_proxy_pwd']) && $_POST['telegram_proxy_pwd'] === '')unset($_POST['telegram_proxy_pwd']);
 	}
 	foreach($_POST as $k=>$v){
 		saveSetting($k, $v);

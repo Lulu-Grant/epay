@@ -53,6 +53,10 @@ if($mod=='site'){
 	  <div class="col-sm-10"><input type="text" name="apiurl" value="<?php echo $conf['apiurl']; ?>" class="form-control" placeholder="留空则与本站网址一致"/><font color="green">用户中心显示的支付对接地址，留空则与本站网址一致</font></div>
 	</div><br/>
 	<div class="form-group">
+	  <label class="col-sm-2 control-label">支付页面网址</label>
+	  <div class="col-sm-10"><input type="text" name="payurl" value="<?php echo isset($conf['payurl'])?$conf['payurl']:''; ?>" class="form-control" placeholder="留空则与本站网址一致"/><font color="green">商户通过独立API域名下单时，收银台和支付跳转固定使用此网址；必须以/结尾</font></div>
+	</div><br/>
+	<div class="form-group">
 	  <label class="col-sm-2 control-label">联系邮箱</label>
 	  <div class="col-sm-10"><input type="text" name="email" value="<?php echo $conf['email']; ?>" class="form-control"/></div>
 	</div><br/>
@@ -427,6 +431,10 @@ $(document).ready(function(){
 	<div class="form-group">
 	  <label class="col-sm-3 control-label">支付宝手机网站支付使用二维码中转</label>
 	  <div class="col-sm-9"><select class="form-control" name="alipay_wap_qrcode" default="<?php echo isset($conf['alipay_wap_qrcode'])?$conf['alipay_wap_qrcode']:0?>"><option value="0">关闭</option><option value="1">开启</option></select><font color="green">关闭后，手机浏览器发起支付宝手机网站支付时直接进入支付宝原生H5流程；开启后才先显示二维码中转页</font></div>
+	</div><br/>
+	<div class="form-group">
+	  <label class="col-sm-3 control-label">支付宝H5跳转模式</label>
+	  <div class="col-sm-9"><select class="form-control" name="alipay_h5_redirect_mode" default="<?php echo isset($conf['alipay_h5_redirect_mode'])?$conf['alipay_h5_redirect_mode']:0?>"><option value="0">传统POST表单</option><option value="1">GET+303服务器跳转</option></select><font color="green">GET+303可避免部分内置浏览器阻止自动跨域POST；如出现兼容问题可立即切回传统POST</font></div>
 	</div><br/>
 	<div class="form-group">
 	  <label class="col-sm-3 control-label">开启交易投诉处理</label>

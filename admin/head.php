@@ -72,6 +72,14 @@ $cdnpublic = '/assets/cdn/';
         <li><a href="./pay_weixin.php">公众号小程序</a></li>
             </ul>
           </li>
+		  <li class="<?php echo checkIfActive('shop_config,shop_goods,shop_orders')?>">
+            <a href="#" class="dropdown-toggle" data-toggle="dropdown"><i class="fa fa-shopping-cart"></i> 商城管理<b class="caret"></b></a>
+            <ul class="dropdown-menu">
+              <li><a href="./shop_config.php">商城配置</a></li>
+              <li><a href="./shop_goods.php">商品管理</a></li>
+              <li><a href="./shop_orders.php">商城订单</a></li>
+            </ul>
+          </li>
 			  <li class="<?php echo checkIfActive('set,gonggao,set_wxkf,telegram_set')?>">
             <a href="#" class="dropdown-toggle" data-toggle="dropdown"><i class="fa fa-cog"></i> 系统设置<b class="caret"></b></a>
             <ul class="dropdown-menu">
