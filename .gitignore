@@ -1,0 +1,7 @@
+# Machine-local database and secret overrides
+/config.local.php
+/install/install.lock
+
+# Generated review packets and browser evidence
+/.engineering-artifacts/
+/docs/evidence/

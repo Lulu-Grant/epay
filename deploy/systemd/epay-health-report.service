@@ -1,0 +1,30 @@
+[Unit]
+Description=Epay daily health report generation and Telegram enqueue
+After=network-online.target epay-health-snapshot.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=www-data
+Group=www-data
+WorkingDirectory=/srv/epay/current
+EnvironmentFile=-/etc/epay/ai-health.env
+ExecStart=/usr/bin/php8.4 /srv/epay/current/health_report.php --send --ai
+TimeoutStartSec=21600
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+CPUQuota=20%
+MemoryMax=768M
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+
+[Install]
+WantedBy=multi-user.target

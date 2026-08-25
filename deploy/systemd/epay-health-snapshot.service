@@ -1,0 +1,29 @@
+[Unit]
+Description=Epay hourly health snapshot
+After=network-online.target mariadb.service mysql.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=www-data
+Group=www-data
+WorkingDirectory=/srv/epay/current
+ExecStart=/usr/bin/php8.4 /srv/epay/current/health_snapshot.php
+TimeoutStartSec=55
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+CPUQuota=20%
+MemoryMax=256M
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+
+[Install]
+WantedBy=multi-user.target

@@ -143,7 +143,7 @@ elseif($_GET['do']=='notify'){
 
 			$attempt = intval($srow['notify']);
 			$url=creat_callback($srow);
-			if(do_notify($url['notify'])){
+			if(do_notify($url['notify'], $srow['uid'])){
 				$DB->update('order', ['notify'=>0, 'notifytime'=>null], ['trade_no'=>$srow['trade_no']]);
 				echo $srow['trade_no'].' 重新通知成功（第'.$attempt.'次）<br/>';
 			}else{
@@ -171,7 +171,7 @@ elseif($_GET['do']=='notify2'){
 		if(!$srow)break;
 
 		$url=creat_callback($srow);
-		if(do_notify($url['notify'])){
+		if(do_notify($url['notify'], $srow['uid'])){
 			$DB->exec("UPDATE pre_order SET notify=0,notifytime=NULL WHERE trade_no='{$srow['trade_no']}'");
 			echo $srow['trade_no'].' 重新通知成功<br/>';
 		}else{

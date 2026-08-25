@@ -214,10 +214,18 @@ $conf = array_merge($conf, $groupconfig);
                 </a>
               </li>
 			  <?php }?>
-        <?php if($conf['complain_open']==1){?>
+        <?php if(!empty($conf['merchant_complain_view_enabled'])){?>
               <li class="<?php echo checkIfActive('complain,complain_info')?>">
                 <a href="complain.php">
-                  <?php $complain_total = $DB->getColumn("SELECT count(*) from pre_complain WHERE uid=$uid AND status=0"); if($complain_total>0){echo '<b class="label bg-danger pull-right">'.$complain_total.'</b>';}?>
+                  <?php
+                  $complain_total = 0;
+                  try{
+                    $complain_total = (new \lib\Complain\MerchantViewService($DB, $conf))->pendingCount($uid);
+                  }catch(Throwable $e){
+                    error_log('Merchant complaint menu count failed: '.$e->getMessage());
+                  }
+                  if($complain_total>0) echo '<b class="label bg-danger pull-right">'.intval($complain_total).'</b>';
+                  ?>
                   <i class="fa fa-commenting fa-fw"></i>
                   <span>交易投诉</span>
                 </a>

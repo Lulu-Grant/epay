@@ -24,21 +24,21 @@ addon_update('telegram', '1000');
                 <div class="col-md-12">
                     <div class="fv-row mb-7">
                         <label class="fs-6 fw-semibold form-label">Bot Token</label>
-                        <input type="text" name="telegram_bot_token" value="<?php echo $conf['telegram_bot_token']; ?>" class="form-control" placeholder="从 @BotFather 获取"/>
-                        <div class="form-text">格式：123456789:ABCdefGHIjklMNOpqrsTUVwxyz</div>
+                        <input type="text" name="telegram_bot_token" value="" class="form-control" placeholder="留空保持现有 Token"/>
+                        <div class="form-text">格式：机器人编号:BotFather生成的密钥</div>
                     </div>
                 </div>
                 <div class="col-md-6">
                     <div class="fv-row mb-7">
                         <label class="fs-6 fw-semibold form-label">管理员 Chat ID</label>
-                        <input type="text" name="telegram_admin_chat_id" value="<?php echo $conf['telegram_admin_chat_id']; ?>" class="form-control" placeholder="管理员的 Telegram Chat ID"/>
+                        <input type="text" name="telegram_admin_chat_id" value="<?php echo htmlspecialchars((string)$conf['telegram_admin_chat_id'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?>" class="form-control" placeholder="管理员的 Telegram Chat ID"/>
                         <div class="form-text">从 @userinfobot 获取您的 Chat ID</div>
                     </div>
                 </div>
                 <div class="col-md-6">
                     <div class="fv-row mb-7">
                         <label class="fs-6 fw-semibold form-label">机器人用户名</label>
-                        <input type="text" name="telegram_bot_name" value="<?php echo $conf['telegram_bot_name']; ?>" class="form-control" placeholder="机器人用户名，例如：@mybot"/>
+                        <input type="text" name="telegram_bot_name" value="<?php echo htmlspecialchars((string)$conf['telegram_bot_name'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?>" class="form-control" placeholder="机器人用户名，例如：@mybot"/>
                         <div class="form-text">从 @BotFather 获取您的机器人用户名</div>
                     </div>
                 </div>
@@ -138,10 +138,13 @@ addon_update('telegram', '1000');
 <script>
     function saveSetting(obj) {
         var ii = layer.load(2, {shade: [0.1, '#fff']});
+        var formData = $(obj).serializeArray().filter(function (item) {
+            return item.name !== 'telegram_bot_token' || item.value.trim() !== '';
+        });
         $.ajax({
             type: 'POST',
             url: 'ajax.php?act=set',
-            data: $(obj).serialize(),
+            data: $.param(formData),
             dataType: 'json',
             success: function (data) {
                 layer.close(ii);

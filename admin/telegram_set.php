@@ -4,6 +4,8 @@
 **/
 include("../includes/common.php");
 if($islogin==1){}else exit("<script language='javascript'>window.location.href='./login.php';</script>");
+if(empty($_SESSION['telegram_csrf_token'])) $_SESSION['telegram_csrf_token']=bin2hex(random_bytes(32));
+$telegramCsrfToken=$_SESSION['telegram_csrf_token'];
 
 if(empty($conf['addon_telegram']) || intval($conf['addon_telegram']) < 1101){
 	\lib\Telegram\Installer::install();
@@ -25,11 +27,17 @@ function telegram_mask_token($value){
 
 $errmsg = '';
 $arr = $CACHE->read('telegramerrmsg');
-if($arr){
-	$errmsg = $arr['time'].' - '.$arr['errmsg'];
+if(is_string($arr) && $arr !== ''){
+	$decoded = @unserialize($arr, ['allowed_classes'=>false]);
+	$arr = is_array($decoded) ? $decoded : [];
+}
+if(is_array($arr) && !empty($arr)){
+	$errorTime = isset($arr['time']) ? (string)$arr['time'] : '';
+	$errorMessage = isset($arr['errmsg']) ? (string)$arr['errmsg'] : '';
+	$errmsg = trim($errorTime.' - '.$errorMessage, ' -');
 }
 
-$stats = [0=>0, 1=>0, 2=>0];
+$stats = [0=>0, 1=>0, 2=>0, 3=>0];
 $statsRows = $DB->getAll("SELECT status,COUNT(*) count FROM pre_telegram_notify_queue GROUP BY status");
 if($statsRows){
 	foreach($statsRows as $row){
@@ -48,7 +56,8 @@ $lastUpdateId = (new \lib\Telegram\BotService($DB, $conf))->getLastUpdateId();
 			<div class="panel-heading"><h3 class="panel-title">Telegram 基础配置</h3></div>
 			<div class="panel-body">
 				<?php if($errmsg){?><div class="alert alert-warning">上一次报错信息：<?php echo telegram_h($errmsg);?></div><?php }?>
-				<form onsubmit="return saveSetting(this)" method="post" class="form-horizontal" role="form">
+					<form onsubmit="return saveSetting(this)" method="post" class="form-horizontal" role="form">
+						<input type="hidden" name="telegram_csrf_token" value="<?php echo telegram_h($telegramCsrfToken);?>">
 					<div class="form-group">
 						<label class="col-sm-2 control-label">Telegram通知开关</label>
 						<div class="col-sm-10"><select class="form-control" name="telegram_notice" default="<?php echo telegram_h($conf['telegram_notice'])?>"><option value="0">关闭</option><option value="1">开启</option></select></div>
@@ -141,7 +150,7 @@ $lastUpdateId = (new \lib\Telegram\BotService($DB, $conf))->getLastUpdateId();
 			<div class="col-sm-4">
 				<div class="panel panel-info">
 					<div class="panel-heading">待发送队列</div>
-					<div class="panel-body"><h3><?php echo $stats[0];?></h3></div>
+					<div class="panel-body"><h3><?php echo $stats[0]+$stats[3];?></h3></div>
 				</div>
 			</div>
 			<div class="col-sm-4">
@@ -161,7 +170,8 @@ $lastUpdateId = (new \lib\Telegram\BotService($DB, $conf))->getLastUpdateId();
 		<div class="panel panel-primary">
 			<div class="panel-heading"><h3 class="panel-title">绑定商户 Telegram Chat ID</h3></div>
 			<div class="panel-body">
-				<form id="bindForm" class="form-inline" onsubmit="return saveBind(this)">
+					<form id="bindForm" class="form-inline" onsubmit="return saveBind(this)">
+						<input type="hidden" name="telegram_csrf_token" value="<?php echo telegram_h($telegramCsrfToken);?>">
 					<div class="form-group">
 						<label>商户号</label>
 						<input type="text" name="uid" class="form-control" placeholder="UID">
@@ -222,6 +232,7 @@ $lastUpdateId = (new \lib\Telegram\BotService($DB, $conf))->getLastUpdateId();
 </div>
 <script src="<?php echo $cdnpublic?>layer/3.1.1/layer.js"></script>
 <script>
+var telegramCsrfToken=<?php echo json_encode($telegramCsrfToken);?>;
 function saveSetting(obj){
 	var ii = layer.load(2, {shade:[0.1,'#fff']});
 	var data = $(obj).serializeArray().filter(function(item){
@@ -229,7 +240,7 @@ function saveSetting(obj){
 	});
 	$.ajax({
 		type: 'POST',
-		url: 'ajax.php?act=set',
+		url: 'ajax_telegram.php?act=saveSettings',
 		data: $.param(data),
 		dataType: 'json',
 		success: function(data){
@@ -249,7 +260,7 @@ function saveSetting(obj){
 }
 function testAdmin(){
 	var ii = layer.load(2, {shade:[0.1,'#fff']});
-	$.post('ajax_telegram.php?act=testAdmin', {}, function(data){
+		$.post('ajax_telegram.php?act=testAdmin', {telegram_csrf_token:telegramCsrfToken}, function(data){
 		layer.close(ii);
 		if(data.code == 0) layer.alert(data.msg, {icon:1});
 		else layer.alert(data.msg, {icon:2});
@@ -257,7 +268,7 @@ function testAdmin(){
 }
 function processQueue(){
 	var ii = layer.load(2, {shade:[0.1,'#fff']});
-	$.post('ajax_telegram.php?act=processQueue', {}, function(data){
+		$.post('ajax_telegram.php?act=processQueue', {telegram_csrf_token:telegramCsrfToken}, function(data){
 		layer.close(ii);
 		if(data.code == 0) layer.alert(data.msg, {icon:1}, function(){ window.location.reload(); });
 		else layer.alert(data.msg, {icon:2});
@@ -265,14 +276,14 @@ function processQueue(){
 }
 function setCommands(){
 	var ii = layer.load(2, {shade:[0.1,'#fff']});
-	$.post('ajax_telegram.php?act=setCommands', {}, function(data){
+		$.post('ajax_telegram.php?act=setCommands', {telegram_csrf_token:telegramCsrfToken}, function(data){
 		layer.close(ii);
 		if(data.code == 0) layer.alert(data.msg, {icon:1});
 		else layer.alert(data.msg, {icon:2});
 	}, 'json').fail(function(){ layer.close(ii); layer.msg('服务器错误'); });
 }
 function clearTelegramError(){
-	$.post('ajax_telegram.php?act=clearError', {}, function(data){
+	$.post('ajax_telegram.php?act=clearError', {telegram_csrf_token:telegramCsrfToken}, function(data){
 		if(data.code == 0) window.location.reload();
 		else layer.alert(data.msg, {icon:2});
 	}, 'json');
@@ -295,7 +306,7 @@ function saveBind(obj){
 }
 function unbind(id){
 	layer.confirm('确定解除该绑定？', function(){
-		$.post('ajax_telegram.php?act=unbind', {id:id}, function(data){
+			$.post('ajax_telegram.php?act=unbind', {id:id,telegram_csrf_token:telegramCsrfToken}, function(data){
 			if(data.code == 0) window.location.reload();
 			else layer.alert(data.msg, {icon:2});
 		}, 'json');
@@ -303,7 +314,7 @@ function unbind(id){
 }
 function deleteBind(id){
 	layer.confirm('确定删除该绑定记录？', function(){
-		$.post('ajax_telegram.php?act=deleteBind', {id:id}, function(data){
+			$.post('ajax_telegram.php?act=deleteBind', {id:id,telegram_csrf_token:telegramCsrfToken}, function(data){
 			if(data.code == 0) window.location.reload();
 			else layer.alert(data.msg, {icon:2});
 		}, 'json');

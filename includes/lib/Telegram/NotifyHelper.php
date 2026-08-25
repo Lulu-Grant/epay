@@ -60,6 +60,11 @@ class NotifyHelper
             return "<b>会员用户组到期提醒 - {$siteName}</b>\n\n".
                 "用户组：".self::e($param['group'])."\n".
                 "到期时间：".self::e($param['endtime']);
+        }elseif($scene == 'daily_health'){
+            if(!isset($param['html']) || !is_string($param['html'])) return false;
+            $message = trim($param['html']);
+            if($message === '' || mb_strlen($message, 'UTF-8') > 3500) return false;
+            return $message;
         }
         return false;
     }

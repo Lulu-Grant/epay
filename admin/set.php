@@ -438,7 +438,11 @@ $(document).ready(function(){
 	</div><br/>
 	<div class="form-group">
 	  <label class="col-sm-3 control-label">开启交易投诉处理</label>
-	  <div class="col-sm-9"><select class="form-control" name="complain_open" default="<?php echo isset($conf['complain_open'])?$conf['complain_open']:0?>"><option value="0">关闭</option><option value="1">开启</option></select><font color="green">开启后，商户后台显示交易投诉入口，后台可拉取并处理支持通道的投诉记录</font></div>
+	  <div class="col-sm-9"><select class="form-control" name="complain_open" default="<?php echo isset($conf['complain_open'])?$conf['complain_open']:0?>"><option value="0">关闭</option><option value="1">开启</option></select><font color="green">控制平台投诉拉取与处理能力；商户端入口由下方“商户投诉只读中心”独立控制</font></div>
+	</div><br/>
+	<div class="form-group">
+	  <label class="col-sm-3 control-label">商户投诉只读中心</label>
+	  <div class="col-sm-9"><select class="form-control" name="merchant_complain_view_enabled" default="<?php echo isset($conf['merchant_complain_view_enabled'])?$conf['merchant_complain_view_enabled']:0?>"><option value="0">关闭</option><option value="1">开启</option></select><font color="green">独立控制商户端入口；商户只能查看自己的本地投诉与关联订单，不能退款、回复或改变投诉状态</font></div>
 	</div><br/>
 	<div class="form-group">
 	  <label class="col-sm-3 control-label">交易投诉记录范围</label>

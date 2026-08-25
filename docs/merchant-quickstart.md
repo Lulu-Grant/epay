@@ -1,6 +1,6 @@
 # 商户快速上手指南
 
-生成日期：2026-07-04
+更新日期：2026-07-20
 
 适用对象：新接入商户、商户技术人员、平台客服。
 
@@ -11,7 +11,7 @@
 访问：
 
 ```text
-https://epay.tianlupay.com/user/login.php
+https://luckrun.xuanfanpay.top/user/login.php
 ```
 
 登录方式以平台配置为准：
@@ -67,13 +67,13 @@ https://epay.tianlupay.com/user/login.php
 V2 文档：
 
 ```text
-https://epay.tianlupay.com/doc.html
+https://luckrun.xuanfanpay.top/doc.html
 ```
 
 旧版 V1 文档：
 
 ```text
-https://epay.tianlupay.com/doc_old.html
+https://luckrun.xuanfanpay.top/doc_old.html
 ```
 
 新接入优先使用 V2 接口。V2 接口使用 RSA 签名，签名算法为 `SHA256WithRSA`。
@@ -125,7 +125,7 @@ https://epay.tianlupay.com/doc_old.html
 测试方式一：使用用户中心测试页。
 
 ```text
-https://epay.tianlupay.com/user/test.php
+https://luckrun.xuanfanpay.top/user/test.php
 ```
 
 测试方式二：由商户系统发起真实接口请求。
@@ -230,16 +230,15 @@ https://epay.tianlupay.com/user/test.php
 收到投诉后：
 
 1. 查看投诉详情。
-2. 核对关联订单。
-3. 联系用户沟通。
-4. 根据实际情况退款、回复、上传凭证或提交处理结果。
-5. 继续关注投诉状态。
+2. 核对关联订单号、商品、金额和支付状态。
+3. 将需要回复、退款或补充材料的投诉提交给平台管理员。
+4. 在只读页面继续关注平台同步的处理状态。
 
 注意：
 
-- 投诉不要拖延处理。
-- 不确认订单和用户诉求前不要直接结案。
-- 已退款的投诉也需要确认投诉状态是否同步完成。
+- 商户端只展示本商户的投诉，不提供退款、回复、上传凭证或结案按钮。
+- 页面展示的是平台本地保存信息，不会因上游投诉接口暂时不可用而阻塞。
+- 如关联订单不可用或信息不完整，请记录投诉单号并联系平台管理员。
 
 ## 13. 上线前检查清单
 

@@ -7,12 +7,40 @@ if(!checkRefererHost())exit('{"code":403}');
 
 @header('Content-Type: application/json; charset=UTF-8');
 
+$mutatingActs = ['saveSettings','testAdmin','saveBind','unbind','deleteBind','processQueue','setCommands','clearError'];
+if(in_array($act, $mutatingActs, true)){
+	$token = isset($_POST['telegram_csrf_token']) ? (string)$_POST['telegram_csrf_token'] : '';
+	if($token === '' || empty($_SESSION['telegram_csrf_token']) || !hash_equals($_SESSION['telegram_csrf_token'], $token)){
+		exit('{"code":403,"msg":"CSRF Token Error"}');
+	}
+}
+
 if(empty($conf['addon_telegram']) || intval($conf['addon_telegram']) < 1100){
 	\lib\Telegram\Installer::install();
 	$conf=$CACHE->pre_fetch();
 }
 
 switch($act){
+case 'saveSettings':
+	try {
+		$input = $_POST;
+		unset($input['telegram_csrf_token']);
+		(new \lib\Telegram\SettingsService($DB, $CACHE, $conf))->save($input);
+	} catch(InvalidArgumentException $e){
+		exit(json_encode(['code'=>-1, 'msg'=>$e->getMessage()], JSON_UNESCAPED_UNICODE));
+	} catch(RuntimeException $e){
+		error_log('Telegram settings save failed: '.$e->getMessage());
+		if($e->getMessage() === 'Telegram settings cache refresh failed'){
+			exit('{"code":-1,"msg":"Telegram 设置已保存，但配置缓存刷新失败"}');
+		}
+		exit('{"code":-1,"msg":"Telegram 设置保存失败"}');
+	} catch(Throwable $e){
+		error_log('Telegram settings save failed: '.$e->getMessage());
+		exit('{"code":-1,"msg":"Telegram 设置保存失败"}');
+	}
+	exit('{"code":0,"msg":"succ"}');
+break;
+
 case 'testAdmin':
 	if(empty($conf['telegram_bot_token']))exit('{"code":-1,"msg":"请先填写 Bot Token"}');
 	if(empty($conf['telegram_admin_chat_id']))exit('{"code":-1,"msg":"请先填写管理员 Chat ID"}');
@@ -76,8 +104,10 @@ break;
 
 case 'processQueue':
 	$result = \lib\Telegram\QueueHelper::processQueue(50);
-	\lib\Telegram\QueueHelper::cleanOldNotifications(7);
-	exit(json_encode(['code'=>0, 'msg'=>$result['message'], 'data'=>$result], JSON_UNESCAPED_UNICODE));
+	$cleaned = \lib\Telegram\QueueHelper::cleanOldNotifications(7);
+	if($cleaned === false && intval($result['failed']) === 0){ $result['failed']=1; $result['message'].='; cleanup failed'; }
+	$code = intval($result['failed']) > 0 ? 1 : 0;
+	exit(json_encode(['code'=>$code, 'msg'=>$result['message'], 'data'=>$result], JSON_UNESCAPED_UNICODE));
 break;
 
 case 'setCommands':

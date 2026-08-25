@@ -33,11 +33,17 @@ CREATE TABLE IF NOT EXISTS `pre_telegram_notify_queue` (
   `status` tinyint(1) NOT NULL DEFAULT '0',
   `retry_count` tinyint(1) NOT NULL DEFAULT '0',
   `error_msg` varchar(500) DEFAULT NULL,
+  `dedupe_key` varchar(100) DEFAULT NULL,
+  `claimtime` datetime DEFAULT NULL,
+  `sendstarttime` datetime DEFAULT NULL,
+  `next_attempt` datetime DEFAULT NULL,
   `addtime` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `sendtime` datetime DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `idx_uid_status` (`uid`,`status`),
-  KEY `idx_status_addtime` (`status`,`addtime`)
+  KEY `idx_status_addtime` (`status`,`addtime`),
+  KEY `idx_queue_ready` (`status`,`next_attempt`,`addtime`),
+  UNIQUE KEY `uk_dedupe_key` (`dedupe_key`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 CREATE TABLE IF NOT EXISTS `pre_telegram_admin_settings` (

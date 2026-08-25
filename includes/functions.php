@@ -53,7 +53,8 @@ function curl_get($url, $follow = false)
 		}
 		return $body;
 	}
-	return $content;
+	logMerchantNotifyHttpFailure('redirect_limit', $current_url, 0, 0, 'merchant notify redirect limit exceeded');
+	return false;
 }
 
 function get_redirect_url($base_url, $location)
@@ -547,13 +548,169 @@ function get_main_host($url){
 	return $host;
 }
 
-function do_notify($url){
-	$return = curl_get($url, true);
+function do_notify($url, $uid = null){
+	$return = merchant_notify_request($url, $uid);
 	if(merchantNotifyResponseSucceeded($return)){
 		return true;
 	}else{
 		return false;
 	}
+}
+
+function merchant_notify_request($url, $uid = null){
+	$proxy = getMerchantNotifyProxyConfig();
+	$force_direct = $uid !== null && in_array(intval($uid), $proxy['direct_uids'], true);
+	if(!$proxy['enabled'] && !$force_direct){
+		return curl_get($url, true);
+	}
+	$use_proxy = $proxy['enabled'] && !$force_direct;
+
+	$redirects = 3;
+	$current_url = $url;
+	$content = false;
+	for($i = 0; $i <= $redirects; $i++){
+		$parts = parse_url($current_url);
+		if(
+			!is_array($parts) ||
+			empty($parts['scheme']) ||
+			empty($parts['host']) ||
+			!in_array(strtolower($parts['scheme']), ['http', 'https'], true) ||
+			isset($parts['user']) ||
+			isset($parts['pass']) ||
+			strpos($current_url, "\r") !== false ||
+			strpos($current_url, "\n") !== false
+		){
+			logMerchantNotifyHttpFailure('invalid_url', $current_url, 0, 0, 'invalid merchant notify URL', $use_proxy);
+			return false;
+		}
+
+		$ch = curl_init($current_url);
+		$httpheader = [
+			'Accept: */*',
+			'Accept-Language: zh-CN,zh;q=0.8',
+			'Connection: close',
+		];
+		curl_setopt($ch, CURLOPT_HTTPHEADER, $httpheader);
+		if($use_proxy){
+			curl_setopt($ch, CURLOPT_PROXYAUTH, CURLAUTH_BASIC);
+			curl_setopt($ch, CURLOPT_PROXY, $proxy['server']);
+			curl_setopt($ch, CURLOPT_PROXYPORT, $proxy['port']);
+			curl_setopt($ch, CURLOPT_PROXYTYPE, defined('CURLPROXY_SOCKS5_HOSTNAME') ? CURLPROXY_SOCKS5_HOSTNAME : CURLPROXY_SOCKS5);
+			if($proxy['user'] !== '' || $proxy['password'] !== ''){
+				curl_setopt($ch, CURLOPT_PROXYUSERPWD, $proxy['user'].':'.$proxy['password']);
+			}
+		}else{
+			curl_setopt($ch, CURLOPT_PROXY, '');
+			curl_setopt($ch, CURLOPT_NOPROXY, '*');
+		}
+		curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, $proxy['tls_verify']);
+		curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, $proxy['tls_verify'] ? 2 : 0);
+		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+		curl_setopt($ch, CURLOPT_HEADER, true);
+		curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/78.0.3904.108 Safari/537.36');
+		curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, $proxy['connect_timeout']);
+		curl_setopt($ch, CURLOPT_TIMEOUT, $proxy['timeout']);
+		$content = curl_exec($ch);
+		$curl_errno = curl_errno($ch);
+		$curl_error = curl_error($ch);
+		$http_code = intval(curl_getinfo($ch, CURLINFO_HTTP_CODE));
+		$header_size = intval(curl_getinfo($ch, CURLINFO_HEADER_SIZE));
+		if($content === false){
+			logMerchantNotifyHttpFailure('request_failed', $current_url, $http_code, $curl_errno, $curl_error, $use_proxy);
+			curl_close($ch);
+			return false;
+		}
+
+		$header = substr($content, 0, $header_size);
+		$body = substr($content, $header_size);
+		curl_close($ch);
+		if($http_code >= 300 && $http_code < 400 && preg_match('/^Location:\s*(.+)$/mi', $header, $match)){
+			$current_url = get_redirect_url($current_url, trim($match[1]));
+			continue;
+		}
+		return $body;
+	}
+	return $content;
+}
+
+function getMerchantNotifyProxyConfig(){
+	static $config = null;
+	if($config !== null){
+		return $config;
+	}
+
+	$config = [
+		'enabled' => false,
+		'server' => '',
+		'port' => 0,
+		'user' => '',
+		'password' => '',
+		'connect_timeout' => 5,
+		'timeout' => 10,
+		'tls_verify' => true,
+		'direct_uids' => [],
+	];
+	$path = getenv('EPAY_MERCHANT_NOTIFY_PROXY_FILE');
+	if(empty($path)){
+		$path = '/etc/epay/merchant-notify-proxy.ini';
+	}
+	if(!is_readable($path)){
+		return $config;
+	}
+
+	$raw = @parse_ini_file($path, false, INI_SCANNER_RAW);
+	if(!is_array($raw)){
+		return $config;
+	}
+	$enabled = isset($raw['enabled']) && in_array(strtolower(trim((string)$raw['enabled'])), ['1', 'true', 'yes', 'on'], true);
+	if(!$enabled){
+		return $config;
+	}
+
+	$server = isset($raw['server']) ? trim((string)$raw['server']) : '';
+	$port = isset($raw['port']) ? intval($raw['port']) : 0;
+	if($server === '' || $port < 1 || $port > 65535 || preg_match('/[\r\n\/]/', $server)){
+		error_log('[merchant-notify-http] invalid proxy configuration');
+		return $config;
+	}
+
+	$config['enabled'] = true;
+	$config['server'] = $server;
+	$config['port'] = $port;
+	$config['user'] = isset($raw['user']) ? (string)$raw['user'] : '';
+	$config['password'] = isset($raw['password']) ? (string)$raw['password'] : '';
+	if(isset($raw['connect_timeout'])){
+		$config['connect_timeout'] = max(1, min(30, intval($raw['connect_timeout'])));
+	}
+	if(isset($raw['timeout'])){
+		$config['timeout'] = max($config['connect_timeout'], min(60, intval($raw['timeout'])));
+	}
+	if(isset($raw['tls_verify'])){
+		$config['tls_verify'] = in_array(strtolower(trim((string)$raw['tls_verify'])), ['1', 'true', 'yes', 'on'], true);
+	}
+	if(isset($raw['direct_uids'])){
+		$direct_uids = preg_split('/[\s,]+/', trim((string)$raw['direct_uids']), -1, PREG_SPLIT_NO_EMPTY);
+		foreach($direct_uids as $direct_uid){
+			if(ctype_digit($direct_uid) && intval($direct_uid) > 0){
+				$config['direct_uids'][] = intval($direct_uid);
+			}
+		}
+		$config['direct_uids'] = array_values(array_unique($config['direct_uids']));
+	}
+	return $config;
+}
+
+function logMerchantNotifyHttpFailure($event, $url, $http_code, $curl_errno, $reason, $proxy = true){
+	$host = parse_url($url, PHP_URL_HOST);
+	$data = [
+		'event' => preg_replace('/[^a-z0-9_.-]/i', '', (string)$event),
+		'host' => $host ? $host : '',
+		'http_code' => intval($http_code),
+		'curl_errno' => intval($curl_errno),
+		'reason' => str_replace(["\r", "\n"], ' ', substr((string)$reason, 0, 300)),
+		'proxy' => (bool)$proxy,
+	];
+	error_log('[merchant-notify-http] '.json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
 }
 
 function merchantNotifyResponseSucceeded($response){
@@ -703,7 +860,7 @@ function processOrder($srow,$notify=true){
 				if($notify==true && !scheduleMerchantNotifyRetry($srow, 1)){
 					logPaymentCallbackEvent('merchant_notify_schedule_failed', $srow['trade_no'], $srow['channel'], 'initial retry could not be scheduled');
 				}
-				if(do_notify($url['notify'])){
+				if(do_notify($url['notify'], $srow['uid'])){
 					$DB->update('order', ['notify'=>0, 'notifytime'=>null], ['trade_no'=>$srow['trade_no']]);
 				}
 	}

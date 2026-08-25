@@ -395,8 +395,8 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-WorkingDirectory=/www/wwwroot/epay.tianlupay.com
-ExecStart=/www/server/php/84/bin/php /www/wwwroot/epay.tianlupay.com/telegram_bot_worker.php
+WorkingDirectory=/srv/epay/current
+ExecStart=/usr/bin/php8.4 /srv/epay/current/telegram_bot_worker.php
 Restart=always
 RestartSec=5
 User=www

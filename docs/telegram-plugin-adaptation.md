@@ -90,7 +90,7 @@
 6. 增加计划任务：
 
 ```bash
-* * * * * cd /www/wwwroot/epay.tianlupay.com && php telegram_notify_cron.php >/dev/null 2>&1
+* * * * * cd /srv/epay/current && /usr/bin/php8.4 telegram_notify_cron.php >/dev/null 2>&1
 ```
 
 第二阶段再接入完整机器人交互。

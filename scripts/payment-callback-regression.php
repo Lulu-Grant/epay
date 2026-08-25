@@ -26,6 +26,12 @@ namespace {
 		http_response_code(404);
 		exit;
 	}
+	$quiet = false;
+	foreach(array_slice($argv, 1) as $argument){
+		if($argument === '--quiet' && !$quiet) $quiet = true;
+		else { fwrite(STDERR, "Unsupported payment callback regression argument\n"); exit(1); }
+	}
+	if($quiet) ini_set('error_log', '/dev/null');
 
 	$root = dirname(__DIR__);
 	define('PLUGIN_ROOT', $root.'/plugins/');
@@ -125,5 +131,5 @@ namespace {
 		exit(1);
 	}
 
-	echo "payment callback regression: ok\n";
+	if(!$quiet) echo "payment callback regression: ok\n";
 }

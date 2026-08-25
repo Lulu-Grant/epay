@@ -140,6 +140,9 @@ case 'set':
 	if(isset($_POST['login_apiurl'])){
 		if(!empty($_POST['login_apiurl']) && (substr($_POST['login_apiurl'],0,4)!='http' || substr($_POST['login_apiurl'],-1)!='/'))exit('{"code":-1,"msg":"聚合登录API接口地址格式错误"}');
 	}
+	if(isset($_POST['merchant_complain_view_enabled']) && !in_array((string)$_POST['merchant_complain_view_enabled'], ['0', '1'], true)){
+		exit('{"code":-1,"msg":"商户投诉只读中心开关参数错误"}');
+	}
 	if(isset($_POST['telegram_proxy'])){
 		if(!in_array((string)$_POST['telegram_proxy'], ['0', '1'], true))exit('{"code":-1,"msg":"Telegram代理开关参数错误"}');
 		$type = isset($_POST['telegram_proxy_type']) ? strtolower(trim((string)$_POST['telegram_proxy_type'])) : '';

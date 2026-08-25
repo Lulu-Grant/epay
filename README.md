@@ -1,6 +1,6 @@
 # 彩虹易支付 PHP 8.4 兼容维护版
 
-本仓库是基于彩虹易支付 `Version 3075` 的维护分支，目标是在保留 PHP 7.4 兼容下限的同时，推进 PHP 8.4 环境可运行、可部署、可验收。
+本仓库是基于彩虹易支付 `Version 3075` 的维护分支，当前生产目标为 PHP 8.4 环境下可运行、可部署、可验收。
 
 当前分支：
 
@@ -14,7 +14,7 @@ upgrade/php-84-compatible
 
 本分支已经包含：
 
-- PHP 8.4 兼容性修正，并保持 PHP 7.4 语法下限。
+- PHP 8.4 兼容性修正与生产运维适配。
 - 管理后台和商户后台的基础可用性修复。
 - 支付统计、历史收入统计、昨日订单数等后台展示增强。
 - 支付宝 H5/二维码中转行为的配置化处理。
@@ -51,13 +51,13 @@ upgrade/php-84-compatible
 推荐环境：
 
 - Linux + Nginx 或 Apache
-- PHP 8.2 / 8.3 / 8.4
+- PHP 8.4
 - MySQL 5.7 或 MariaDB 10.x
 - 宝塔面板可用，但需要正确配置运行目录、伪静态和计划任务
 
 兼容下限：
 
-- PHP 7.4
+- 历史 PHP 7.4 兼容性资料仅供旧环境审计，不作为当前生产要求。
 - MySQL 5.7
 
 必需 PHP 扩展：
@@ -187,6 +187,7 @@ EPAY_DB_USER="root" EPAY_DB_PASSWORD="你的本地数据库密码" bash tools/ph
 - [PHP 8.4 升级验收标准](docs/php84-acceptance-criteria.md)
 - [PHP 8.4 Upgrade Verification Report](docs/php84-verification-report.md)
 - [PHP 8.4 回滚操作手册](docs/php84-rollback-runbook.md)
+- [当前生产环境与入口](docs/production-environment.md)
 
 ## 文档
 
@@ -239,7 +240,7 @@ success
 
 这个分支偏向生产维护版。新增功能应遵循以下原则：
 
-- 保持 PHP 7.4 语法下限。
+- 当前生产发布以 PHP 8.4 为唯一运行基线。
 - 优先修复实际部署问题，不做大规模架构重写。
 - 支付、回调、结算、余额变更等资金相关逻辑必须先分析、再小步改动、再验证。
 - 涉及订单通知补发、余额修正和通道切换时，必须先备份数据库并确认回滚路径。

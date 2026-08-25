@@ -456,7 +456,7 @@ pre_order.type           = pre_shop_orders.pay_type（通道分配后）
 线上 PHP 8.4 计划任务示例：
 
 ```cron
-* * * * * /www/server/php/84/bin/php /www/wwwroot/epay.tianlupay.com/scripts/shop-shadow-reconcile.php --limit=200 >> /www/wwwlogs/epay-shop-shadow-reconcile.log 2>&1
+* * * * * /usr/bin/php8.4 /srv/epay/current/scripts/shop-shadow-reconcile.php --limit=200 >> /var/log/epay/shop-shadow-reconcile.log 2>&1
 ```
 
 脚本内部已按站点路径使用进程锁，不需要对公网暴露调度 URL。

@@ -1,29 +1,28 @@
 <?php
 include("../includes/common.php");
 
-if($islogin2==1){}else exit("<script language='javascript'>window.location.href='./login.php';</script>");
+if($islogin2!=1) exit("<script>window.location.href='./login.php';</script>");
 
-$act=isset($_GET['act'])?daddslashes($_GET['act']):null;
-
-switch($act){
-
-case 'wximg':
-	if(!checkRefererHost())exit();
-	$channelid = intval($_GET['channel']);
-	$subchannelid = intval($_GET['subchannel']);
-	$media_id = $_GET['mediaid'];
-	$channel = $subchannelid ? \lib\Channel::getSub($subchannelid) : \lib\Channel::get($channelid);
-	$model = \lib\Complain\CommUtil::getModel($channel);
-	$image = $model->getImage($media_id);
-	if($image !== false){
-		$seconds_to_cache = 3600*24*7;
-		header("Cache-Control: max-age=$seconds_to_cache");
-		header("Content-Type: image/jpeg");
-		echo $image;
-	}
-break;
-
-default:
-	exit('No Act');
-break;
+if(empty($conf['merchant_complain_view_enabled'])){
+    http_response_code(404);
+    exit('Not Found');
 }
+
+$act = isset($_GET['act']) ? (string)$_GET['act'] : '';
+if($act !== 'complain_image' || !checkRefererHost()){
+    http_response_code(404);
+    exit('Not Found');
+}
+
+$complaintId = isset($_GET['id']) ? intval($_GET['id']) : 0;
+$service = new \lib\Complain\MerchantViewService($DB, $conf);
+try{
+    $service->detailForMerchant($uid, $complaintId);
+}catch(Throwable $e){
+    error_log('Merchant complaint image authorization failed: '.$e->getMessage());
+}
+
+// Phase one has no trusted local attachment snapshots. Fail closed after UID authorization.
+http_response_code(404);
+header('Cache-Control: no-store');
+exit('Not Found');

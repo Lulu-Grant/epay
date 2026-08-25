@@ -1,0 +1,11 @@
+[Unit]
+Description=Run Epay health snapshot hourly
+
+[Timer]
+OnCalendar=*-*-* *:10:00 Asia/Shanghai
+Persistent=true
+RandomizedDelaySec=30
+Unit=epay-health-snapshot.service
+
+[Install]
+WantedBy=timers.target

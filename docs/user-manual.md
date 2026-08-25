@@ -1,12 +1,12 @@
 # 彩虹易支付用户使用文档
 
-生成日期：2026-07-04
+更新日期：2026-07-21
 
 适用版本：Version 3075 及当前定制版本
 
 本文档面向三类人员：
 
-- 商户用户：使用用户中心查看订单、配置接口、处理结算和投诉。
+- 商户用户：使用用户中心查看订单、配置接口、处理结算并查询自己的投诉。
 - 平台管理员：使用管理后台维护商户、订单、支付通道、结算和系统配置。
 - 对接开发人员：按平台接口文档完成支付、通知、查询、退款、代付等对接。
 
@@ -19,19 +19,21 @@
 | [商户快速上手指南](merchant-quickstart.md) | 商户、商户技术、客服 | 商户接入、测试、上线前检查 |
 | [管理员日常运维手册](admin-operations-runbook.md) | 管理员、运营、财务、值班运维 | 日常巡检、订单、结算、通道、投诉处理 |
 | [支付系统故障排查手册](troubleshooting-guide.md) | 管理员、运维、开发 | 登录、支付、通知、结算、统计等故障排查 |
+| [当前生产环境与入口](production-environment.md) | 商户、管理员、运维 | 域名职责、API 入口与发布环境 |
 
 ## 访问入口
 
-生产环境域名为 `epay.tianlupay.com`。
+当前生产环境采用展示、后台和 API 分域。完整规则见[当前生产环境与入口](production-environment.md)。
 
 | 模块 | 地址 | 用途 |
 | --- | --- | --- |
-| 首页 | `https://epay.tianlupay.com/` | 对外展示页或静态说明页 |
-| 用户中心登录 | `https://epay.tianlupay.com/user/login.php` | 商户登录 |
-| 管理后台登录 | `https://epay.tianlupay.com/admin/login.php` | 平台管理员登录 |
-| 开发文档 | `https://epay.tianlupay.com/doc.html` | V2 API 文档 |
-| 旧版开发文档 | `https://epay.tianlupay.com/doc_old.html` | V1 兼容接口文档 |
-| 测试支付 | `https://epay.tianlupay.com/user/test.php` | 站内测试拉单 |
+| 展示页与商城 | `https://luckrun.xuanfanpay.top/` | 普通 Web 页面 |
+| 用户中心登录 | `https://luckrun.xuanfanpay.top/user/login.php` | 商户登录 |
+| 管理后台登录 | `https://manage.xuanfanpay.top/admin/login.php` | 平台管理员登录 |
+| 开发文档 | `https://luckrun.xuanfanpay.top/doc.html` | V2 API 文档 |
+| 旧版开发文档 | `https://luckrun.xuanfanpay.top/doc_old.html` | V1 兼容接口文档 |
+| 测试支付 | `https://luckrun.xuanfanpay.top/user/test.php` | 站内测试拉单 |
+| 商户 API 与收银台 | `https://api.xuanfanpay.top/` | 下单、支付、回调入口 |
 
 ## 角色与权限
 
@@ -44,7 +46,7 @@
 - 修改结算账号、联系方式、通知开关和扣费模式。
 - 查询订单记录、资金明细、结算记录。
 - 申请提现、余额充值、购买会员或用户组。
-- 处理交易投诉。
+- 只读查询本商户交易投诉并联系平台处理。
 - 查看开发文档并完成接口对接。
 
 ### 平台管理员
@@ -77,7 +79,7 @@
 访问：
 
 ```text
-https://epay.tianlupay.com/user/login.php
+https://luckrun.xuanfanpay.top/user/login.php
 ```
 
 可用登录方式以站点配置为准：
@@ -140,7 +142,7 @@ V2 接口使用 `SHA256WithRSA` 签名。具体签名规则以 `/doc.html` 中�
 
 推荐流程：
 
-1. 阅读 `https://epay.tianlupay.com/doc.html`。
+1. 阅读 `https://luckrun.xuanfanpay.top/doc.html`，并将平台 API 基址配置为 `https://api.xuanfanpay.top/`。
 2. 在 API 信息页面生成或确认 RSA 密钥。
 3. 先对接页面跳转支付或统一下单接口。
 4. 配置 `notify_url` 和 `return_url`。
@@ -313,7 +315,7 @@ V2 接口使用 `SHA256WithRSA` 签名。具体签名规则以 `/doc.html` 中�
 - 通配符支持情况以平台后台说明为准。
 - 域名变更后应及时更新，否则可能出现支付创建失败。
 
-### 11. 交易投诉处理
+### 11. 交易投诉查询
 
 路径：
 
@@ -321,21 +323,22 @@ V2 接口使用 `SHA256WithRSA` 签名。具体签名规则以 `/doc.html` 中�
 用户中心 -> 交易投诉
 ```
 
-该入口只有在平台开启交易投诉功能时显示。
+该入口只有在平台开启“商户投诉只读中心”时显示。
 
-处理流程：
+查看流程：
 
 1. 查看投诉列表，重点关注未处理投诉。
 2. 点击投诉详情，查看关联订单、问题类型、投诉原因、投诉详情、联系方式、第三方投诉单号。
-3. 与用户充分沟通。
-4. 根据实际情况选择处理结果、回复留言、上传凭证或退款。
-5. 提交处理结果后继续关注投诉状态。
+3. 核对系统订单号、商户订单号、金额和订单状态。
+4. 将需要处理、退款或回复的投诉提交给平台管理员。
+5. 后续在该页面查看平台同步的最新本地处理状态。
 
 注意事项：
 
-- 不要在未沟通或未核实订单的情况下直接结案。
-- 涉及退款时，先确认订单、金额、收款账号和退款能力。
-- 投诉处理记录会影响商户风控判断。
+- 商户页面为只读页面，不能直接退款、回复、上传凭证或改变投诉状态。
+- 页面只展示平台已保存的本地数据，不会在打开页面时实时访问支付通道。
+- 联系电话默认脱敏；如确需完整资料，请由平台管理员按流程核验。
+- 非本商户投诉统一显示为“投诉不存在”。
 
 ## 管理员使用流程
 
@@ -344,7 +347,7 @@ V2 接口使用 `SHA256WithRSA` 签名。具体签名规则以 `/doc.html` 中�
 访问：
 
 ```text
-https://epay.tianlupay.com/admin/login.php
+https://manage.xuanfanpay.top/admin/login.php
 ```
 
 登录后进入平台首页。
