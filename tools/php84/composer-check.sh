@@ -22,14 +22,7 @@ fi
 
 if [ -f composer.lock ]; then
   "$COMPOSER_BIN" install --no-dev --no-interaction --prefer-dist
-  PHP_VERSION_ID=$(
-    "$PHP_BIN" -r 'echo PHP_VERSION_ID;' 2>/dev/null || printf '0'
-  )
-  if [ "$PHP_VERSION_ID" -ge 80500 ]; then
-    printf 'PHP is newer than the target range; skip local platform requirement check and use PHP 7.4/8.4 CI for final acceptance.\n'
-  else
-    "$COMPOSER_BIN" check-platform-reqs
-  fi
+  "$COMPOSER_BIN" check-platform-reqs
 else
   printf 'composer.lock is missing; skipping install until dependency locking is completed.\n'
   exit 2

@@ -4,7 +4,7 @@
     "type": "project",
     "license": "proprietary",
     "require": {
-        "php": ">=7.4 <8.5",
+        "php": ">=8.4 <8.5",
         "cccyun/alipay-sdk": "^1.1",
         "cccyun/wechatpay-sdk": "^1.0",
         "cccyun/qqpay-sdk": "^1.0",
@@ -12,7 +12,7 @@
     },
     "config": {
         "platform": {
-            "php": "7.4.33"
+            "php": "8.4.0"
         },
         "sort-packages": true
     }
