@@ -251,11 +251,11 @@
 
 ### 7.2 现有检查与新增覆盖
 
-沿用 [PHP 8.4 验收标准](php84-acceptance-criteria.md)：目标 PHP 8.4，同时保持 PHP 7.4 下限，现有 CI 矩阵不得被绕过。以下是计划执行的检查，不代表本轮已运行：
+沿用 [PHP 8.4 验收标准](php84-acceptance-criteria.md)：仅维护 PHP 8.4.x，相关 CI 检查不得被绕过。以下是计划执行的检查，不代表本轮已运行：
 
 ```text
-PHP 7.4 / 8.4：变更 PHP 文件语法检查
-php tools/php84/check-php74-floor.php
+PHP 8.4.x：变更 PHP 文件语法检查
+php tools/php84/check-env.php
 php scripts/merchant-complaint-readonly-regression.php
 php scripts/payment-callback-regression.php
 ```
