@@ -397,67 +397,95 @@ case 'delRoll':
 	else exit('{"code":-1,"msg":"删除轮询组失败['.$DB->error().']"}');
 break;
 case 'saveRoll':
-	if($_POST['action'] == 'add'){
-		$name=trim($_POST['name']);
-		$type=intval($_POST['type']);
-		$kind=intval($_POST['kind']);
-		$row=$DB->getRow("select * from pre_roll where name='$name' limit 1");
-		if($row)
-			exit('{"code":-1,"msg":"轮询组名称重复"}');
-		$sql = "INSERT INTO pre_roll (name, type, kind) VALUES ('{$name}', {$type}, {$kind})";
-		if($DB->exec($sql))exit('{"code":0,"msg":"新增轮询组成功！"}');
-		else exit('{"code":-1,"msg":"新增轮询组失败['.$DB->error().']"}');
-	}else{
-		$id=intval($_POST['id']);
-		$name=trim($_POST['name']);
-		$type=intval($_POST['type']);
-		$kind=intval($_POST['kind']);
-		$row=$DB->getRow("select * from pre_roll where name='$name' and id<>$id limit 1");
-		if($row)
-			exit('{"code":-1,"msg":"轮询组名称重复"}');
-		$sql = "UPDATE pre_roll SET name='{$name}',type='{$type}',kind='{$kind}' WHERE id='$id'";
-		if($DB->exec($sql)!==false)exit('{"code":0,"msg":"修改轮询组成功！"}');
-		else exit('{"code":-1,"msg":"修改轮询组失败['.$DB->error().']"}');
+	$action = isset($_POST['action']) ? $_POST['action'] : '';
+	$name = isset($_POST['name']) && is_string($_POST['name']) ? trim($_POST['name']) : '';
+	$type = isset($_POST['type']) ? filter_var($_POST['type'], FILTER_VALIDATE_INT, ['options'=>['min_range'=>1]]) : false;
+	$kind = isset($_POST['kind']) ? filter_var($_POST['kind'], FILTER_VALIDATE_INT, ['options'=>['min_range'=>0, 'max_range'=>2]]) : false;
+	if($name === '' || $type === false || $kind === false || !in_array($action, ['add','edit'], true))
+		exit(json_encode(['code'=>-1,'msg'=>'轮询组参数错误'], JSON_UNESCAPED_UNICODE));
+	if(!$DB->getColumn('SELECT id FROM pre_type WHERE id=:type LIMIT 1', [':type'=>$type]))
+		exit(json_encode(['code'=>-1,'msg'=>'支付方式不存在'], JSON_UNESCAPED_UNICODE));
+	$id = $action === 'edit' && isset($_POST['id']) ? filter_var($_POST['id'], FILTER_VALIDATE_INT, ['options'=>['min_range'=>1]]) : 0;
+	if($action === 'edit' && $id === false) exit(json_encode(['code'=>-1,'msg'=>'轮询组参数错误'], JSON_UNESCAPED_UNICODE));
+	if($DB->getRow('SELECT id FROM pre_roll WHERE name=:name AND id<>:id LIMIT 1', [':name'=>$name, ':id'=>$id]))
+		exit(json_encode(['code'=>-1,'msg'=>'轮询组名称重复'], JSON_UNESCAPED_UNICODE));
+	if($action === 'add'){
+		$ok = $DB->exec('INSERT INTO pre_roll (name,type,kind) VALUES (:name,:type,:kind)', [':name'=>$name, ':type'=>$type, ':kind'=>$kind]);
+		exit(json_encode(['code'=>$ok === false ? -1 : 0, 'msg'=>$ok === false ? '新增轮询组失败' : '新增轮询组成功'], JSON_UNESCAPED_UNICODE));
 	}
+	$row = $DB->getRow('SELECT * FROM pre_roll WHERE id=:id LIMIT 1', [':id'=>$id]);
+	if(!$row) exit(json_encode(['code'=>-1,'msg'=>'当前轮询组不存在'], JSON_UNESCAPED_UNICODE));
+	if(!isset($_POST['originalKind'], $_POST['originalInfo'], $_POST['originalName'], $_POST['originalType']) || (string)$row['kind'] !== (string)$_POST['originalKind'] || (string)$row['info'] !== (string)$_POST['originalInfo'] || (string)$row['name'] !== (string)$_POST['originalName'] || (string)$row['type'] !== (string)$_POST['originalType'])
+		exit(json_encode(['code'=>-1,'msg'=>'轮询组已变化，请刷新后重试'], JSON_UNESCAPED_UNICODE));
+	if($type !== intval($row['type']) && $row['info'] !== '')
+		exit(json_encode(['code'=>-1,'msg'=>'请先清空原通道配置，再更改支付方式'], JSON_UNESCAPED_UNICODE));
+	try {
+		$items = \lib\RollConfig::parse($row['info']);
+	} catch (\InvalidArgumentException $e) {
+		exit(json_encode(['code'=>-1,'msg'=>'原轮询规则无效，请先检查配置'], JSON_UNESCAPED_UNICODE));
+	}
+	if($kind === 1 && $items && !\lib\RollConfig::hasPositiveWeight($items))
+		exit(json_encode(['code'=>-1,'msg'=>'加权模式至少需要一个正权重通道'], JSON_UNESCAPED_UNICODE));
+	$info = $items ? \lib\RollConfig::serialize($items) : '';
+	$index = $kind === 0 && ($kind !== intval($row['kind']) || $info !== $row['info']) ? 0 : intval($row['index']);
+	if($name === $row['name'] && $type === intval($row['type']) && $kind === intval($row['kind']) && $info === $row['info'] && $index === intval($row['index']))
+		exit(json_encode(['code'=>0,'msg'=>'轮询组配置未变化'], JSON_UNESCAPED_UNICODE));
+	$stmt = $DB->query('UPDATE pre_roll SET name=:name,type=:type,kind=:kind,info=:info,`index`=:idx WHERE id=:id AND kind=:oldkind AND info=:oldinfo AND name=:oldname AND type=:oldtype', [':name'=>$name, ':type'=>$type, ':kind'=>$kind, ':info'=>$info, ':idx'=>$index, ':id'=>$id, ':oldkind'=>$row['kind'], ':oldinfo'=>$row['info'], ':oldname'=>$row['name'], ':oldtype'=>$row['type']]);
+	if($stmt === false) exit(json_encode(['code'=>-1,'msg'=>'修改轮询组失败'], JSON_UNESCAPED_UNICODE));
+	exit(json_encode(['code'=>$stmt->rowCount() ? 0 : -1,'msg'=>$stmt->rowCount() ? '修改轮询组成功' : '轮询组已变化，请刷新后重试'], JSON_UNESCAPED_UNICODE));
 break;
 case 'rollInfo':
 	$id=intval($_GET['id']);
-	$row=$DB->getRow("select * from pre_roll where id='$id' limit 1");
+	$row=$DB->getRow('SELECT * FROM pre_roll WHERE id=:id LIMIT 1', [':id'=>$id]);
 	if(!$row)
 		exit('{"code":-1,"msg":"当前轮询组不存在！"}');
-	$list=$DB->getAll("select id,name from pre_channel where type='{$row['type']}' and status=1 ORDER BY id ASC");
-	if(!$list)exit('{"code":-1,"msg":"没有找到支持该支付方式的通道"}');
-	if(!empty($row['info'])){
-		$arr = explode(',',$row['info']);
-		$info = [];
-		foreach($arr as $item){
-			$a = explode(':',$item);
-			$info[] = ['channel'=>$a[0], 'weight'=>$a[1]?$a[1]:1];
-		}
-	}else{
-		$info = null;
+	try {
+		$info = \lib\RollConfig::parse($row['info']);
+	} catch (\InvalidArgumentException $e) {
+		exit(json_encode(['code'=>-1,'msg'=>'轮询规则无效，请检查已保存配置'], JSON_UNESCAPED_UNICODE));
 	}
-	$result=array("code"=>0,"msg"=>"succ","channels"=>$list,"info"=>$info);
+	$list=$DB->getAll('SELECT id,name,status FROM pre_channel WHERE type=:type ORDER BY id ASC', [':type'=>$row['type']]);
+	$list = $list ?: [];
+	$known = [];
+	foreach($list as &$channelrow){
+		$known[$channelrow['id']] = true;
+		if(!$channelrow['status']) $channelrow['name'] .= '（已停用）';
+	}
+	unset($channelrow);
+	foreach($info as $item){
+		if(!isset($known[$item['channel']])) $list[] = ['id'=>$item['channel'],'name'=>$item['channel'].'（已删除，请移除）','missing'=>1];
+	}
+	if(!$list)exit(json_encode(['code'=>-1,'msg'=>'没有找到支持该支付方式的通道'], JSON_UNESCAPED_UNICODE));
+	$result=array('code'=>0,'msg'=>'succ','channels'=>$list,'info'=>$info,'kind'=>intval($row['kind']),'type'=>intval($row['type']),'originalInfo'=>$row['info']);
 	exit(json_encode($result));
 break;
 case 'saveRollInfo':
 	$id=intval($_GET['id']);
-	$row=$DB->getRow("select * from pre_roll where id='$id' limit 1");
+	$row=$DB->getRow('SELECT * FROM pre_roll WHERE id=:id LIMIT 1', [':id'=>$id]);
 	if(!$row)
 		exit('{"code":-1,"msg":"当前轮询组不存在！"}');
-	$list=$_POST['list'];
-	if(empty($list))
-		exit('{"code":-1,"msg":"通道配置不能为空！"}');
-	$info = '';
-	foreach($list as $a){
-		$info .= $row['kind']==1 ? $a['channel'].':'.$a['weight'].',' : $a['channel'].',';
+	if(!isset($_POST['originalKind'], $_POST['originalInfo'], $_POST['originalType']) || (string)$row['kind'] !== (string)$_POST['originalKind'] || (string)$row['info'] !== (string)$_POST['originalInfo'] || (string)$row['type'] !== (string)$_POST['originalType'])
+		exit(json_encode(['code'=>-1,'msg'=>'轮询组已变化，请刷新后重试'], JSON_UNESCAPED_UNICODE));
+	try {
+		$items = \lib\RollConfig::fromInput(isset($_POST['list']) ? $_POST['list'] : null);
+	} catch (\InvalidArgumentException $e) {
+		exit(json_encode(['code'=>-1,'msg'=>$e->getMessage()], JSON_UNESCAPED_UNICODE));
 	}
-	$info = trim($info,',');
-	if(empty($info))
-		exit('{"code":-1,"msg":"通道配置不能为空！"}');
-	$sql = "UPDATE pre_roll SET info='{$info}' WHERE id='$id'";
-	if($DB->exec($sql)!==false)exit('{"code":0,"msg":"修改轮询组成功！"}');
-	else exit('{"code":-1,"msg":"修改轮询组失败['.$DB->error().']"}');
+	if(intval($row['kind']) === 1 && !\lib\RollConfig::hasPositiveWeight($items))
+		exit(json_encode(['code'=>-1,'msg'=>'加权模式至少需要一个正权重通道'], JSON_UNESCAPED_UNICODE));
+	$ids = implode(',', array_column($items, 'channel'));
+	$channels = $DB->getAll("SELECT id,type FROM pre_channel WHERE id IN ($ids)");
+	if(!is_array($channels) || count($channels) !== count($items))
+		exit(json_encode(['code'=>-1,'msg'=>'通道已删除或不可用，请刷新后重试'], JSON_UNESCAPED_UNICODE));
+	foreach($channels as $channelrow){
+		if(intval($channelrow['type']) !== intval($row['type']))
+			exit(json_encode(['code'=>-1,'msg'=>'轮询组包含不同支付方式的通道'], JSON_UNESCAPED_UNICODE));
+	}
+	$info = \lib\RollConfig::serialize($items);
+	if($info === $row['info']) exit(json_encode(['code'=>0,'msg'=>'轮询组配置未变化'], JSON_UNESCAPED_UNICODE));
+	$stmt = $DB->query('UPDATE pre_roll SET info=:info,`index`=0 WHERE id=:id AND kind=:kind AND info=:oldinfo AND type=:type', [':info'=>$info, ':id'=>$id, ':kind'=>$row['kind'], ':oldinfo'=>$row['info'], ':type'=>$row['type']]);
+	if($stmt === false) exit(json_encode(['code'=>-1,'msg'=>'修改轮询组失败'], JSON_UNESCAPED_UNICODE));
+	exit(json_encode(['code'=>$stmt->rowCount() ? 0 : -1,'msg'=>$stmt->rowCount() ? '修改轮询组成功' : '轮询组已变化，请刷新后重试'], JSON_UNESCAPED_UNICODE));
 break;
 
 case 'getChannelMoney': //统计支付通道金额
