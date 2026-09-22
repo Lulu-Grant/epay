@@ -1,4 +1,8 @@
 <?php
+if (PHP_VERSION_ID < 80400 || PHP_VERSION_ID >= 80500) {
+    http_response_code(500);
+    exit('PHP 8.4.x is required.');
+}
 //error_reporting(0);
 error_reporting(E_ERROR | E_PARSE | E_COMPILE_ERROR);
 if(defined('IN_CRONLITE'))return;
