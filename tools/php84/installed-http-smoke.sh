@@ -543,7 +543,9 @@ if (round((float)$total_amount, 2) == round((float)$order["realmoney"], 2)) {
 sysmsg("fail");
 PHP
 
-"$PHP_BIN" -S "$HOST:$PORT" -t "$APP_DIR" "$ROUTER_FILE" >"$SERVER_LOG" 2>&1 &
+# Merchant callbacks can call back into this fixture while the originating
+# request is still active. The CLI server needs another worker for that call.
+PHP_CLI_SERVER_WORKERS=${EPAY_SMOKE_WORKERS:-4} "$PHP_BIN" -S "$HOST:$PORT" -t "$APP_DIR" "$ROUTER_FILE" >"$SERVER_LOG" 2>&1 &
 SERVER_PID=$!
 
 ready=0
@@ -1760,7 +1762,17 @@ else
   authenticated_page user_order_authenticated "$user_cookie" "/user/order.php" "订单记录|搜索"
   authenticated_page user_settle_authenticated "$user_cookie" "/user/settle.php" "结算记录"
   authenticated_page user_transfer_authenticated "$user_cookie" "/user/transfer.php" "代付管理|代付记录"
-  authenticated_page user_download_invalid_action "$user_cookie" "/user/download.php?act=../../config" "No Act"
+  user_download_body="$WORK_DIR/user_download_invalid_action.body"
+  user_download_status=$("$CURL_BIN" -sS -b "$user_cookie" -e "$BASE_URL/user/" \
+    -o "$user_download_body" -w "%{http_code}" \
+    "$BASE_URL/user/download.php?act=../../config")
+  if [ "$user_download_status" = "404" ] &&
+    grep -qx "Not Found" "$user_download_body"; then
+    printf '[OK] user_download_invalid_action: authenticated request denied without file output\n'
+  else
+    printf '[FAIL] user_download_invalid_action: expected HTTP 404 and Not Found\n'
+    failures=$((failures + 1))
+  fi
 
   user_logout_body="$WORK_DIR/user_logout.body"
   user_logout_check_body="$WORK_DIR/user_logout_check.body"
