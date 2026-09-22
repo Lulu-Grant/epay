@@ -38,6 +38,13 @@ jobs:
       - name: Check payment signatures
         run: php tools/php84/check-signatures.php
 
+      - name: P5 repair regressions
+        run: |
+          php scripts/complaint-sync-regression.php
+          php scripts/merchant-complaint-readonly-regression.php
+          php scripts/roll-config-regression.php
+          php scripts/payment-callback-regression.php
+
       - name: Check download endpoint safety
         run: php tools/php84/check-download-safety.php
 
