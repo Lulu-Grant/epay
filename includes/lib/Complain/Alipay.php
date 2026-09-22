@@ -28,23 +28,34 @@ class Alipay implements IComplain
 
         $count_add = 0;
         $count_update = 0;
+        $count_unchanged = 0;
+        $count_skipped = 0;
+        $count_fetched = 0;
         for($page_num = 1; $page_num <= $page_count; $page_num++){
             try{
                 $result = $this->service->batchQuery(null, null, null, $page_num, $page_size);
-            } catch (Exception $e) {
-                return ['code'=>-1, 'msg'=>$e->getMessage()];
+            } catch (\Throwable $e) {
+                return CommUtil::syncFailure('QUERY_FAILED', $count_fetched, $count_add, $count_update, $count_unchanged, $count_skipped);
             }
+            if(!is_array($result) || !isset($result['total_num'], $result['total_page_num'], $result['trade_complain_infos']) || !is_array($result['trade_complain_infos']))
+                return CommUtil::syncFailure('INVALID_RESPONSE', $count_fetched, $count_add, $count_update, $count_unchanged, $count_skipped);
             if($result['total_num'] == 0 || count($result['trade_complain_infos']) == 0) break;
 
             foreach($result['trade_complain_infos'] as $info){
-                $rescode = $this->updateInfo($info);
+				$count_fetched++;
+				try { $rescode = $this->updateInfo($info); }
+				catch (\Throwable $e) {
+					return CommUtil::syncFailure('SAVE_FAILED', $count_fetched, $count_add, $count_update, $count_unchanged, $count_skipped);
+				}
                 if($rescode == 2) $count_update++;
                 elseif($rescode == 1) $count_add++;
+                elseif($rescode == 3) $count_skipped++;
+                else $count_unchanged++;
             }
 
             if($page_num >= $result['total_page_num']) break;
         }
-        return ['code'=>0, 'msg'=>'成功添加'.$count_add.'条投诉记录，更新'.$count_update.'条投诉记录'];
+        return ['code'=>0, 'msg'=>'成功添加'.$count_add.'条、更新'.$count_update.'条；未变'.$count_unchanged.'条，未匹配订单'.$count_skipped.'条', 'counts'=>['fetched'=>$count_fetched,'inserted'=>$count_add,'updated'=>$count_update,'unchanged'=>$count_unchanged,'skipped_unmatched'=>$count_skipped]];
     }
 
     //回调刷新单条投诉记录
@@ -124,13 +135,14 @@ class Alipay implements IComplain
         if(!$row){
             $order = $DB->find('order', 'trade_no,uid,subchannel', ['trade_no'=>$trade_no]);
             if(!$order){
-                if(!$conf['complain_range']) return 0;
+                if(!$conf['complain_range']) return 3;
             }
         }
 
         if($row){
             if($row['edittime'] != $info['gmt_modified']){
-                $DB->update('complain', ['status'=>$status, 'edittime'=>$info['gmt_modified']], ['id'=>$row['id']]);
+                if($DB->update('complain', ['status'=>$status, 'edittime'=>$info['gmt_modified']], ['id'=>$row['id']]) === false)
+                    throw new \RuntimeException('投诉状态保存失败');
                 if($status != $row['status']){
                     CommUtil::autoHandle($trade_no, $status);
                 }
@@ -139,7 +151,8 @@ class Alipay implements IComplain
         }else{
             if($order || $conf['complain_range']==1){
                 $subchannel = $order ? $order['subchannel'] : ($this->channel['subid'] ?? 0);
-                $DB->insert('complain', ['paytype'=>$this->channel['type'], 'channel'=>$this->channel['id'], 'subchannel'=>$subchannel, 'uid'=>$order['uid'] ?? 0, 'trade_no'=>$trade_no, 'thirdid'=>$thirdid, 'type'=>$info['leaf_category_name'], 'title'=>$info['complain_reason'], 'content'=>$info['content'], 'status'=>$status, 'phone'=>$info['phone_no'], 'addtime'=>$info['gmt_create'], 'edittime'=>$info['gmt_modified']]);
+                if($DB->insert('complain', ['paytype'=>$this->channel['type'], 'channel'=>$this->channel['id'], 'subchannel'=>$subchannel, 'uid'=>$order['uid'] ?? 0, 'trade_no'=>$trade_no, 'thirdid'=>$thirdid, 'type'=>$info['leaf_category_name'], 'title'=>$info['complain_reason'], 'content'=>$info['content'], 'status'=>$status, 'phone'=>$info['phone_no'], 'addtime'=>$info['gmt_create'], 'edittime'=>$info['gmt_modified']]) === false)
+                    throw new \RuntimeException('投诉记录保存失败');
 
                 if($status == 0 && $conf['complain_auto_reply'] == 1 && !empty($conf['complain_auto_reply_con'])){
                     usleep(300000);

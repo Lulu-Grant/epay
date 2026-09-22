@@ -5,6 +5,34 @@ class CommUtil
 {
     public static $plugins = ['alipay','alipaysl','alipayd','wxpayn','wxpaynp','huifu','kuaiqian','huolian','yeepay','epayn','dinpay','fuiou2','passpay'];
 
+    public static function syncFailure($error, $fetched, $inserted, $updated, $unchanged, $skipped){
+        return [
+            'code'=>-1,
+            'msg'=>'投诉同步中断，请按诊断编号排查',
+            'error'=>$error,
+            'partial'=>($inserted + $updated) > 0,
+            'counts'=>[
+                'fetched'=>$fetched,
+                'inserted'=>$inserted,
+                'updated'=>$updated,
+                'unchanged'=>$unchanged,
+                'skipped_unmatched'=>$skipped,
+                'failed'=>1
+            ]
+        ];
+    }
+
+    public static function supports($channel, $source = 0){
+        if(!is_array($channel) || !isset($channel['plugin'], $channel['type'])) return false;
+        $plugin = $channel['plugin'];
+        $type = intval($channel['type']);
+        if(in_array($plugin, ['alipay','alipaysl','alipayd'], true)) return $type === 1 && in_array($source, [0,1], true);
+        if($source !== 0) return false;
+        if(in_array($plugin, ['kuaiqian','yeepay','epayn'], true)) return in_array($type, [1,2], true);
+        if(in_array($plugin, ['wxpayn','wxpaynp','huifu','huolian','dinpay','fuiou2','passpay'], true)) return $type === 2;
+        return false;
+    }
+
     public static function getModel($channel){
         if(!$channel) return false;
         $channel['source'] = $channel['source'] ?? 0;

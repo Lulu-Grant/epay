@@ -30,21 +30,32 @@ class Wxpay implements IComplain
 
         $count_add = 0;
         $count_update = 0;
+        $count_unchanged = 0;
+        $count_skipped = 0;
+        $count_fetched = 0;
         for($page_num = 1; $page_num <= $page_count; $page_num++){
             try{
                 $result = $this->service->batchQuery($begin_date, $end_date, $page_num, $page_size);
-            } catch (Exception $e) {
-                return ['code'=>-1, 'msg'=>$e->getMessage()];
+            } catch (\Throwable $e) {
+                return CommUtil::syncFailure('QUERY_FAILED', $count_fetched, $count_add, $count_update, $count_unchanged, $count_skipped);
             }
-            if($result['offset'] == 0 && $result['total_count'] == 0 || count($result['data']) == 0) break;
+            if(!is_array($result) || !isset($result['offset'], $result['total_count'], $result['data']) || !is_array($result['data']))
+                return CommUtil::syncFailure('INVALID_RESPONSE', $count_fetched, $count_add, $count_update, $count_unchanged, $count_skipped);
+            if(($result['offset'] == 0 && $result['total_count'] == 0) || count($result['data']) == 0) break;
 
             foreach($result['data'] as $info){
-                $rescode = $this->updateInfo($info);
+				$count_fetched++;
+				try { $rescode = $this->updateInfo($info); }
+				catch (\Throwable $e) {
+					return CommUtil::syncFailure('SAVE_FAILED', $count_fetched, $count_add, $count_update, $count_unchanged, $count_skipped);
+				}
                 if($rescode == 2) $count_update++;
                 elseif($rescode == 1) $count_add++;
+                elseif($rescode == 3) $count_skipped++;
+                else $count_unchanged++;
             }
         }
-        return ['code'=>0, 'msg'=>'成功添加'.$count_add.'条投诉记录，更新'.$count_update.'条投诉记录'];
+        return ['code'=>0, 'msg'=>'成功添加'.$count_add.'条、更新'.$count_update.'条；未变'.$count_unchanged.'条，未匹配订单'.$count_skipped.'条', 'counts'=>['fetched'=>$count_fetched,'inserted'=>$count_add,'updated'=>$count_update,'unchanged'=>$count_unchanged,'skipped_unmatched'=>$count_skipped]];
     }
 
     //回调刷新单条投诉记录
@@ -139,12 +150,13 @@ class Wxpay implements IComplain
             $order = $DB->find('order', 'uid', ['trade_no'=>$trade_no]);
             if(!$order){
                 $order = $DB->find('order', 'trade_no,uid', ['api_trade_no'=>$api_trade_no]);
+                if($order) $trade_no = $order['trade_no'];
                 if(!$order){
                     $order = $DB->find('order', 'trade_no,uid', ['bill_trade_no'=>$api_trade_no]);
                     if($order){
                         $trade_no = $order['trade_no'];
                     }else{
-                        if(!$conf['complain_range']) return 0;
+                        if(!$conf['complain_range']) return 3;
                     }
                 }
             }
@@ -152,7 +164,8 @@ class Wxpay implements IComplain
 
         if($row){
             if($status != $row['status']){
-                $DB->update('complain', ['status'=>$status, 'edittime'=>'NOW()'], ['id'=>$row['id']]);
+                if($DB->update('complain', ['status'=>$status, 'edittime'=>'NOW()'], ['id'=>$row['id']]) === false)
+                    throw new \RuntimeException('投诉状态保存失败');
                 CommUtil::autoHandle($trade_no, $status);
                 return 2;
             }
@@ -161,7 +174,8 @@ class Wxpay implements IComplain
                 $time = date('Y-m-d H:i:s', strtotime($info['complaint_time']));
                 $type = self::$problem_type_text[$info['problem_type']] ?? '其他类型';
                 $phone = $info['payer_phone'] ? $this->service->rsaDecrypt($info['payer_phone']) : null;
-                $DB->insert('complain', ['paytype'=>$this->channel['type'], 'channel'=>$this->channel['id'], 'uid'=>$order['uid'] ?? 0, 'trade_no'=>$trade_no, 'thirdid'=>$thirdid, 'type'=>$type, 'title'=>$info['problem_description'], 'content'=>$info['complaint_detail'], 'status'=>$status, 'phone'=>$phone, 'addtime'=>$time, 'edittime'=>$time, 'thirdmchid'=>$info['complainted_mchid']]);
+                if($DB->insert('complain', ['paytype'=>$this->channel['type'], 'channel'=>$this->channel['id'], 'uid'=>$order['uid'] ?? 0, 'trade_no'=>$trade_no, 'thirdid'=>$thirdid, 'type'=>$type, 'title'=>$info['problem_description'], 'content'=>$info['complaint_detail'], 'status'=>$status, 'phone'=>$phone, 'addtime'=>$time, 'edittime'=>$time, 'thirdmchid'=>$info['complainted_mchid']]) === false)
+                    throw new \RuntimeException('投诉记录保存失败');
 
                 if($status == 0 && $conf['complain_auto_reply'] == 1 && !empty($conf['complain_auto_reply_con'])){
                     usleep(300000);
