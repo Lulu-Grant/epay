@@ -55,10 +55,7 @@ upgrade/php-84-compatible
 - MySQL 5.7 或 MariaDB 10.x
 - 宝塔面板可用，但需要正确配置运行目录、伪静态和计划任务
 
-兼容下限：
-
-- 历史 PHP 7.4 兼容性资料仅供旧环境审计，不作为当前生产要求。
-- MySQL 5.7
+受支持版本仅为 PHP 8.4.x；MySQL 5.7+ 或兼容的 MariaDB。见 [运行版本政策](docs/php84-support-policy.md)。
 
 必需 PHP 扩展：
 
@@ -161,12 +158,6 @@ PHP 语法检查：
 bash tools/php84/lint-all.sh
 ```
 
-PHP 7.4 下限静态检查：
-
-```bash
-php tools/php84/check-php74-floor.php
-```
-
 弃用模式扫描：
 
 ```bash
@@ -183,9 +174,9 @@ EPAY_DB_USER="root" EPAY_DB_PASSWORD="你的本地数据库密码" bash tools/ph
 
 更多验收项见：
 
-- [PHP 8.4 升级计划](docs/php84-upgrade-plan.md)
+- [PHP 8.4 运行版本政策](docs/php84-support-policy.md)
 - [PHP 8.4 升级验收标准](docs/php84-acceptance-criteria.md)
-- [PHP 8.4 Upgrade Verification Report](docs/php84-verification-report.md)
+- [PHP 8.4 历史升级验证报告](docs/php84-verification-report.md)
 - [PHP 8.4 回滚操作手册](docs/php84-rollback-runbook.md)
 - [当前生产环境与入口](docs/production-environment.md)
 
@@ -198,13 +189,12 @@ EPAY_DB_USER="root" EPAY_DB_PASSWORD="你的本地数据库密码" bash tools/ph
 - [管理员日常运维手册](docs/admin-operations-runbook.md)
 - [支付系统故障排查手册](docs/troubleshooting-guide.md)
 
-面向升级开发：
+面向当前维护与历史核查：
 
-- [PHP 8.4 升级计划](docs/php84-upgrade-plan.md)
+- [PHP 8.4 运行版本政策](docs/php84-support-policy.md)
 - [PHP 8.4 升级验收标准](docs/php84-acceptance-criteria.md)
 - [PHP 8.4 Upgrade Baseline Report](docs/php84-baseline-report.md)
-- [PHP 8.4 Upgrade Verification Report](docs/php84-verification-report.md)
-- [PHP 8.4 目标模式开发提示词](docs/target-mode-php84-development-prompts.md)
+- [PHP 8.4 历史升级验证报告](docs/php84-verification-report.md)
 
 扩展模块：
 
