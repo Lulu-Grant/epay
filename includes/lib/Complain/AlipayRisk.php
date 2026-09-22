@@ -25,18 +25,34 @@ class AlipayRisk implements IComplain
 
         $count_add = 0;
         $count_update = 0;
+        $count_unchanged = 0;
+        $count_skipped = 0;
+        $count_fetched = 0;
         for($page_num = 1; $page_num <= $page_count; $page_num++){
             try{
                 $result = $this->service->riskbatchQuery(null, null, null, $page_num, $page_size);
-            } catch (Exception $e) {
-                return ['code'=>-1, 'msg'=>$e->getMessage()];
+            } catch (\Throwable $e) {
+                return CommUtil::syncFailure('QUERY_FAILED', $count_fetched, $count_add, $count_update, $count_unchanged, $count_skipped);
             }
+            if(!is_array($result) || !isset($result['total_size'], $result['complaint_list']) || !is_array($result['complaint_list']))
+                return CommUtil::syncFailure('INVALID_RESPONSE', $count_fetched, $count_add, $count_update, $count_unchanged, $count_skipped);
             if($result['total_size'] == 0 || count($result['complaint_list']) == 0) break;
 
             foreach($result['complaint_list'] as $info){
-                $retcode = $this->updateInfo($info);
+				$count_fetched++;
+				try { $retcode = $this->updateInfo($info); }
+				catch (SyncActionException $e) {
+					if($e->persistedCode() == 1) $count_add++;
+					else $count_update++;
+					return CommUtil::syncFailure('ACTION_FAILED', $count_fetched, $count_add, $count_update, $count_unchanged, $count_skipped);
+				}
+				catch (\Throwable $e) {
+					return CommUtil::syncFailure('SAVE_FAILED', $count_fetched, $count_add, $count_update, $count_unchanged, $count_skipped);
+				}
                 if($retcode == 2) $count_update++;
                 elseif($retcode == 1) $count_add++;
+                elseif($retcode == 3) $count_skipped++;
+                else $count_unchanged++;
 
                 if(isset($_GET['key']) && self::getStatus($info['status']) < 2){ //监控模式
                     global $DB;
@@ -52,7 +68,7 @@ class AlipayRisk implements IComplain
                 }
             }
         }
-        return ['code'=>0, 'msg'=>'成功添加'.$count_add.'条投诉记录，更新'.$count_update.'条投诉记录'];
+        return ['code'=>0, 'msg'=>'成功添加'.$count_add.'条、更新'.$count_update.'条；未变'.$count_unchanged.'条，未匹配订单'.$count_skipped.'条', 'counts'=>['fetched'=>$count_fetched,'inserted'=>$count_add,'updated'=>$count_update,'unchanged'=>$count_unchanged,'skipped_unmatched'=>$count_skipped]];
     }
 
     //回调刷新单条投诉记录
@@ -105,12 +121,13 @@ class AlipayRisk implements IComplain
             $order = $DB->find('order', 'uid', ['trade_no'=>$trade_no]);
             if(!$order){
                 $order = $DB->find('order', 'trade_no,uid', ['api_trade_no'=>$api_trade_no]);
+                if($order) $trade_no = $order['trade_no'];
                 if(!$order){
                     $order = $DB->find('order', 'trade_no,uid', ['bill_trade_no'=>$api_trade_no]);
                     if($order){
                         $trade_no = $order['trade_no'];
                     }else{
-                        if(!$conf['complain_range']) return 0;
+                        if(!$conf['complain_range']) return 3;
                     }
                 }
             }
@@ -118,19 +135,25 @@ class AlipayRisk implements IComplain
 
         if($row){
             if($status != $row['status']){
-                $DB->update('complain', ['status'=>$status, 'edittime'=>$info['gmt_process']], ['id'=>$row['id']]);
-                CommUtil::autoHandle($trade_no, $status);
+                if($DB->update('complain', ['status'=>$status, 'edittime'=>$info['gmt_process']], ['id'=>$row['id']]) === false)
+                    throw new \RuntimeException('投诉状态保存失败');
+                try { CommUtil::autoHandle($trade_no, $status); }
+                catch (\Throwable $e) { throw new SyncActionException(2, $e); }
                 return 2;
             }
         }else{
             if($order || $conf['complain_range']==1){
-                $DB->insert('complain', ['paytype'=>$this->channel['type'], 'channel'=>$this->channel['id'], 'source'=>1, 'uid'=>$order['uid'] ?? 0, 'trade_no'=>$trade_no, 'thirdid'=>$thirdid, 'type'=>'交易投诉', 'title'=>'-', 'content'=>$info['complain_content'], 'status'=>$status, 'phone'=>$info['contact'], 'addtime'=>$info['gmt_complain'], 'edittime'=>$info['gmt_process']]);
-
-                if($status == 0 && $conf['complain_auto_reply'] == 1 && !empty($conf['complain_auto_reply_con'])){
-                    usleep(300000);
-                    $this->feedbackSubmit($thirdid, 'ORTHER', $conf['complain_auto_reply_con']);
-                }
-                CommUtil::autoHandle($trade_no, $status);
+                if($DB->insert('complain', ['paytype'=>$this->channel['type'], 'channel'=>$this->channel['id'], 'source'=>1, 'uid'=>$order['uid'] ?? 0, 'trade_no'=>$trade_no, 'thirdid'=>$thirdid, 'type'=>'交易投诉', 'title'=>'-', 'content'=>$info['complain_content'], 'status'=>$status, 'phone'=>$info['contact'], 'addtime'=>$info['gmt_complain'], 'edittime'=>$info['gmt_process']]) === false)
+                    throw new \RuntimeException('投诉记录保存失败');
+                try {
+                    if($status == 0 && $conf['complain_auto_reply'] == 1 && !empty($conf['complain_auto_reply_con'])){
+                        usleep(300000);
+                        $reply = $this->feedbackSubmit($thirdid, 'ORTHER', $conf['complain_auto_reply_con']);
+                        if(!is_array($reply) || !isset($reply['code']) || $reply['code'] != 0)
+                            throw new \RuntimeException('自动回复失败');
+                    }
+                    CommUtil::autoHandle($trade_no, $status);
+                } catch (\Throwable $e) { throw new SyncActionException(1, $e); }
                 return 1;
             }
         }

@@ -317,6 +317,10 @@ function changeChannel(){
 		$("#form_getnewlist").show();
 		$(".channelid").text(channel)
 		var plugin = $("#channel option:selected").attr('plugin');
+		if(plugin.indexOf('alipay') === -1){
+			$('#source').val('0');
+			source = 0;
+		}
 		if(existSubChannel.indexOf(plugin)>-1){
 			$("#subchannel_div").show();
 			getSubChannels();
@@ -399,9 +403,10 @@ function refreshNewList(){
 				layer.alert(data.msg, {icon: 2})
 			}
 		},
-		error:function(data){
+			error:function(data){
 			layer.close(ii);
-			layer.msg('服务器错误');
+			var response = data.responseJSON;
+			layer.alert(response && response.msg ? response.msg : '获取失败，请检查登录状态或网络连接', {icon: 2});
 		}
 	});
 }

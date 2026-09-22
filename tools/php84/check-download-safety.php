@@ -12,7 +12,7 @@ $files = array(
         'login_guard' => '$islogin==1',
     ),
     'user/download.php' => array(
-        'login_guard' => '$islogin2==1',
+        'login_guard' => '$islogin2!=1',
     ),
 );
 

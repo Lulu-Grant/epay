@@ -3,9 +3,29 @@ include("../includes/common.php");
 if($islogin==1){}else exit("<script language='javascript'>window.location.href='./login.php';</script>");
 $act=isset($_GET['act'])?daddslashes($_GET['act']):null;
 
-if(!checkRefererHost())exit('{"code":403}');
+if(!checkRefererHost())exit('{"code":403,"msg":"请求来源无效"}');
 
 @header('Content-Type: application/json; charset=UTF-8');
+
+function complainAdminJson($payload){
+	exit(\lib\Complain\AdminFetch::encode($payload));
+}
+
+function complainAdminFailure($stage, $channelid, $plugin, $source, $kind, $counts = null){
+	$reference = uniqid('cf', false);
+	error_log('Complaint fetch failed ref='.$reference.' stage='.$stage.' channel='.intval($channelid).' plugin='.preg_replace('/[^a-z0-9_]/', '', (string)$plugin).' source='.intval($source).' kind='.$kind);
+	$error = in_array($kind, ['QUERY_FAILED','INVALID_RESPONSE','SAVE_FAILED','ACTION_FAILED'], true) ? $kind : 'FETCH_FAILED';
+	$response = ['code'=>-1,'msg'=>'投诉获取失败（'.$stage.'），诊断编号：'.$reference,'error'=>$error,'reference'=>$reference];
+	if(is_array($counts)){
+		$response['partial'] = !empty($counts['inserted']) || !empty($counts['updated']);
+		$response['counts'] = [];
+		foreach(['fetched','inserted','updated','unchanged','skipped_unmatched','failed'] as $key){
+			$response['counts'][$key] = isset($counts[$key]) ? max(0, intval($counts[$key])) : 0;
+		}
+		$response['msg'] .= '；此前已新增 '.$response['counts']['inserted'].' 条、更新 '.$response['counts']['updated'].' 条';
+	}
+	complainAdminJson($response);
+}
 
 switch($act){
 case 'list':
@@ -74,7 +94,8 @@ case 'getChannels':
 	if(isset($_SESSION['complain_channels']) && count($_SESSION['complain_channels'])>0){
 		$orderby = 'FIELD(id,'.implode(',',$_SESSION['complain_channels']).') desc,id ASC';
 	}
-	$list=$DB->getAll("SELECT id,name,plugin FROM pre_channel WHERE plugin IN ('".implode("','", $plugins)."') ORDER BY {$orderby}");
+	$list=$DB->getAll("SELECT id,name,plugin,type FROM pre_channel WHERE plugin IN ('".implode("','", $plugins)."') ORDER BY {$orderby}");
+	$list=array_values(array_filter($list ?: [], function($channel){ return \lib\Complain\CommUtil::supports($channel, 0) || \lib\Complain\CommUtil::supports($channel, 1); }));
 	$result = ['code'=>0,'msg'=>'succ','plugins'=>$plugins,'data'=>$list];
 	exit(json_encode($result));
 break;
@@ -93,8 +114,8 @@ case 'setNotifyUrl':
 			$result = $model->delNotifyUrl();
 		}
 		exit(json_encode($result));
-	}catch(Exception $e){
-		exit('{"code":-1,"msg":"'.$e->getMessage().'"}');
+	}catch(\Throwable $e){
+		complainAdminFailure('回调配置', $channelid, isset($channel['plugin']) ? $channel['plugin'] : '', 0, get_class($e));
 	}
 break;
 
@@ -107,21 +128,45 @@ case 'getSubChannels':
 break;
 
 case 'refreshNewList':
-	$channelid = intval($_POST['channel']);
-	$subchannelid = intval($_POST['subchannel']);
-	$num = intval($_POST['num']);
-	$source = isset($_POST['source'])?intval($_POST['source']):0;
-	if($num < 10) $num = 10;
-	$channel=$subchannelid>0 ? \lib\Channel::getSub($subchannelid) : \lib\Channel::get($channelid);
-	if(!$channel)exit('{"code":-1,"msg":"当前支付通道不存在！"}');
-	$channel['source'] = $source;
+	try { $request = \lib\Complain\AdminFetch::request($_POST); }
+	catch (\InvalidArgumentException $e) { complainAdminJson(['code'=>-1,'msg'=>$e->getMessage()]); }
+	$channelid = $request['channel'];
+	$subchannelid = $request['subchannel'];
+	$num = $request['num'];
+	$source = $request['source'];
+	$stage = '通道读取';
+	$plugin = '';
 	try{
+		$parent = \lib\Channel::get($channelid);
+		if(!$parent) complainAdminJson(['code'=>-1,'msg'=>'当前支付通道不存在']);
+		$plugin = $parent['plugin'];
+		$channel = $parent;
+		if($subchannelid > 0){
+			$subrow = $DB->getRow('SELECT channel FROM pre_subchannel WHERE id=:id AND status=1 LIMIT 1', [':id'=>$subchannelid]);
+			if(!$subrow || intval($subrow['channel']) !== $channelid)
+				complainAdminJson(['code'=>-1,'msg'=>'子通道不属于所选通道或未启用']);
+			$channel = \lib\Channel::getSub($subchannelid);
+			if(!$channel) complainAdminJson(['code'=>-1,'msg'=>'当前子通道不存在']);
+		}
+		if(!\lib\Complain\CommUtil::supports($channel, $source))
+			complainAdminJson(['code'=>-1,'msg'=>'该插件、支付方式或投诉来源不支持获取']);
+		if(\lib\Complain\AdminFetch::hasUnresolvedConfig($channel))
+			complainAdminJson(['code'=>-1,'msg'=>'通道配置包含未解析变量，请选择已配置子通道后重试']);
+		$channel['source'] = $source;
+		$stage = '适配器初始化';
 		$model = \lib\Complain\CommUtil::getModel($channel);
-		if(!$model)exit('{"code":-1,"msg":"不支持该支付插件"}');
+		if(!$model) complainAdminJson(['code'=>-1,'msg'=>'不支持该支付插件']);
+		$stage = '上游查询';
 		$result = $model->refreshNewList($num);
-		exit(json_encode($result));
-	}catch(Exception $e){
-		exit('{"code":-1,"msg":"'.$e->getMessage().'"}');
+		if(!is_array($result) || !isset($result['code']))
+			complainAdminFailure('响应校验', $channelid, $plugin, $source, 'INVALID_RESULT');
+		if(intval($result['code']) !== 0){
+			$error = isset($result['error']) ? $result['error'] : 'QUERY_FAILED';
+			complainAdminFailure('同步执行', $channelid, $plugin, $source, $error, isset($result['counts']) ? $result['counts'] : null);
+		}
+		complainAdminJson($result);
+	}catch(\Throwable $e){
+		complainAdminFailure($stage, $channelid, $plugin, $source, get_class($e));
 	}
 break;
 

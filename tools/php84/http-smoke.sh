@@ -126,7 +126,9 @@ request() {
 }
 
 request install "/install/" "200" "text/html" "安装环境检测|安装程序|install\\.lock" "no"
-request update "/install/update.php" "200" "text/html" "成功执行SQL|升级|安装|返回首页" "no"
+# This smoke uses the repository's empty config template; the database-backed
+# upgrade path is exercised separately by install-upgrade-smoke.sh.
+request update "/install/update.php" "200" "text/html" "链接数据库失败" "no"
 request submit_missing_merchant "/submit.php" "200" "text/html" "你还未配置支付接口商户" "no"
 request mapi_missing_params "/mapi.php" "200" "application/json" "未传入任何参数" "json"
 

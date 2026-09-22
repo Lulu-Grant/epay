@@ -21,7 +21,7 @@ $conf = array_merge($conf, $groupconfig);
 <head>
   <meta charset="utf-8" />
   <title><?php echo $title?> | <?php echo $conf['sitename']?></title>
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
   <link rel="stylesheet" href="<?php echo $cdnpublic?>twitter-bootstrap/3.3.7/css/bootstrap.min.css" type="text/css" />
   <link rel="stylesheet" href="<?php echo $cdnpublic?>animate.css/3.5.2/animate.min.css" type="text/css" />
@@ -30,8 +30,9 @@ $conf = array_merge($conf, $groupconfig);
   <link rel="stylesheet" href="./assets/css/font.css" type="text/css" />
   <link rel="stylesheet" href="./assets/css/app.css" type="text/css" />
   <link rel="stylesheet" href="../assets/css/bootstrap-table.css?v=1"/>
+  <link rel="stylesheet" href="../assets/css/dashboard-responsive.css?v=1"/>
 </head>
-<body>
+<body class="dashboard-responsive">
 <div class="app app-header-fixed  ">
   <!-- header -->
   <header id="header" class="app-header navbar" role="menu">

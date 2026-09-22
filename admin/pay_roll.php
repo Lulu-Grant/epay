@@ -38,6 +38,10 @@ $list = $DB->getAll("SELECT * FROM pre_roll ORDER BY id ASC");
 				<form class="form-horizontal" id="form-store">
 					<input type="hidden" name="action" id="action"/>
 					<input type="hidden" name="id" id="id"/>
+					<input type="hidden" name="originalKind" id="originalKind"/>
+					<input type="hidden" name="originalInfo" id="originalInfo"/>
+					<input type="hidden" name="originalName" id="originalName"/>
+					<input type="hidden" name="originalType" id="originalType"/>
 					<div class="form-group">
 						<label class="col-sm-2 control-label no-padding-right">显示名称</label>
 						<div class="col-sm-10">
@@ -124,6 +128,10 @@ function addframe(){
 	$("#name").val('');
 	$("#type").val(0);
 	$("#kind").val(0);
+	$("#originalKind").val('');
+	$("#originalInfo").val('');
+	$("#originalName").val('');
+	$("#originalType").val('');
 }
 function editframe(id){
 	var ii = layer.load(2, {shade:[0.1,'#fff']});
@@ -141,6 +149,10 @@ function editframe(id){
 				$("#name").val(data.data.name);
 				$("#type").val(data.data.type);
 				$("#kind").val(data.data.kind);
+				$("#originalKind").val(data.data.kind);
+				$("#originalInfo").val(data.data.info);
+				$("#originalName").val(data.data.name);
+				$("#originalType").val(data.data.type);
 			}else{
 				layer.alert(data.msg, {icon: 2})
 			}
@@ -225,6 +237,19 @@ function setStatus(id,status) {
 		}
 	});
 }
+var rollRowIndex = 0;
+function addRollRow(channel, weight){
+	var index = rollRowIndex++;
+	var row = $('<dd class="form-inline roll-row"></dd>');
+	var select = $('<select class="form-control roll-channel"></select>').attr('name', 'list['+index+'][channel]');
+	select.append($('#channel option').clone());
+	if(channel != null) select.val(String(channel));
+	var input = $('<input type="number" min="1" max="99" step="1" class="form-control roll-weight" placeholder="权重(1-99)">')
+		.attr('name', 'list['+index+'][weight]').val(weight == null ? 1 : weight);
+	row.append(select, ' ', input, ' ', $('<button type="button" class="btn btn-sm btn-danger btn-remove" aria-label="移除通道"><i class="fa fa-times"></i></button>'));
+	$('#form-info .fieldlist').append(row);
+	return row;
+}
 function editInfo(id){
 	var ii = layer.load(2, {shade:[0.1,'#fff']});
 	$("#channel").empty();
@@ -236,11 +261,14 @@ function editInfo(id){
 			layer.close(ii);
 			if(data.code == 0){
 				$.each(data.channels, function (i, res) {
-					$("#channel").append('<option value="'+res.id+'">'+res.name+'</option>');
+					$("#channel").append($('<option></option>').val(res.id).text(res.name));
 				})
-				var item = '<div class="modal-body"><form class="form" id="form-info"><dl class="fieldlist" data-name="list" data-listidx="0">';
-				item += '</dl><button type="button" id="save" onclick="saveInfo('+id+')" class="btn btn-primary btn-block">保存</button><br/>备注:顺序轮询设置权重值无效</form></div>';
-				var area = [$(window).width() > 520 ? '520px' : '100%', '480px'];
+				var item = '<div class="modal-body roll-modal-body"><form class="form" id="form-info">'+
+					'<input type="hidden" name="originalKind"><input type="hidden" name="originalInfo"><input type="hidden" name="originalType">'+
+					'<dl class="fieldlist"></dl><button type="button" class="btn btn-sm btn-success pay-append">追加通道</button> '+
+					'<button type="button" class="btn btn-sm btn-default roll-edit-weight">配置将来权重</button>'+
+					'<p class="help-block" id="roll-weight-note"></p><button type="button" id="save" onclick="saveInfo('+id+')" class="btn btn-primary btn-block">保存</button></form></div>';
+				var area = [Math.min(520, Math.max(240, window.innerWidth - 24))+'px', Math.min(600, Math.max(180, window.innerHeight - 24))+'px'];
 				layer.open({
 				  type: 1,
 				  area: area,
@@ -248,16 +276,19 @@ function editInfo(id){
 				  skin: 'layui-layer-rim',
 				  content: item,
 				  success: function(){
-					  if(data.info == null){
-						$(".fieldlist").append('<dd class="form-inline"><select name="list[0][channel]" class="form-control">'+$("#channel").html()+'</select> <input type="text" name="list[0][weight]" class="form-control" value="" size="10" placeholder="权重(1-99)"> <span class="btn btn-sm btn-danger" disabled><i class="fa fa-times"></i></span> </dd>');
+					  rollRowIndex = 0;
+					  $('#form-info input[name="originalKind"]').val(data.kind);
+					  $('#form-info input[name="originalInfo"]').val(data.originalInfo);
+					  $('#form-info input[name="originalType"]').val(data.type);
+					  $.each(data.info || [], function(i, res){ addRollRow(res.channel, res.weight); });
+					  if(!data.info || !data.info.length) addRollRow(null, 1);
+					  if(data.kind != 1){
+						$('#roll-weight-note').text('当前模式不使用权重；保存的权重会在切换到加权随机后使用。');
+						$('#form-info .roll-weight').prop('readonly', true);
 					  }else{
-						$.each(data.info, function (i, res) {
-							var num = parseInt(Math.random()*(99999-10+1)+10,10);
-							$(".fieldlist").append('<dd class="form-inline"><select name="list['+num+'][channel]" class="form-control" default="'+res.channel+'">'+$("#channel").html()+'</select> <input type="text" name="list['+num+'][weight]" class="form-control" value="'+res.weight+'" size="10" placeholder="权重(1-99)"> <span class="btn btn-sm btn-danger btn-remove"><i class="fa fa-times"></i></span> </dd>');
-							$("select[name='list["+num+"][channel]']").val(res.channel);
-						})
+						$('#roll-weight-note').text('每个通道权重为 1–99，数值越大被选中的概率越高。');
+						$('#form-info .roll-edit-weight').hide();
 					  }
-					  $(".fieldlist").append('<dd><a href="javascript:;" class="btn btn-sm btn-success pay-append"><i class="fa fa-plus"></i> 追加</a></dd>');
 				  }
 				});
 			}else{
@@ -297,13 +328,15 @@ function saveInfo(id){
 	});
 }
 $(document).on("click", ".pay-append", function (e) {
-	var select = $("#channel").html();
-	var num = parseInt(Math.random()*(99999-10+1)+10,10);
-	var html = '<dd class="form-inline"><select name="list['+num+'][channel]" class="form-control">'+select+'</select> <input type="text" name="list['+num+'][weight]" class="form-control" value="" size="10" placeholder="权重(1-99)"> <span class="btn btn-sm btn-danger btn-remove"><i class="fa fa-times"></i></span> </dd>';
-	$(this).parent().parent().find('dd[class="form-inline"]:last').append(html);
+	e.preventDefault();
+	var row = addRollRow(null, 1);
+	if($('#form-info input[name="originalKind"]').val() != '1' && !$('#form-info').data('weightEditing')) row.find('.roll-weight').prop('readonly', true);
 });
 $(document).on("click", "dd .btn-remove", function () {
-	var container = $(this).closest("dl");
 	$(this).closest("dd").remove();
+});
+$(document).on('click', '.roll-edit-weight', function(){
+	$('#form-info').data('weightEditing', true).find('.roll-weight').prop('readonly', false);
+	$(this).hide();
 });
 </script>

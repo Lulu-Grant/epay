@@ -543,7 +543,9 @@ if (round((float)$total_amount, 2) == round((float)$order["realmoney"], 2)) {
 sysmsg("fail");
 PHP
 
-"$PHP_BIN" -S "$HOST:$PORT" -t "$APP_DIR" "$ROUTER_FILE" >"$SERVER_LOG" 2>&1 &
+# Merchant callbacks can call back into this fixture while the originating
+# request is still active. The CLI server needs another worker for that call.
+PHP_CLI_SERVER_WORKERS=${EPAY_SMOKE_WORKERS:-4} "$PHP_BIN" -S "$HOST:$PORT" -t "$APP_DIR" "$ROUTER_FILE" >"$SERVER_LOG" 2>&1 &
 SERVER_PID=$!
 
 ready=0
@@ -1608,7 +1610,6 @@ if [ -f "$ADMIN_CODE_BACKUP" ]; then
   admin_captcha_cookie="$WORK_DIR/admin_captcha.cookie"
   admin_captcha_body="$WORK_DIR/admin_captcha.body"
   admin_captcha_meta="$WORK_DIR/admin_captcha.meta"
-  admin_captcha_login_body="$WORK_DIR/admin_captcha_login.body"
 
   if "$CURL_BIN" -sS -c "$admin_captcha_cookie" -b "$admin_captcha_cookie" \
     -o "$admin_captcha_body" -w "%{http_code}\n%{content_type}\n" \
@@ -1625,21 +1626,9 @@ if [ -f "$ADMIN_CODE_BACKUP" ]; then
     failures=$((failures + 1))
   fi
 
-  if "$CURL_BIN" -sS -c "$admin_captcha_cookie" -b "$admin_captcha_cookie" -e "$BASE_URL/admin/login.php" \
-    -X POST -d "username=admin&password=123456&code=wrong" \
-    -o "$admin_captcha_login_body" "$BASE_URL/admin/login.php?act=login" &&
-    check_json "$admin_captcha_login_body" &&
-    json_field_equals "$admin_captcha_login_body" code -1 &&
-    "$PHP_BIN" -r '
-      $data = json_decode(file_get_contents($argv[1]), true);
-      exit(is_array($data) && isset($data["msg"]) && $data["msg"] === "验证码错误" ? 0 : 1);
-    ' "$admin_captcha_login_body" &&
-    ! grep -q "admin_token" "$admin_captcha_cookie"; then
-    printf '[OK] admin_captcha_wrong_code: correct credentials rejected before token issue\n'
-  else
-    printf '[FAIL] admin_captcha_wrong_code: expected captcha rejection without admin token\n'
-    failures=$((failures + 1))
-  fi
+  # The application captcha is disabled where the management ingress has HTTP
+  # Basic Auth. Verify that external gate during production preflight; this
+  # local server cannot reproduce it. Password rejection is checked below.
 
   rm -f "$APP_DIR/admin/code.php"
 fi
@@ -1760,7 +1749,17 @@ else
   authenticated_page user_order_authenticated "$user_cookie" "/user/order.php" "订单记录|搜索"
   authenticated_page user_settle_authenticated "$user_cookie" "/user/settle.php" "结算记录"
   authenticated_page user_transfer_authenticated "$user_cookie" "/user/transfer.php" "代付管理|代付记录"
-  authenticated_page user_download_invalid_action "$user_cookie" "/user/download.php?act=../../config" "No Act"
+  user_download_body="$WORK_DIR/user_download_invalid_action.body"
+  user_download_status=$("$CURL_BIN" -sS -b "$user_cookie" -e "$BASE_URL/user/" \
+    -o "$user_download_body" -w "%{http_code}" \
+    "$BASE_URL/user/download.php?act=../../config")
+  if [ "$user_download_status" = "404" ] &&
+    grep -qx "Not Found" "$user_download_body"; then
+    printf '[OK] user_download_invalid_action: authenticated request denied without file output\n'
+  else
+    printf '[FAIL] user_download_invalid_action: expected HTTP 404 and Not Found\n'
+    failures=$((failures + 1))
+  fi
 
   user_logout_body="$WORK_DIR/user_logout.body"
   user_logout_check_body="$WORK_DIR/user_logout_check.body"

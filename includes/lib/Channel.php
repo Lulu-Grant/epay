@@ -301,12 +301,14 @@ class Channel {
 		if($rollid <= 0 || $typeid <= 0)return null;
 		$roll = $DB->getRow("SELECT status,info FROM pre_roll WHERE id='$rollid' LIMIT 1");
 		if(!$roll || $roll['status']==0 || empty($roll['info']))return null;
-		$info = self::rollinfo_decode($roll['info']);
+		try {
+			$info = RollConfig::parse($roll['info']);
+		} catch (\InvalidArgumentException $e) {
+			return null;
+		}
 		$channelids = [];
 		foreach($info as $row){
-			if(isset($row['name']) && is_numeric($row['name'])){
-				$channelids[] = intval($row['name']);
-			}
+			$channelids[] = $row['channel'];
 		}
 		if(empty($channelids))return null;
 		$ids = implode(',', $channelids);
@@ -317,36 +319,43 @@ class Channel {
 	static private function getChannelFromRoll($channel, $money){
 		global $DB;
 		$row=$DB->getRow("SELECT * FROM pre_roll WHERE id='$channel' LIMIT 1");
-		if($row['status']==1){
-			$info = self::rollinfo_decode($row['info'],true);
+		if($row && $row['status']==1){
+			try {
+				$info = RollConfig::parse($row['info']);
+			} catch (\InvalidArgumentException $e) {
+				return false;
+			}
+			if (!$info) return false;
 
 			//先根据支付金额与限额过滤可用支付通道
 			$channelids = [];
 			foreach($info as $inforow){
-				$channelids[] = $inforow['name'];
+				$channelids[] = $inforow['channel'];
 			}
 			$channelids = implode(',',$channelids);
-			$rows=$DB->getAll("SELECT id,paymin,paymax FROM pre_channel WHERE id IN ($channelids) AND status=1 AND daystatus=0");
+			$rows=$DB->getAll("SELECT id,paymin,paymax FROM pre_channel WHERE id IN ($channelids) AND type='{$row['type']}' AND status=1 AND daystatus=0");
 			$newids = [];
-			foreach($rows as $channelrow){
+			foreach($rows ?: [] as $channelrow){
 				if($money>0 && !empty($channelrow['paymin']) && $channelrow['paymin']>0 && $money<$channelrow['paymin'])continue;
 				if($money>0 && !empty($channelrow['paymax']) && $channelrow['paymax']>0 && $money>$channelrow['paymax'])continue;
-				$newids[] = $channelrow['id'];
+				$newids[$channelrow['id']] = true;
 			}
 			if(count($newids)==0)return false;
 			
 			$newinfo = [];
 			foreach($info as $inforow){
-				if(in_array($inforow['name'], $newids))$newinfo[]=$inforow;
+				if(isset($newids[$inforow['channel']]))$newinfo[]=$inforow;
 			}
+			if (!$newinfo) return false;
 
 			if($row['kind']==2){
-				return $newids[0];
+				return $newinfo[0]['channel'];
 			}elseif($row['kind']==1){
-				$channel = self::random_weight($newinfo);
+				$channel = RollConfig::chooseWeighted($newinfo);
 			}else{
-				$channel = $newinfo[$row['index']]['name'];
-				$index = ($row['index'] + 1) % count($newinfo);
+				$current = max(0, intval($row['index'])) % count($newinfo);
+				$channel = $newinfo[$current]['channel'];
+				$index = ($current + 1) % count($newinfo);
 				$DB->exec("UPDATE pre_roll SET `index`='$index' WHERE id='{$row['id']}'");
 			}
 			return $channel;
@@ -354,30 +363,4 @@ class Channel {
 		return false;
 	}
 
-	//解析轮询组info
-	static private function rollinfo_decode($content){
-		$result = [];
-		$arr = explode(',',$content);
-		foreach($arr as $row){
-			$a = explode(':',$row);
-			$result[] = ['name'=>$a[0], 'weight'=>$a[1]];
-		}
-		return $result;
-	}
-
-	//加权随机
-	static private function random_weight($arr){
-		$weightSum = 0;
-		foreach ($arr as $value) {
-			$weightSum += intval($value['weight']);
-		}
-		if($weightSum<=0)return false;
-		$randNum = rand(1, $weightSum);
-		foreach ($arr as $k => $v) {
-			if ($randNum <= $v['weight']) {
-				return $v['name'];
-			}
-			$randNum -=$v['weight'];
-		}
-	}
 }
