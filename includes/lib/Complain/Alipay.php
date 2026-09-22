@@ -158,7 +158,6 @@ class Alipay implements IComplain
                 $subchannel = $order ? $order['subchannel'] : ($this->channel['subid'] ?? 0);
                 if($DB->insert('complain', ['paytype'=>$this->channel['type'], 'channel'=>$this->channel['id'], 'subchannel'=>$subchannel, 'uid'=>$order['uid'] ?? 0, 'trade_no'=>$trade_no, 'thirdid'=>$thirdid, 'type'=>$info['leaf_category_name'], 'title'=>$info['complain_reason'], 'content'=>$info['content'], 'status'=>$status, 'phone'=>$info['phone_no'], 'addtime'=>$info['gmt_create'], 'edittime'=>$info['gmt_modified']]) === false)
                     throw new \RuntimeException('投诉记录保存失败');
-
                 try {
                     if($status == 0 && $conf['complain_auto_reply'] == 1 && !empty($conf['complain_auto_reply_con'])){
                         usleep(300000);

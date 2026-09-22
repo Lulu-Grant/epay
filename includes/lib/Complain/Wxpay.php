@@ -182,7 +182,6 @@ class Wxpay implements IComplain
                 $phone = $info['payer_phone'] ? $this->service->rsaDecrypt($info['payer_phone']) : null;
                 if($DB->insert('complain', ['paytype'=>$this->channel['type'], 'channel'=>$this->channel['id'], 'uid'=>$order['uid'] ?? 0, 'trade_no'=>$trade_no, 'thirdid'=>$thirdid, 'type'=>$type, 'title'=>$info['problem_description'], 'content'=>$info['complaint_detail'], 'status'=>$status, 'phone'=>$phone, 'addtime'=>$time, 'edittime'=>$time, 'thirdmchid'=>$info['complainted_mchid']]) === false)
                     throw new \RuntimeException('投诉记录保存失败');
-
                 try {
                     if($status == 0 && $conf['complain_auto_reply'] == 1 && !empty($conf['complain_auto_reply_con'])){
                         usleep(300000);
