@@ -17,7 +17,7 @@
 - 原始上游：[https://github.com/lopinx/epay](https://github.com/lopinx/epay)
 - 当前分支与 `origin/upgrade/php-84-compatible` 已核对一致
 - 项目基础版本：彩虹易支付 `Version 3075`
-- 当前生产 PHP 基线：PHP 8.4；不再以 PHP 7.4 作为后续生产兼容目标
+- 当前生产 PHP 基线及唯一维护版本：PHP 8.4.x
 
 本次交接的主线是：先让 Grokbot 读取、理解和审计，不默认授权部署、改库、改配置、发起真实支付或补发通知。
 
@@ -229,12 +229,11 @@ epay-health-report-retry.timer   每 15 分钟续跑未完成日报
 
 ### 7.2 PHP 8.4
 
-- `docs/php84-upgrade-plan.md`
+- `docs/php84-support-policy.md`
 - `docs/php84-acceptance-criteria.md`
 - `docs/php84-baseline-report.md`
 - `docs/php84-verification-report.md`
 - `docs/php84-rollback-runbook.md`
-- `docs/target-mode-php84-development-prompts.md`
 
 ### 7.3 AI 简报
 

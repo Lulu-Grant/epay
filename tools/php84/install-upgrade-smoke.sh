@@ -421,7 +421,7 @@ expect_body() {
 
 install_home_body="$WORK_DIR/install_home.body"
 "$CURL_BIN" -sS -o "$install_home_body" "$BASE_URL/install/"
-expect_body install_home_loads "$install_home_body" "安装环境检测|PHP版本>=7.4"
+expect_body install_home_loads "$install_home_body" "安装环境检测|PHP 版本 8\.4\.x"
 
 install_bad_db_body="$WORK_DIR/install_bad_db.body"
 "$CURL_BIN" -sS -X POST \

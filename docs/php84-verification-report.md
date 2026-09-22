@@ -1,12 +1,14 @@
 # PHP 8.4 Upgrade Verification Report
 
+> Historical verification record. Its dual-runtime targets and comparisons are superseded by the current [PHP 8.4-only support policy](php84-support-policy.md); they are not release requirements for new work.
+
 Generated: 2026-06-22
 
 Branch: `upgrade/php-84-compatible`
 
 ## Scope
 
-This report records the implementation and verification status for the target-mode PHP 8.4 upgrade work. The project target remains PHP `>=7.4 <8.5`.
+This report records the implementation and verification status at the time of the PHP 8.4 upgrade. The current project target is PHP 8.4.x only.
 
 ## Completed Stages
 

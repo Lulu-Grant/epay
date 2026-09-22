@@ -1,6 +1,6 @@
 <?php
 /**
- * PHP 7.4 compatible environment check for the PHP 8.4 upgrade work.
+ * PHP 8.4-only environment check.
  *
  * This script is read-only. It does not connect to the database and does not
  * call any payment provider.
@@ -55,14 +55,9 @@ foreach ($recommendedExtensions as $extension) {
 
 echo PHP_EOL;
 
-$versionOk = PHP_VERSION_ID >= 70400 && PHP_VERSION_ID < 80500;
-$versionTooNew = PHP_VERSION_ID >= 80500;
-if ($versionTooNew) {
-    echo '[WARN] target PHP range >=7.4 <8.5: ' . PHP_VERSION . ' is newer than target; use PHP 8.4 for final acceptance' . PHP_EOL;
-} else {
-    print_check_line('target PHP range >=7.4 <8.5', $versionOk, PHP_VERSION);
-}
-if (!$versionOk && !$versionTooNew) {
+$versionOk = PHP_VERSION_ID >= 80400 && PHP_VERSION_ID < 80500;
+print_check_line('supported PHP 8.4.x', $versionOk, PHP_VERSION);
+if (!$versionOk) {
     $failed++;
 }
 

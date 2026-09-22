@@ -1,7 +1,4 @@
 <?php
-if (version_compare(PHP_VERSION, '7.4.0', '<')) {
-    die('require PHP >= 7.4 !');
-}
 include("./includes/common.php");
 
 if(isset($_GET['doc'])){

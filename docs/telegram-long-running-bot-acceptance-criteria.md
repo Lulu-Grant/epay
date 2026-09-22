@@ -17,7 +17,6 @@
 以下任一项失败即视为不通过：
 
 - 新增 PHP 文件语法检查失败。
-- PHP 7.4 不兼容。
 - PHP 8.4 不兼容。
 - 机器人 worker 无法启动。
 - worker 重启后重复处理历史消息。
@@ -40,7 +39,6 @@
 
 - 生产 PHP CLI 可执行。
 - PHP 版本为 8.4.x。
-- 保持 PHP 7.4 兼容。
 - 扩展 `curl`、`openssl`、`json`、`pdo_mysql`、`mbstring` 已启用。
 
 验收命令：

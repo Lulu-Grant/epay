@@ -140,7 +140,7 @@ Telegram 用户消息
 
 | 文件 | 修改内容 |
 | --- | --- |
-| `includes/lib/Telegram/BotAPI.php` | 补齐 `setMyCommands`、`deleteMyCommands`、`removeKeyboard`，确保 PHP 7.4/8.4 兼容 |
+| `includes/lib/Telegram/BotAPI.php` | 补齐 `setMyCommands`、`deleteMyCommands`、`removeKeyboard`，确保 PHP 8.4.x 兼容 |
 | `includes/lib/Telegram/Installer.php` | 如需新增绑定码表或状态字段，统一在安装器中兼容初始化 |
 | `install/addon_telegram.sql` | 如需新增表结构，保留 `pre_` 前缀 |
 | `admin/telegram_set.php` | 增加 worker 状态、最后 update_id、最近错误、设置命令按钮 |
@@ -483,7 +483,7 @@ systemctl restart epay-telegram-bot.service
 
 代码必须兼容：
 
-- PHP 7.4
+- PHP 8.4.x
 - PHP 8.4
 
 禁止使用：
