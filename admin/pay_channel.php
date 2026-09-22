@@ -452,7 +452,7 @@ function editInfo(id){
 		success : function(data) {
 			layer.close(ii);
 			if(data.code == 0){
-				var area = [$(window).width() > 520 ? '520px' : '100%', ';max-height:100%'];
+				var area = [Math.min(520, Math.max(240, window.innerWidth - 24))+'px', 'auto'];
 				layer.open({
 				  type: 1,
 				  area: area,
@@ -566,7 +566,7 @@ function getSuccessRate(channel, obj) {
 }
 function testpay(id) {
 	var ii = layer.open({
-		area: ['360px'],
+		area: [Math.min(360, Math.max(240, window.innerWidth - 24))+'px'],
 		title: '测试支付',
 		content: '<div class="form-group"><div class="input-group"><span class="input-group-addon"><span class="glyphicon glyphicon-shopping-cart"></span></span><input class="form-control" placeholder="订单名称" value="支付测试" name="test_name" type="text"></div></div><div class="form-group"><div class="input-group"><span class="input-group-addon"><span class="glyphicon glyphicon-yen"></span></span><input class="form-control" placeholder="订单金额" value="1" name="test_money" type="text"></div></div>',
 		yes: function(){

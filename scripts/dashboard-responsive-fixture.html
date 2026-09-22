@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="../assets/cdn/twitter-bootstrap/3.4.1/css/bootstrap.min.css">
+  <link rel="stylesheet" href="../assets/css/bootstrap-table.css">
+  <link rel="stylesheet" href="../assets/css/dashboard-responsive.css">
+  <style>.form-inline .form-control{display:inline-block;width:auto;vertical-align:middle}</style>
+</head>
+<body class="dashboard-responsive">
+  <main class="container" style="padding-top:20px">
+    <h1>控制台响应式回归样例</h1>
+    <form class="form-inline" id="filters">
+      <div class="form-group"><label for="channel">通道</label><select class="form-control" id="channel"><option>很长的支付通道名称用于检查窄屏布局</option></select></div>
+      <div class="form-group"><label for="keyword">搜索</label><input class="form-control" id="keyword" value="测试订单"></div>
+      <button type="button" class="btn btn-primary">搜索</button>
+    </form>
+    <div class="bootstrap-table"><div class="fixed-table-body"><table class="table table-bordered"><thead><tr><th>订单号</th><th>通道</th><th>投诉</th><th>状态</th></tr></thead><tbody><tr><td>ORDER-901-20260922</td><td>很长的支付通道名称</td><td>测试投诉文本</td><td>待处理</td></tr></tbody></table></div></div>
+    <div class="roll-modal-body"><dl class="fieldlist">
+      <dd class="form-inline roll-row"><select class="form-control roll-channel"><option>很长的支付通道名称用于检查窄屏布局</option></select><input class="form-control roll-weight" type="number" value="80"><button type="button" class="btn btn-danger btn-remove">移除</button></dd>
+      <dd class="form-inline roll-row"><select class="form-control roll-channel"><option>第二个测试通道</option></select><input class="form-control roll-weight" type="number" value="20"><button type="button" class="btn btn-danger btn-remove">移除</button></dd>
+    </dl></div>
+  </main>
+  <script src="../assets/cdn/jquery/2.1.4/jquery.min.js"></script>
+  <script>
+    window.addEventListener('load', function(){
+      var main = document.querySelector('main');
+      var row = document.querySelector('.roll-row');
+      document.body.dataset.metrics = JSON.stringify({
+        viewport: window.innerWidth,
+        pageWidth: document.documentElement.scrollWidth,
+        formWidth: document.getElementById('filters').scrollWidth,
+        mainWidth: main.clientWidth,
+        rowWidth: row.scrollWidth,
+        rowClientWidth: row.clientWidth,
+        tableScrollWidth: document.querySelector('.fixed-table-body').scrollWidth,
+        tableClientWidth: document.querySelector('.fixed-table-body').clientWidth
+      });
+    });
+  </script>
+</body>
+</html>

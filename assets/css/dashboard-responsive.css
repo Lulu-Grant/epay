@@ -1,0 +1,36 @@
+/* Shared admin and merchant controls. Keep wide data tables scrollable inside their own container. */
+body.dashboard-responsive .layui-layer {
+  max-width: calc(100vw - 24px);
+  max-height: calc(100vh - 24px);
+  max-height: calc(100dvh - 24px);
+}
+body.dashboard-responsive .layui-layer-content {
+  max-height: calc(100vh - 112px);
+  max-height: calc(100dvh - 112px);
+  overflow-y: auto;
+}
+body.dashboard-responsive .roll-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 10px;
+}
+body.dashboard-responsive .roll-row .roll-channel { min-width: 0; flex: 1 1 auto; }
+body.dashboard-responsive .roll-row .roll-weight { width: 100px; flex: 0 0 100px; }
+body.dashboard-responsive .roll-row .btn-remove { flex: 0 0 auto; }
+
+@media (max-width: 767px) {
+  body.dashboard-responsive .form-inline .form-group,
+  body.dashboard-responsive .form-inline .form-control {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    margin-bottom: 8px;
+  }
+  body.dashboard-responsive .form-inline .input-group .form-control { display: table-cell; margin-bottom: 0; }
+  body.dashboard-responsive .roll-row { flex-wrap: wrap; }
+  body.dashboard-responsive .roll-row .roll-channel { flex: 1 1 100%; margin-bottom: 0; }
+  body.dashboard-responsive .roll-row .roll-weight { flex: 1 1 90px; width: auto; margin-bottom: 0; }
+  body.dashboard-responsive .roll-modal-body { padding: 12px; }
+  body.dashboard-responsive .bootstrap-table .fixed-table-body { overflow-x: auto; }
+}
