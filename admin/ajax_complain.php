@@ -14,7 +14,7 @@ function complainAdminJson($payload){
 function complainAdminFailure($stage, $channelid, $plugin, $source, $kind, $counts = null){
 	$reference = uniqid('cf', false);
 	error_log('Complaint fetch failed ref='.$reference.' stage='.$stage.' channel='.intval($channelid).' plugin='.preg_replace('/[^a-z0-9_]/', '', (string)$plugin).' source='.intval($source).' kind='.$kind);
-	$error = in_array($kind, ['QUERY_FAILED','INVALID_RESPONSE','SAVE_FAILED'], true) ? $kind : 'FETCH_FAILED';
+	$error = in_array($kind, ['QUERY_FAILED','INVALID_RESPONSE','SAVE_FAILED','ACTION_FAILED'], true) ? $kind : 'FETCH_FAILED';
 	$response = ['code'=>-1,'msg'=>'投诉获取失败（'.$stage.'），诊断编号：'.$reference,'error'=>$error,'reference'=>$reference];
 	if(is_array($counts)){
 		$response['partial'] = !empty($counts['inserted']) || !empty($counts['updated']);

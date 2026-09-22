@@ -41,6 +41,11 @@ class AlipayRisk implements IComplain
             foreach($result['complaint_list'] as $info){
 				$count_fetched++;
 				try { $retcode = $this->updateInfo($info); }
+				catch (SyncActionException $e) {
+					if($e->persistedCode() == 1) $count_add++;
+					else $count_update++;
+					return CommUtil::syncFailure('ACTION_FAILED', $count_fetched, $count_add, $count_update, $count_unchanged, $count_skipped);
+				}
 				catch (\Throwable $e) {
 					return CommUtil::syncFailure('SAVE_FAILED', $count_fetched, $count_add, $count_update, $count_unchanged, $count_skipped);
 				}
@@ -132,7 +137,8 @@ class AlipayRisk implements IComplain
             if($status != $row['status']){
                 if($DB->update('complain', ['status'=>$status, 'edittime'=>$info['gmt_process']], ['id'=>$row['id']]) === false)
                     throw new \RuntimeException('投诉状态保存失败');
-                CommUtil::autoHandle($trade_no, $status);
+                try { CommUtil::autoHandle($trade_no, $status); }
+                catch (\Throwable $e) { throw new SyncActionException(2, $e); }
                 return 2;
             }
         }else{
@@ -140,11 +146,15 @@ class AlipayRisk implements IComplain
                 if($DB->insert('complain', ['paytype'=>$this->channel['type'], 'channel'=>$this->channel['id'], 'source'=>1, 'uid'=>$order['uid'] ?? 0, 'trade_no'=>$trade_no, 'thirdid'=>$thirdid, 'type'=>'交易投诉', 'title'=>'-', 'content'=>$info['complain_content'], 'status'=>$status, 'phone'=>$info['contact'], 'addtime'=>$info['gmt_complain'], 'edittime'=>$info['gmt_process']]) === false)
                     throw new \RuntimeException('投诉记录保存失败');
 
-                if($status == 0 && $conf['complain_auto_reply'] == 1 && !empty($conf['complain_auto_reply_con'])){
-                    usleep(300000);
-                    $this->feedbackSubmit($thirdid, 'ORTHER', $conf['complain_auto_reply_con']);
-                }
-                CommUtil::autoHandle($trade_no, $status);
+                try {
+                    if($status == 0 && $conf['complain_auto_reply'] == 1 && !empty($conf['complain_auto_reply_con'])){
+                        usleep(300000);
+                        $reply = $this->feedbackSubmit($thirdid, 'ORTHER', $conf['complain_auto_reply_con']);
+                        if(!is_array($reply) || !isset($reply['code']) || $reply['code'] != 0)
+                            throw new \RuntimeException('自动回复失败');
+                    }
+                    CommUtil::autoHandle($trade_no, $status);
+                } catch (\Throwable $e) { throw new SyncActionException(1, $e); }
                 return 1;
             }
         }

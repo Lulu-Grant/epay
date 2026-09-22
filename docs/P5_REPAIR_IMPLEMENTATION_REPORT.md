@@ -18,10 +18,10 @@
 
 | 检查 | 结果 |
 | --- | --- |
-| 17 个相关 PHP 文件语法检查 | 通过 |
-| `tools/php84/check-php74-floor.php`，扫描 483 个 PHP 文件 | 通过；这不是 PHP 7.4 运行时测试 |
+| 18 个相关 PHP 文件语法检查 | 通过 |
+| `tools/php84/check-php74-floor.php`，扫描 484 个 PHP 文件 | 通过；这不是 PHP 7.4 运行时测试 |
 | `scripts/roll-config-regression.php` | 通过：旧配置、显式零、非法输入、溢出、权重边界、候选过滤、顺序索引 |
-| `scripts/complaint-sync-regression.php` | 通过：能力与请求校验、JSON 编码、变量占位、订单映射、重复获取、写库失败、第二页异常后的部分完成 |
+| `scripts/complaint-sync-regression.php` | 通过：能力与请求校验、JSON 编码、变量占位、订单映射、重复获取、写库失败、第二页异常及保存后自动处理失败的部分完成计数 |
 | `scripts/merchant-complaint-readonly-regression.php` | 通过；本机 PHP CLI 需单独启用 `mbstring` 扩展 |
 | `scripts/payment-callback-regression.php` | 通过 |
 | `scripts/dashboard-responsive-check.cjs` | 通过：320、360、390、414、667 横屏、768、1440 像素；基础样式和单独检出的 P5 `lp-dark` 样式均检查整页宽度、表单及轮询行；实际轮询脚本检查追加 10 行、删中间行、删空重加、序列化对应关系 |

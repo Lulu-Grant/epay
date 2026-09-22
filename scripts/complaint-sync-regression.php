@@ -5,6 +5,7 @@ $root = dirname(__DIR__);
 require $root.'/includes/lib/Complain/IComplain.php';
 require $root.'/includes/lib/Complain/CommUtil.php';
 require $root.'/includes/lib/Complain/AdminFetch.php';
+require $root.'/includes/lib/Complain/SyncActionException.php';
 require $root.'/includes/lib/Complain/AlipayRisk.php';
 require $root.'/includes/lib/Complain/Wxpay.php';
 
@@ -45,6 +46,7 @@ class ComplaintFakeDb {
     public $inserted = null;
     public $inserts = 0;
     public $failInsert = false;
+    public $failAutoLookup = false;
     public $autoLookups = 0;
     public function find($table, $columns, $where, $join = null, $limit = null){
         if ($table === 'complain') {
@@ -54,7 +56,10 @@ class ComplaintFakeDb {
         if ($columns === 'trade_no,uid' && isset($where['api_trade_no'])) {
             return ['trade_no'=>'LOCAL-ORDER-901','uid'=>901];
         }
-        if ($columns === 'buyer,realmoney,status,ip') $this->autoLookups++;
+        if ($columns === 'buyer,realmoney,status,ip') {
+            $this->autoLookups++;
+            if ($this->failAutoLookup) throw new RuntimeException('simulated automatic action failure');
+        }
         return false;
     }
     public function insert($table, $row){
@@ -109,9 +114,10 @@ $wxInfo = [
 complaintRunAdapter('lib\Complain\AlipayRisk', ['id'=>901,'type'=>1], $riskInfo);
 complaintRunAdapter('lib\Complain\Wxpay', ['id'=>901,'type'=>2], $wxInfo);
 
-function complaintPartialPage($class, $channel, $firstPage){
+function complaintPartialPage($class, $channel, $firstPage, $failAutoLookup = false){
     global $DB;
     $DB = new ComplaintFakeDb();
+    $DB->failAutoLookup = $failAutoLookup;
     $adapter = (new ReflectionClass($class))->newInstanceWithoutConstructor();
     $channelProperty = new ReflectionProperty($class, 'channel');
     $channelProperty->setAccessible(true);
@@ -126,7 +132,7 @@ function complaintPartialPage($class, $channel, $firstPage){
     });
     $result = $adapter->refreshNewList(21);
     complaintAssert($result['code'], -1, $class.' malformed second page rejected');
-    complaintAssert($result['error'], 'INVALID_RESPONSE', $class.' failure category');
+    complaintAssert($result['error'], $failAutoLookup ? 'ACTION_FAILED' : 'INVALID_RESPONSE', $class.' failure category');
     complaintAssert($result['partial'], true, $class.' partial flag');
     complaintAssert($result['counts']['inserted'], 1, $class.' prior insert count');
     complaintAssert($result['counts']['failed'], 1, $class.' failure count');
@@ -135,5 +141,9 @@ complaintPartialPage('lib\Complain\AlipayRisk', ['id'=>901,'type'=>1],
     ['total_size'=>21,'complaint_list'=>[$riskInfo]]);
 complaintPartialPage('lib\Complain\Wxpay', ['id'=>901,'type'=>2],
     ['offset'=>0,'total_count'=>21,'data'=>[$wxInfo]]);
+complaintPartialPage('lib\Complain\AlipayRisk', ['id'=>901,'type'=>1],
+    ['total_size'=>21,'complaint_list'=>[$riskInfo]], true);
+complaintPartialPage('lib\Complain\Wxpay', ['id'=>901,'type'=>2],
+    ['offset'=>0,'total_count'=>21,'data'=>[$wxInfo]], true);
 
 echo "complaint sync regression: ok\n";
