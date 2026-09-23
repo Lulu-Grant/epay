@@ -437,7 +437,7 @@ include __DIR__ . "/includes/common.php";
 header("Content-Type: text/plain; charset=utf-8");
 
 $trade_no = isset($_POST["out_trade_no"]) ? $_POST["out_trade_no"] : "";
-if (!preg_match('/^[0-9]+$/', $trade_no)) {
+if (!preg_match('/^(?:LP)?[0-9]{19}$/', $trade_no)) {
     echo "fail";
     exit;
 }
@@ -499,7 +499,7 @@ $nosession = true;
 include __DIR__ . "/includes/common.php";
 
 $trade_no = isset($_GET["out_trade_no"]) ? $_GET["out_trade_no"] : "";
-if (!preg_match('/^[0-9]+$/', $trade_no)) {
+if (!preg_match('/^(?:LP)?[0-9]{19}$/', $trade_no)) {
     sysmsg("fail");
     exit;
 }
