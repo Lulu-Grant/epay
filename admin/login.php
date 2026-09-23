@@ -40,7 +40,8 @@ if(isset($_GET['act']) && $_GET['act']=='login'){
 		$session=md5($username.$password.$password_hash);
 		$expiretime=time() + 2592000;
 		$token=authcode("{$username}\t{$session}\t{$expiretime}", 'ENCODE', SYS_KEY);
-		setcookie("admin_token", $token, $expiretime, null, null, null, true);
+		$adminCookiePath = rtrim(str_replace('\\', '/', dirname((string)($_SERVER['SCRIPT_NAME'] ?? '/admin/login.php'))), '/').'/';
+		setcookie("admin_token", $token, ['expires'=>$expiretime,'path'=>$adminCookiePath,'secure'=>is_https(),'httponly'=>true,'samesite'=>'Lax']);
     unset($_SESSION['vc_code']);
     exit(json_encode(['code'=>0]));
   }else{
@@ -61,12 +62,14 @@ if(isset($_GET['act']) && $_GET['act']=='login'){
   }
 }elseif(isset($_GET['logout'])){
 	if(!checkRefererHost())exit();
-	setcookie("admin_token", "", time() - 2592000);
+	try{ \lib\AdminSso::revokeIssuer($DB, (string)($_COOKIE['admin_token'] ?? '')); }catch(\Throwable $e){ error_log('Administrator merchant sessions could not be revoked during logout'); }
+	$adminCookiePath = rtrim(str_replace('\\', '/', dirname((string)($_SERVER['SCRIPT_NAME'] ?? '/admin/login.php'))), '/').'/';
+	setcookie("admin_token", "", ['expires'=>time()-2592000,'path'=>$adminCookiePath,'secure'=>is_https(),'httponly'=>true,'samesite'=>'Lax']);
 	exit("<script language='javascript'>window.location.href='./login.php';</script>");
 }elseif($islogin==1){
 	exit("<script language='javascript'>alert('您已登录！');window.location.href='./';</script>");
 }
-$title='用户登录';
+$title='管理员登录';
 include './head.php';
 ?>
   <nav class="navbar navbar-fixed-top navbar-default">
@@ -78,7 +81,7 @@ include './head.php';
           <span class="icon-bar"></span>
           <span class="icon-bar"></span>
         </button>
-        <a class="navbar-brand" href="./">党员管理中心</a>
+        <a class="navbar-brand" href="./">乐跑管理后台</a>
       </div><!-- /.navbar-header -->
       <div id="navbar" class="collapse navbar-collapse">
         <ul class="nav navbar-nav navbar-right">
@@ -95,13 +98,15 @@ include './head.php';
         <div class="panel-heading"><h3 class="panel-title">管理员登录</h3></div>
         <div class="panel-body">
           <form class="form-horizontal" role="form" onsubmit="return submitlogin()">
+            <label class="control-label" for="admin-login-user">管理员用户名</label>
             <div class="input-group">
               <span class="input-group-addon"><span class="glyphicon glyphicon-user"></span></span>
-              <input type="text" name="user" value="" class="form-control input-lg" placeholder="用户名" required="required"/>
+              <input id="admin-login-user" type="text" name="user" value="" class="form-control input-lg" placeholder="请输入管理员用户名" autocomplete="username" required="required"/>
             </div><br/>
+            <label class="control-label" for="admin-login-password">管理员密码</label>
             <div class="input-group">
               <span class="input-group-addon"><span class="glyphicon glyphicon-lock"></span></span>
-              <input type="password" name="pass" class="form-control input-lg" placeholder="密码" required="required"/>
+              <input id="admin-login-password" type="password" name="pass" class="form-control input-lg" placeholder="请输入管理员密码" autocomplete="current-password" required="required"/>
             </div><br/>
 			<?php if($verifycode==1){?>
 			<div class="input-group">

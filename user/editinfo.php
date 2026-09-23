@@ -325,7 +325,7 @@ if($group_settings){
 				<div class="form-group has-success">
 					<div class="col-sm-offset-2 col-sm-9">
 					<div class="alert alert-success">
-					1、余额扣费 (经典模式，默认)：例如费率1%，客户购买100元商品，客户需支付100元，卖家到账99元，手续费1元由卖家支付<br>            2、订单加费 (奸商模式)：例如费率1%，客户购买100元商品，客户需支付101元，卖家到账100元，手续费1元由买家支付
+					1、余额扣费（默认）：例如费率1%，客户购买100元商品，客户需支付100元，卖家到账99元，手续费1元由卖家承担<br>            2、订单加费：例如费率1%，客户购买100元商品，客户需支付101元，卖家到账100元，手续费1元由买家承担
 					  </div>
 						<select class="form-control" name="mode" default="<?php echo $userrow['mode']?>">
 								<option value="0">余额扣费</option>

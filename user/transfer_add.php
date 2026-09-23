@@ -176,7 +176,7 @@ $desc = $_SESSION['transfer_desc'];
 			</div></div>
 			<div class="form-group">
 				<div class="input-group"><div class="input-group-addon">验证登录密码</div>
-				<input type="text" name="paypwd" value="" class="form-control" required/>
+				<input type="password" name="paypwd" value="" class="form-control" autocomplete="current-password" required/>
 			</div></div>
             <p><input type="submit" name="submit" value="立即转账" class="btn btn-primary form-control"/></p>
           </form>

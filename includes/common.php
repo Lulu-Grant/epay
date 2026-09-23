@@ -7,7 +7,7 @@ if (PHP_VERSION_ID < 80400 || PHP_VERSION_ID >= 80500) {
 error_reporting(E_ERROR | E_PARSE | E_COMPILE_ERROR);
 if(defined('IN_CRONLITE'))return;
 define('VERSION', '3075');
-define('DB_VERSION', '2038');
+define('DB_VERSION', '2039');
 define('IN_CRONLITE', true);
 define('SYSTEM_ROOT', dirname(__FILE__).'/');
 define('ROOT', dirname(SYSTEM_ROOT).'/');

@@ -43,10 +43,11 @@ unset($rs);
 			<h3 class="panel-title">订单记录</h3>
 		</div>
 
-	    <form onsubmit="return searchSubmit()" method="GET" class="form-inline" id="searchToolbar">
+	    <form onsubmit="return searchSubmit()" method="GET" class="form-inline filter-toolbar" id="searchToolbar">
 		<input type="hidden" name="subchannel" value="">
 	      <div class="form-group">
-			<select class="form-control" name="type">
+			<label class="filter-label" for="order-search-type">搜索字段</label>
+			<select id="order-search-type" class="form-control" name="type">
 			  <option value="1">系统订单号</option>
 			  <option value="2">商户订单号</option>
 			  <option value="3">商品名称</option>
@@ -58,23 +59,30 @@ unset($rs);
 			</select>
 		  </div>
 			<div class="form-group" id="searchword">
-			  <input type="text" class="form-control" name="kw" placeholder="搜索内容" style="min-width: 300px;">
+			  <label class="filter-label" for="order-search-keyword">关键词</label>
+			  <input id="order-search-keyword" type="text" class="form-control filter-keyword" name="kw" placeholder="输入要搜索的内容">
 			</div>
+			<div class="form-group filter-date-group">
+			<label class="filter-label" for="starttime">创建日期</label>
 			<div class="input-group input-daterange">
 				<input type="text" id="starttime" name="starttime" class="form-control dates" placeholder="开始日期" autocomplete="off" title="留空则不限时间范围">
-				<span class="input-group-addon" onclick="$('#starttime').val('');$('#endtime').val('');" title="清除"><i class="fa fa-chevron-right"></i></span>
+				<button type="button" class="input-group-addon date-clear" onclick="$('#starttime').val('');$('#endtime').val('');" aria-label="清除日期范围" title="清除日期范围"><i class="fa fa-times" aria-hidden="true"></i></button>
 				<input type="text" id="endtime" name="endtime" class="form-control dates" placeholder="结束日期" autocomplete="off" title="留空则不限时间范围">
 			</div>
+			</div>
 			<div class="form-group">
-			  <select name="paytype" class="form-control"><?php echo $type_select?></select>
+			  <label class="filter-label" for="order-pay-type">支付方式</label>
+			  <select id="order-pay-type" name="paytype" class="form-control"><?php echo $type_select?></select>
 		    </div>
 			<div class="form-group">
-				<select name="dstatus" class="form-control"><option value="-1">全部状态</option><option value="0">状态未支付</option><option value="1">状态已支付</option><option value="2">状态已退款</option><option value="3">状态已冻结</option></select>
+				<label class="filter-label" for="order-status">订单状态</label>
+				<select id="order-status" name="dstatus" class="form-control"><option value="-1">全部状态</option><option value="0">状态未支付</option><option value="1">状态已支付</option><option value="2">状态已退款</option><option value="3">状态已冻结</option></select>
 			</div>
 			<button class="btn btn-primary" type="submit"><i class="fa fa-search"></i> 搜索</button>
 			<a href="javascript:searchClear()" class="btn btn-default"><i class="fa fa-refresh"></i> 重置</a>
 			<a href="javascript:showOrderSummary()" class="btn btn-info"><i class="fa fa-bar-chart"></i> 统计概况</a>
 		</form>
+      <div id="order-list-state" class="table-state sr-only" role="status" aria-live="polite">正在加载订单记录</div>
       <table id="listTable">
 	  </table>
 	</div>
@@ -102,6 +110,10 @@ $(document).ready(function(){
 		pageNumber: pageNumber,
 		pageSize: pageSize,
 		classes: 'table table-striped table-hover table-bordered',
+		formatLoadingMessage: function(){ return '正在加载订单记录…'; },
+		formatNoMatches: function(){ return window.location.search ? '没有符合当前筛选条件的订单，请调整条件后重试。' : '暂无订单记录，成功支付的订单会显示在这里。'; },
+		onLoadSuccess: function(){ $('#order-list-state').text('订单记录已加载'); },
+		onLoadError: function(){ $('#order-list-state').removeClass('sr-only').addClass('alert alert-danger').text('订单记录加载失败，请稍后重试。'); },
 		columns: [
 			{
 				field: 'trade_no',
@@ -294,7 +306,7 @@ function refund(trade_no) {
 				layer.open({
 					area: ['360px'],
 					title: '退款确认',
-					content: '<p>此操作将直接原路退款该订单，每个订单只能操作一次退款，退款金额不能大于订单金额。</p><div class="form-group"><div class="input-group"><div class="input-group-addon">退款金额</div><input type="text" class="form-control" name="refund2" value="'+data.money+'" placeholder="请输入退款金额" autocomplete="off"/></div></div><div class="form-group"><div class="input-group"><div class="input-group-addon">登录密码</div><input type="text" class="form-control" name="paypwd" value="" placeholder="请输入用户登录密码" autocomplete="off"/></div></div>',
+					content: '<p>此操作将直接原路退款该订单，每个订单只能操作一次退款，退款金额不能大于订单金额。</p><div class="form-group"><label for="order-refund-money">退款金额</label><input id="order-refund-money" type="text" class="form-control" name="refund2" value="'+data.money+'" placeholder="请输入退款金额" inputmode="decimal" autocomplete="off"/></div><div class="form-group"><label for="order-refund-password">登录密码</label><input id="order-refund-password" type="password" class="form-control" name="paypwd" value="" placeholder="请输入用户登录密码" autocomplete="current-password"/></div>',
 					yes: function(){
 						var money = $("input[name='refund2']").val();
 						var paypwd = $("input[name='paypwd']").val();

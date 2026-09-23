@@ -43,7 +43,11 @@ jobs:
           php scripts/complaint-sync-regression.php
           php scripts/merchant-complaint-readonly-regression.php
           php scripts/roll-config-regression.php
+          php scripts/email-integrity-regression.php
+          php scripts/registration-completion-regression.php
+          php scripts/admin-sso-regression.php
           php scripts/payment-callback-regression.php
+          php scripts/ui-contract-regression.php
 
       - name: Check download endpoint safety
         run: php tools/php84/check-download-safety.php

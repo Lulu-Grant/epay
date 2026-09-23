@@ -469,7 +469,9 @@ EPAY_DB_HOST="$DB_HOST" EPAY_DB_PORT="$DB_PORT" EPAY_DB_SOCKET="$DB_SOCKET" \
     $pdo = new PDO($dsn, getenv("EPAY_DB_USER"), getenv("EPAY_DB_PASSWORD"), array(PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION));
     $version = $pdo->query("SELECT `v` FROM `".$prefix."_config` WHERE `k`=\"version\"")->fetchColumn();
     $admin = $pdo->query("SELECT `v` FROM `".$prefix."_config` WHERE `k`=\"admin_user\"")->fetchColumn();
-    if ((string)$version !== "2038" || $admin !== "admin") {
+    $emailLength = $pdo->query("SELECT CHARACTER_MAXIMUM_LENGTH FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=".$pdo->quote($prefix."_user")." AND COLUMN_NAME=\"email\"")->fetchColumn();
+    $ssoEnabled = $pdo->query("SELECT `v` FROM `".$prefix."_config` WHERE `k`=\"admin_sso_enabled\"")->fetchColumn();
+    if ((string)$version !== "2039" || $admin !== "admin" || (int)$emailLength !== 254 || (string)$ssoEnabled !== "0") {
         exit(1);
     }
   '
@@ -582,7 +584,9 @@ EPAY_DB_HOST="$DB_HOST" EPAY_DB_PORT="$DB_PORT" EPAY_DB_SOCKET="$DB_SOCKET" \
     $user = $pdo->query("SELECT `username` FROM `".$prefix."_user` WHERE `uid`=1000")->fetchColumn();
     $order = $pdo->query("SELECT `name` FROM `".$prefix."_order` WHERE `out_trade_no`=\"upgrade-preserve-order\"")->fetchColumn();
     $channel = $pdo->query("SELECT `name` FROM `".$prefix."_channel` WHERE `name`=\"PHP84 upgrade channel\"")->fetchColumn();
-    if ((string)$version !== "2038" || $user !== "upgrade-user" || $order !== "Upgrade preserved order" || $channel !== "PHP84 upgrade channel") {
+    $emailLength = $pdo->query("SELECT CHARACTER_MAXIMUM_LENGTH FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=".$pdo->quote($prefix."_user")." AND COLUMN_NAME=\"email\"")->fetchColumn();
+    $ssoTable = $pdo->query("SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=".$pdo->quote($prefix."_admin_sso_ticket"))->fetchColumn();
+    if ((string)$version !== "2039" || $user !== "upgrade-user" || $order !== "Upgrade preserved order" || $channel !== "PHP84 upgrade channel" || (int)$emailLength !== 254 || (int)$ssoTable !== 1) {
         fwrite(STDERR, "version=".$version." user=".$user." order=".$order." channel=".$channel."\n");
         exit(1);
     }

@@ -238,7 +238,8 @@ class Payment {
     static public function processOrder($isnotify, $order, $api_trade_no, $buyer){
         global $DB,$conf,$siteurl;
         if($order['status']==0 || $order['status']==4){
-            if($DB->exec("UPDATE `pre_order` SET `status`=1 WHERE `trade_no`='".$order['trade_no']."'")){
+            $statusStmt = $DB->query('UPDATE pre_order SET status=1 WHERE trade_no=:trade_no AND status IN (0,4)', [':trade_no'=>$order['trade_no']]);
+            if($statusStmt !== false && $statusStmt->rowCount() === 1){
 
                 $data = ['endtime'=>'NOW()', 'date'=>'CURDATE()'];
                 if(!empty($api_trade_no)) $data['api_trade_no'] = $api_trade_no;
@@ -257,6 +258,12 @@ class Payment {
         }elseif(empty($order['buyer']) && !empty($buyer)){
             $data['buyer'] = $buyer;
             $DB->update('order', $data, ['trade_no'=>$order['trade_no']]);
+        }
+        // A previous callback may have committed the paid order status before a
+        // transient registration write failed. The completion ledger makes this
+        // retry safe and prevents duplicate accounts or duplicate income.
+        if((int)$order['tid'] === 1 && (int)$order['status'] === 1 && function_exists('completePaidRegistration')){
+            completePaidRegistration($order);
         }
         if($isnotify && $order['settle']>0){
             $DB->update('order', ['settle'=>$order['settle']], ['trade_no'=>$order['trade_no']]);

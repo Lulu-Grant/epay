@@ -262,6 +262,14 @@ $body = help_markdown($content);
 			--accent: #b42318;
 			--code-bg: #f0f4f2;
 			--thead: #edf5f2;
+			--action-bg: #ffffff;
+			--active-line: #83bcb2;
+			--active-bg: #e7f4f0;
+			--quote-bg: #f0f8f5;
+			--code-ink: #7a2e12;
+			--pre-bg: #13201d;
+			--pre-ink: #eef8f5;
+			--stripe: #f8faf9;
 		}
 		* { box-sizing: border-box; }
 		body {
@@ -272,6 +280,10 @@ $body = help_markdown($content);
 		}
 		a { color: var(--brand-dark); text-decoration: none; }
 		a:hover { color: var(--accent); text-decoration: underline; }
+		a:focus-visible, summary:focus-visible {
+			outline: 3px solid var(--brand);
+			outline-offset: 3px;
+		}
 		.topbar {
 			position: sticky;
 			top: 0;
@@ -306,7 +318,7 @@ $body = help_markdown($content);
 			padding: 6px 12px;
 			border: 1px solid var(--line);
 			border-radius: 4px;
-			background: #fff;
+			background: var(--action-bg);
 			color: var(--ink);
 		}
 		.layout {
@@ -328,6 +340,15 @@ $body = help_markdown($content);
 			top: 82px;
 			padding: 14px;
 		}
+		.doc-menu > summary {
+			cursor: pointer;
+			font-weight: 700;
+			padding: 6px;
+			color: var(--ink);
+		}
+		@media (min-width: 861px) {
+			.doc-menu > summary { display: none; }
+		}
 		.side-title {
 			margin: 2px 6px 10px;
 			font-size: 13px;
@@ -345,10 +366,15 @@ $body = help_markdown($content);
 		.doc-link strong { display: block; font-size: 14px; }
 		.doc-link span { display: block; color: var(--muted); font-size: 12px; line-height: 1.5; margin-top: 2px; }
 		.doc-link.active {
-			border-color: #b7d7d0;
-			background: #eef8f5;
+			border-color: var(--active-line);
+			background: var(--active-bg);
 		}
 		.content { padding: 30px 36px; min-width: 0; }
+		.content > h1, .content > h2, .content > h3, .content > h4,
+		.content > p, .content > ul, .content > ol, .content > blockquote {
+			max-width: 70ch;
+		}
+		.content a { overflow-wrap: anywhere; }
 		.content h1 {
 			margin: 0 0 12px;
 			font-size: 30px;
@@ -370,22 +396,22 @@ $body = help_markdown($content);
 			margin: 14px 0;
 			padding: 10px 14px;
 			border-left: 4px solid var(--brand);
-			background: #f6fbf9;
+			background: var(--quote-bg);
 			color: var(--muted);
 		}
 		code {
 			padding: 2px 5px;
 			border-radius: 4px;
 			background: var(--code-bg);
-			color: #7a2e12;
+			color: var(--code-ink);
 			font-family: Menlo, Consolas, monospace;
 			font-size: 13px;
 		}
 		pre {
 			overflow: auto;
 			padding: 14px;
-			background: #13201d;
-			color: #eef8f5;
+			background: var(--pre-bg);
+			color: var(--pre-ink);
 			border-radius: 6px;
 		}
 		pre code {
@@ -407,7 +433,7 @@ $body = help_markdown($content);
 			vertical-align: top;
 		}
 		th { background: var(--thead); color: var(--brand-dark); }
-		tr:nth-child(even) td { background: #fbfcfc; }
+		tr:nth-child(even) td { background: var(--stripe); }
 		@media (max-width: 860px) {
 			.topbar-inner { align-items: flex-start; flex-direction: column; }
 			.layout { display: block; padding: 14px 12px 30px; }
@@ -421,7 +447,7 @@ $body = help_markdown($content);
 	<header class="topbar">
 		<div class="topbar-inner">
 			<a class="brand" href="<?php echo $is_admin ? '/admin/help.php' : '/user/help_center.php'?>"><?php echo htmlspecialchars($conf['sitename'], ENT_QUOTES, 'UTF-8')?> 使用帮助</a>
-			<nav class="actions">
+			<nav class="actions" aria-label="帮助页操作">
 				<?php if($is_admin){?><a href="/admin/">返回管理后台</a><?php }?>
 				<?php if($is_user){?><a href="/user/">返回用户中心</a><?php }?>
 				<a href="/doc.html" target="_blank" rel="noopener noreferrer">开发文档</a>
@@ -429,14 +455,17 @@ $body = help_markdown($content);
 		</div>
 	</header>
 	<main class="layout">
-		<aside class="sidebar">
+		<aside class="sidebar" aria-label="文档目录">
+			<details class="doc-menu" open>
+			<summary>文档目录 · <?php echo htmlspecialchars($current['title'], ENT_QUOTES, 'UTF-8')?></summary>
 			<div class="side-title">文档目录</div>
 			<?php foreach($available_docs as $key=>$meta){?>
-				<a class="doc-link <?php echo $key===$requested?'active':null?>" href="<?php echo $is_admin ? '/admin/help.php' : '/user/help_center.php'?>?doc=<?php echo urlencode($key)?>">
+				<a class="doc-link <?php echo $key===$requested?'active':null?>"<?php echo $key===$requested?' aria-current="page"':''?> href="<?php echo $is_admin ? '/admin/help.php' : '/user/help_center.php'?>?doc=<?php echo urlencode($key)?>">
 					<strong><?php echo htmlspecialchars($meta['title'], ENT_QUOTES, 'UTF-8')?></strong>
 					<span><?php echo htmlspecialchars($meta['summary'], ENT_QUOTES, 'UTF-8')?></span>
 				</a>
 			<?php }?>
+			</details>
 		</aside>
 		<article class="content">
 			<?php echo $body?>

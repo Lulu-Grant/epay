@@ -4,7 +4,7 @@ include("../includes/common.php");
 
 //if($conf['reg_open']==0)sysmsg('未开放商户申请');
 
-$csrf_token = md5(mt_rand(0,999).time());
+$csrf_token = bin2hex(random_bytes(32));
 $_SESSION['csrf_token'] = $csrf_token;
 ?>
 <!DOCTYPE html>
@@ -12,7 +12,7 @@ $_SESSION['csrf_token'] = $csrf_token;
 <head>
 <meta charset="utf-8" />
 <title>找回密码 | <?php echo $conf['sitename']?></title>
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="stylesheet" href="<?php echo $cdnpublic?>twitter-bootstrap/3.4.1/css/bootstrap.min.css" type="text/css" />
 <link rel="stylesheet" href="<?php echo $cdnpublic?>animate.css/3.5.2/animate.min.css" type="text/css" />
 <link rel="stylesheet" href="<?php echo $cdnpublic?>font-awesome/4.7.0/css/font-awesome.min.css" type="text/css" />
@@ -21,37 +21,42 @@ $_SESSION['csrf_token'] = $csrf_token;
 <link rel="stylesheet" href="./assets/css/app.css" type="text/css" />
 <style>input:-webkit-autofill{-webkit-box-shadow:0 0 0px 1000px white inset;-webkit-text-fill-color:#333;}img.logo{width:14px;height:14px;margin:0 5px 0 3px;}</style>
 </head>
-<body>
+<body class="auth-page">
 <div class="app app-header-fixed  ">
-<div class="container w-xxl w-auto-xs" ng-controller="SigninFormController" ng-init="app.settings.container = false;">
+<div class="container w-xxl w-auto-xs auth-shell" ng-controller="SigninFormController" ng-init="app.settings.container = false;">
 <span class="navbar-brand block m-t" id="sitename"><?php echo $conf['sitename']?></span>
 <div class="m-b-lg">
 <div class="wrapper text-center">
 <strong>找回密码</strong>
 </div>
-<form name="form" class="form-validation">
+<form name="form" class="form-validation auth-form">
 <input type="hidden" name="csrf_token" value="<?php echo $csrf_token?>">
 <div class="text-danger wrapper text-center" ng-show="authError">
 </div>
 <div class="list-group list-group-sm swaplogin">
 <div class="list-group-item">
-<select class="form-control" name="type">
+<label class="auth-field-label" for="recovery-type">找回方式</label>
+<select id="recovery-type" class="form-control" name="type">
 <option value="email">使用邮箱找回</option><option value="phone">使用手机找回</option></select>
 </div>
 <div class="list-group-item">
-<input type="text" name="account" placeholder="邮箱/手机号" class="form-control no-border" required>
+<label class="auth-field-label" for="recovery-account">邮箱或手机号码</label>
+<input id="recovery-account" type="text" name="account" placeholder="请输入邮箱或手机号码" class="form-control no-border" autocomplete="username" required>
 </div>
 <div class="list-group-item">
+<label class="auth-field-label" for="recovery-code">验证码</label>
 <div class="input-group">
-<input type="text" name="code" placeholder="输入验证码" class="form-control no-border" required>
-<a class="input-group-addon" id="sendcode">获取验证码</a>
+<input id="recovery-code" type="text" name="code" placeholder="请输入验证码" class="form-control no-border" inputmode="numeric" autocomplete="one-time-code" required>
+<button type="button" class="input-group-addon auth-code-button" id="sendcode">获取验证码</button>
 </div>
 </div>
 <div class="list-group-item">
-<input type="password" name="pwd" placeholder="请输入新密码" class="form-control no-border" required>
+<label class="auth-field-label" for="recovery-password">新密码</label>
+<input id="recovery-password" type="password" name="pwd" placeholder="请输入新密码" class="form-control no-border" autocomplete="new-password" required>
 </div>
 <div class="list-group-item">
-<input type="password" name="pwd2" placeholder="请重新输入密码" class="form-control no-border" required>
+<label class="auth-field-label" for="recovery-password-confirm">确认新密码</label>
+<input id="recovery-password-confirm" type="password" name="pwd2" placeholder="请再次输入新密码" class="form-control no-border" autocomplete="new-password" required>
 </div>
 </div>
 <button type="button" id="submit" class="btn btn-lg btn-primary btn-block" ng-click="login()" ng-disabled='form.$invalid'>确认提交</button>
@@ -77,6 +82,7 @@ function invokeSettime(obj){
     function settime(obj) {
         if (countdown == 0) {
             $(obj).attr("data-lock", "false");
+            $(obj).attr("disabled",false);
             $(obj).text("获取验证码");
             countdown = 60;
             return;

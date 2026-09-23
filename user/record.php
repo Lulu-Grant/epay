@@ -23,22 +23,25 @@ include './head.php';
 		<div class="panel-heading font-bold">
 			<h3 class="panel-title">资金明细</h3>
 		</div>
-	    <form onsubmit="return searchSubmit()" method="GET" class="form-inline" id="searchToolbar">
+	    <form onsubmit="return searchSubmit()" method="GET" class="form-inline filter-toolbar" id="searchToolbar">
 	      <div class="form-group">
-			<select class="form-control" name="type">
+			<label class="filter-label" for="record-search-type">搜索字段</label>
+			<select id="record-search-type" class="form-control" name="type">
 			  <option value="1">操作类型</option>
 			  <option value="2">变更金额</option>
 			  <option value="3">关联订单号</option>
 			</select>
 		  </div>
 		  <div class="form-group" id="searchword">
-			<input type="text" class="form-control" name="kw" placeholder="搜索内容" style="min-width: 300px;">
+			<label class="filter-label" for="record-search-keyword">关键词</label>
+			<input id="record-search-keyword" type="text" class="form-control filter-keyword" name="kw" placeholder="输入要搜索的内容">
 		  </div>
 		  <div class="form-group">
 			<button class="btn btn-primary" type="submit"><i class="fa fa-search"></i> 搜索</button>
 			<a href="javascript:searchClear()" class="btn btn-default"><i class="fa fa-refresh"></i> 重置</a>
 		  </div>
 		</form>
+      <div id="record-list-state" class="table-state sr-only" role="status" aria-live="polite">正在加载资金明细</div>
       <table id="listTable">
 	  </table>
 	</div>
@@ -63,6 +66,10 @@ $(document).ready(function(){
 		pageNumber: pageNumber,
 		pageSize: pageSize,
 		classes: 'table table-striped table-hover table-bordered',
+		formatLoadingMessage: function(){ return '正在加载资金明细…'; },
+		formatNoMatches: function(){ return window.location.search ? '没有符合当前筛选条件的资金明细，请调整条件后重试。' : '暂无资金明细，余额发生变动后会显示在这里。'; },
+		onLoadSuccess: function(){ $('#record-list-state').text('资金明细已加载'); },
+		onLoadError: function(){ $('#record-list-state').removeClass('sr-only').addClass('alert alert-danger').text('资金明细加载失败，请稍后重试。'); },
 		columns: [
 			{
 				field: 'type',

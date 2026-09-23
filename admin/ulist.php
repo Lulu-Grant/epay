@@ -168,7 +168,7 @@ $(document).ready(function(){
 				field: '',
 				title: '操作',
 				formatter: function(value, row, index) {
-					return '<a href="./uset.php?my=edit&uid='+row.uid+'" class="btn btn-xs btn-info">编辑</a>&nbsp;<a href="./sso.php?uid='+row.uid+'" target="_blank" class="btn btn-xs btn-success">登录</a>&nbsp;<a href="javascript:delUser('+row.uid+')" class="btn btn-xs btn-danger">删除</a><br/><a href="./order.php?uid='+row.uid+'" target="_blank" class="btn btn-xs btn-default">订单</a>&nbsp;<a href="./slist.php?uid='+row.uid+'" target="_blank" class="btn btn-xs btn-default">结算</a>&nbsp;<a href="./record.php?column=uid&value='+row.uid+'" target="_blank" class="btn btn-xs btn-default">明细</a>';
+					return '<a href="./uset.php?my=edit&uid='+row.uid+'" class="btn btn-xs btn-info">编辑</a>&nbsp;<a href="./sso.php?uid='+row.uid+'" target="_blank" rel="noopener" class="btn btn-xs btn-success">代登录</a>&nbsp;<a href="javascript:delUser('+row.uid+')" class="btn btn-xs btn-danger">删除</a><br/><a href="./order.php?uid='+row.uid+'" target="_blank" class="btn btn-xs btn-default">订单</a>&nbsp;<a href="./slist.php?uid='+row.uid+'" target="_blank" class="btn btn-xs btn-default">结算</a>&nbsp;<a href="./record.php?column=uid&value='+row.uid+'" target="_blank" class="btn btn-xs btn-default">明细</a>';
 				}
 			},
 		],

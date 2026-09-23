@@ -31,21 +31,21 @@ if($rs = $db->query("SELECT v FROM pay_config WHERE k='version'")){
 	$version = $rs->fetchColumn();
 }
 
-if($version<2038){
-	$sqls = file_get_contents('update2.sql');
+if($version>=2038 && $version<2039){
+	$sqls = file_get_contents('update3.sql');
 	$sqls=explode(';', $sqls);
-	$sqls[]="UPDATE `pre_config` SET `v` = '2038' where `k` = 'version'";
+}elseif($version<2038){
+	$sqls = file_get_contents('update2.sql')."\n".file_get_contents('update3.sql');
+	$sqls=explode(';', $sqls);
 }elseif($version<2001){
 	$sqls = file_get_contents('update.sql');
 	$sqls=explode(';', $sqls);
 	$sqls[]="INSERT INTO `pay_config` VALUES ('syskey', '".random(32)."')";
 	$sqls[]="INSERT INTO `pay_config` VALUES ('build', '".$date."')";
 	$sqls[]="INSERT INTO `pay_config` VALUES ('cronkey', '".rand(111111,999999)."')";
-	$sqls[]="UPDATE `pay_config` SET `v` = '2001' where `k` = 'version'";
 }else{
 	exit('你的网站已经升级到最新版本了');
 }
-$sqls[]="UPDATE `pre_cache` SET `v` = '' where `k` = 'config'";
 $success=0;$error=0;$errorMsg=null;
 foreach ($sqls as $value) {
 	$value=trim($value);
@@ -58,6 +58,17 @@ foreach ($sqls as $value) {
 	}else{
 		$success++;
 	}
+}
+if($error===0){
+	$versionSql = str_replace('pre_',$dbconfig['dbqz'].'_',"UPDATE `pre_config` SET `v` = '2039' where `k` = 'version'");
+	$cacheSql = str_replace('pre_',$dbconfig['dbqz'].'_',"UPDATE `pre_cache` SET `v` = '' where `k` = 'config'");
+	if($db->exec($versionSql)===false || $db->exec($cacheSql)===false){
+		$error++;
+	}
+}
+if($error>0){
+	http_response_code(500);
+	exit('升级未完成，数据库版本未推进。请核对备份和数据库错误日志后重试。');
 }
 echo '成功执行SQL语句'.$success.'条！<br/>';
 if($errorMsg){

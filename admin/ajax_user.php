@@ -338,6 +338,12 @@ case 'addUser':
 	];
 
 	if(empty($data['account']) || empty($data['username'])) exit('{"code":-1,"msg":"必填项不能为空！"}');
+	try{
+		$data['email'] = \lib\EmailAddress::normalize($data['email'], true);
+		\lib\EmailAddress::assertStorageCapacity($DB, $data['email'], ['user.email']);
+	}catch(\InvalidArgumentException|\RuntimeException $e){
+		exit(json_encode(['code'=>-1,'msg'=>$e->getMessage()], JSON_UNESCAPED_UNICODE));
+	}
 
 	if(!empty($data['phone'])){
 		if($DB->find('user','*',['phone'=>$data['phone']])) exit('{"code":-1,"msg":"手机号已存在！"}');
@@ -346,15 +352,21 @@ case 'addUser':
 		if($DB->find('user','*',['email'=>$data['email']])) exit('{"code":-1,"msg":"邮箱已存在！"}');
 	}
 
-	$uid = $DB->insert('user', $data);
-	if($uid!==false){
+	try{
+		if(!$DB->beginTransaction()) throw new \RuntimeException('无法开始商户创建事务');
+		$uid = $DB->insert('user', $data);
+		if($uid===false) throw new \RuntimeException('添加商户失败');
+		$uid = (int)$uid;
 		if(!empty($_POST['pwd'])){
 			$pwd = getMd5Pwd(trim($_POST['pwd']), $uid);
-			$DB->update('user', ['pwd'=>$pwd], ['uid'=>$uid]);
+			if($DB->update('user', ['pwd'=>$pwd], ['uid'=>$uid]) === false) throw new \RuntimeException('设置商户密码失败');
 		}
+		if($data['email'] !== '') \lib\EmailAddress::assertUserStored($DB, $uid, $data['email']);
+		if(!$DB->commit()) throw new \RuntimeException('提交商户创建事务失败');
 		exit(json_encode(['code'=>0, 'uid'=>$uid, 'key'=>$key]));
-	}else{
-		exit('{"code":-1,"msg":"添加商户失败！'.$DB->error().'"}');
+	}catch(\Throwable $e){
+		try{ $DB->rollBack(); }catch(\Throwable $ignored){}
+		exit(json_encode(['code'=>-1,'msg'=>$e instanceof \RuntimeException ? $e->getMessage() : '添加商户失败'], JSON_UNESCAPED_UNICODE));
 	}
 break;
 case 'editUser':
@@ -386,15 +398,30 @@ case 'editUser':
 	];
 
 	if(empty($data['account']) || empty($data['username'])) exit('{"code":-1,"msg":"必填项不能为空！"}');
+	try{
+		$data['email'] = \lib\EmailAddress::normalize($data['email'], true);
+		\lib\EmailAddress::assertStorageCapacity($DB, $data['email'], ['user.email']);
+	}catch(\InvalidArgumentException|\RuntimeException $e){
+		exit(json_encode(['code'=>-1,'msg'=>$e->getMessage()], JSON_UNESCAPED_UNICODE));
+	}
+	if($data['email'] !== ''){
+		$duplicate = $DB->getRow('SELECT uid FROM pre_user WHERE email=:email AND uid<>:uid LIMIT 1', [':email'=>$data['email'], ':uid'=>$uid]);
+		if($duplicate) exit('{"code":-1,"msg":"邮箱已存在！"}');
+	}
 
-	if($DB->update('user', $data, ['uid'=>$uid])!==false){
+	try{
+		if(!$DB->beginTransaction()) throw new \RuntimeException('无法开始商户修改事务');
+		if($DB->update('user', $data, ['uid'=>$uid])===false) throw new \RuntimeException('修改商户信息失败');
 		if(!empty($_POST['pwd'])){
 			$pwd = getMd5Pwd(trim($_POST['pwd']), $uid);
-			$DB->update('user', ['pwd'=>$pwd], ['uid'=>$uid]);
+			if($DB->update('user', ['pwd'=>$pwd], ['uid'=>$uid])===false) throw new \RuntimeException('设置商户密码失败');
 		}
+		\lib\EmailAddress::assertUserStored($DB, $uid, $data['email']);
+		if(!$DB->commit()) throw new \RuntimeException('提交商户修改事务失败');
 		exit('{"code":0}');
-	}else{
-		exit('{"code":-1,"msg":"修改商户信息失败！'.$DB->error().'"}');
+	}catch(\Throwable $e){
+		try{ $DB->rollBack(); }catch(\Throwable $ignored){}
+		exit(json_encode(['code'=>-1,'msg'=>$e instanceof \RuntimeException ? $e->getMessage() : '修改商户信息失败'], JSON_UNESCAPED_UNICODE));
 	}
 break;
 case 'editUserChannelInfo':

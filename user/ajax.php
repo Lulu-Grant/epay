@@ -42,6 +42,13 @@ case 'login':
 
 	if($type==1 && is_numeric($user) && strlen($user)<=6)$type=0;
 	if($type==1){
+		if(strpos($user, '@') !== false){
+			try{
+				$user = \lib\EmailAddress::normalize($user);
+			}catch(\InvalidArgumentException $e){
+				exit(json_encode(['code'=>-1,'msg'=>$e->getMessage()], JSON_UNESCAPED_UNICODE));
+			}
+		}
 		$userrow=$DB->getRow("SELECT * FROM pre_user WHERE email=:user OR phone=:user limit 1", [':user'=>$user]);
 		$pass=getMd5Pwd($pass, $userrow['uid']);
 	}else{
@@ -154,6 +161,12 @@ case 'sendcode':
 		}
 		$type = 1;
 	}else{
+		try{
+			$sendto = \lib\EmailAddress::normalize($sendto);
+			\lib\EmailAddress::assertStorageCapacity($DB, $sendto, ['user.email','regcode.to']);
+		}catch(\InvalidArgumentException|\RuntimeException $e){
+			exit(json_encode(['code'=>-1,'msg'=>$e->getMessage()], JSON_UNESCAPED_UNICODE));
+		}
 		$row=$DB->getRow("select * from pre_user where email=:email limit 1", [':email'=>$sendto]);
 		if($row){
 			exit('{"code":-1,"msg":"该邮箱已经注册过商户，如需找回商户信息，请返回登录页面点击找回商户"}');
@@ -170,7 +183,7 @@ case 'sendcode':
 break;
 case 'reg':
 	if($conf['reg_open']==0)exit('{"code":-1,"msg":"未开放商户申请"}');
-	$email=htmlspecialchars(strip_tags(trim($_POST['email'])));
+	$email=trim((string)$_POST['email']);
 	$phone=htmlspecialchars(strip_tags(trim($_POST['phone'])));
 	$code=trim($_POST['code']);
 	$pwd=trim($_POST['pwd']);
@@ -207,9 +220,23 @@ case 'reg':
 		if($row){
 			exit('{"code":-1,"msg":"该手机号已经注册过商户，如需找回商户信息，请返回登录页面点击找回商户"}');
 		}
+		if($email !== ''){
+			try{
+				$email = \lib\EmailAddress::normalize($email);
+				\lib\EmailAddress::assertStorageCapacity($DB, $email, ['user.email']);
+			}catch(\InvalidArgumentException|\RuntimeException $e){
+				exit(json_encode(['code'=>-1,'msg'=>$e->getMessage()], JSON_UNESCAPED_UNICODE));
+			}
+			if($DB->getRow("select uid from pre_user where email=:email limit 1", [':email'=>$email])){
+				exit('{"code":-1,"msg":"该邮箱已经注册过商户"}');
+			}
+		}
 	}else{
-		if(!preg_match('/^[A-z0-9._-]+@[A-z0-9._-]+\.[A-z0-9._-]+$/', $email)){
-			exit('{"code":-1,"msg":"邮箱格式不正确"}');
+		try{
+			$email = \lib\EmailAddress::normalize($email);
+			\lib\EmailAddress::assertStorageCapacity($DB, $email, ['user.email','regcode.to']);
+		}catch(\InvalidArgumentException|\RuntimeException $e){
+			exit(json_encode(['code'=>-1,'msg'=>$e->getMessage()], JSON_UNESCAPED_UNICODE));
 		}
 		$row=$DB->getRow("select * from pre_user where email=:email limit 1", [':email'=>$email]);
 		if($row){
@@ -251,28 +278,38 @@ case 'reg':
 	}else{
 		$key = random(32);
 		$paystatus = $conf['user_review']==1?2:1;
-		$sds=$DB->exec("INSERT INTO `pre_user` (`upid`, `key`, `money`, `email`, `phone`, `addtime`, `pay`, `settle`, `keylogin`, `apply`, `status`) VALUES (:upid, :key, '0.00', :email, :phone, NOW(), :paystatus, 1, 0, 0, 1)", [':upid'=>$upid, ':key'=>$key, ':email'=>$email, ':phone'=>$phone, ':paystatus'=>$paystatus]);
-		$uid=$DB->lastInsertId();
+		$sds = false;
+		try{
+			if(!$DB->beginTransaction()) throw new \RuntimeException('无法开始注册事务');
+			$stmt = $DB->query("INSERT INTO `pre_user` (`upid`, `key`, `money`, `email`, `phone`, `addtime`, `pay`, `settle`, `keylogin`, `apply`, `status`) VALUES (:upid, :key, '0.00', :email, :phone, NOW(), :paystatus, 1, 0, 0, 1)", [':upid'=>$upid, ':key'=>$key, ':email'=>$email, ':phone'=>$phone, ':paystatus'=>$paystatus]);
+			if($stmt === false || $stmt->rowCount() !== 1) throw new \RuntimeException('创建商户失败');
+			$uid=(int)$DB->lastInsertId();
+			$pwdHash = getMd5Pwd($pwd, $uid);
+			$stmt = $DB->query("UPDATE `pre_user` SET `pwd`=:pwd WHERE `uid`=:uid", [':pwd'=>$pwdHash, ':uid'=>$uid]);
+			if($stmt === false || $stmt->rowCount() !== 1) throw new \RuntimeException('设置商户密码失败');
+			if($email !== '') \lib\EmailAddress::assertUserStored($DB, $uid, $email);
+			if($inviterow && $DB->update('invitecode', ['status'=>1, 'uid'=>$uid, 'usetime'=>'NOW()'], ['id'=>$inviterow['id']]) === false){
+				throw new \RuntimeException('更新邀请码失败');
+			}
+			if(!$DB->commit()) throw new \RuntimeException('提交注册事务失败');
+			$sds = true;
+		}catch(\Throwable $e){
+			try{ $DB->rollBack(); }catch(\Throwable $ignored){}
+			$result=array("code"=>-1,"msg"=>"申请商户失败，未保存不完整账户");
+		}
 		if($sds){
-			$pwd = getMd5Pwd($pwd, $uid);
-			$DB->exec("update `pre_user` set `pwd` ='{$pwd}' where `uid`='$uid'");
 			if(!empty($email)){
 				$sub = $conf['sitename'].' - 注册成功通知';
-				$msg = '<h2>商户注册成功通知</h2>感谢您注册'.$conf['sitename'].'！<br/>您的登录账号：'.($info['email']?$info['email']:$info['phone']).'<br/>您的商户ID：'.$uid.'<br/>您的商户秘钥：'.$key.'<br/>'.$conf['sitename'].'官网：<a href="http://'.$_SERVER['HTTP_HOST'].'/" target="_blank">'.$_SERVER['HTTP_HOST'].'</a><br/>【<a href="'.$siteurl.'user/" target="_blank">商户管理后台</a>】';
+				$msg = '<h2>商户注册成功通知</h2>感谢您注册'.$conf['sitename'].'！<br/>您的登录账号：'.($email !== '' ? $email : $phone).'<br/>您的商户ID：'.$uid.'<br/>您的商户秘钥：'.$key.'<br/>'.$conf['sitename'].'官网：<a href="http://'.$_SERVER['HTTP_HOST'].'/" target="_blank">'.$_SERVER['HTTP_HOST'].'</a><br/>【<a href="'.$siteurl.'user/" target="_blank">商户管理后台</a>】';
 				send_mail($email, $sub, $msg);
 			}
 			\lib\VerifyCode::void_code();
-			if($inviterow){
-				$DB->update('invitecode', ['status'=>1, 'uid'=>$uid, 'usetime'=>'NOW()'], ['id'=>$inviterow['id']]);
-			}
 			$_SESSION['reg_submit']=time();
 			$result=array("code"=>1,"msg"=>"申请商户成功！","uid"=>$uid,"key"=>$key);
 			unset($_SESSION['csrf_token']);
 			if($paystatus == 2){
-				\lib\MsgNotice::send('regaudit', 0, ['uid'=>$uid, 'account'=>$info['email']?$info['email']:$info['phone']]);
+				\lib\MsgNotice::send('regaudit', 0, ['uid'=>$uid, 'account'=>$email !== '' ? $email : $phone]);
 			}
-		}else{
-			$result=array("code"=>-1,"msg"=>"申请商户失败！".$DB->error());
 		}
 	}
 	exit(json_encode($result));
@@ -294,6 +331,12 @@ case 'sendcode2':
 		}
 		$type = 1;
 	}else{
+		try{
+			$sendto = \lib\EmailAddress::normalize($sendto);
+			\lib\EmailAddress::assertStorageCapacity($DB, $sendto, ['regcode.to']);
+		}catch(\InvalidArgumentException|\RuntimeException $e){
+			exit(json_encode(['code'=>-1,'msg'=>$e->getMessage()], JSON_UNESCAPED_UNICODE));
+		}
 		$userrow=$DB->getRow("select * from pre_user where email=:email limit 1", [':email'=>$sendto]);
 		if(!$userrow){
 			exit('{"code":-1,"msg":"该邮箱未找到注册商户"}');
@@ -336,8 +379,10 @@ case 'findpwd':
 			exit('{"code":-1,"msg":"该手机号未找到注册商户"}');
 		}
 	}else{
-		if(!preg_match('/^[A-z0-9._-]+@[A-z0-9._-]+\.[A-z0-9._-]+$/', $account)){
-			exit('{"code":-1,"msg":"邮箱格式不正确"}');
+		try{
+			$account = \lib\EmailAddress::normalize($account);
+		}catch(\InvalidArgumentException $e){
+			exit(json_encode(['code'=>-1,'msg'=>$e->getMessage()], JSON_UNESCAPED_UNICODE));
 		}
 		$userrow=$DB->getRow("select * from pre_user where email=:account limit 1", [':account'=>$account]);
 		if(!$userrow){

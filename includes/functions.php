@@ -794,6 +794,91 @@ function processNotify($order, $api_trade_no=null, $buyer=null){
 	\lib\Payment::processOrder(true, $order, $api_trade_no, $buyer);
 }
 
+/**
+ * Complete a paid registration exactly once. The ledger, payer balance record,
+ * merchant row and password are committed together so a retry cannot create a
+ * second account or repeat the registration income.
+ */
+function completePaidRegistration($srow){
+	global $DB,$CACHE,$conf;
+	$tradeNo = isset($srow['trade_no']) ? (string)$srow['trade_no'] : '';
+	if(!preg_match('/^[0-9]{19}$/D', $tradeNo)) throw new \RuntimeException('注册订单号无效');
+
+	if(!$DB->beginTransaction()) throw new \RuntimeException('无法开始付费注册事务');
+	try{
+		$stmt = $DB->query('INSERT IGNORE INTO pre_registration_completion (trade_no,status,created_at) VALUES (:trade_no,0,NOW())', [':trade_no'=>$tradeNo]);
+		if($stmt === false) throw new \RuntimeException('无法创建注册完成记录');
+		if($stmt->rowCount() === 0){
+			$existing = $DB->getRow('SELECT uid,status FROM pre_registration_completion WHERE trade_no=:trade_no FOR UPDATE', [':trade_no'=>$tradeNo]);
+			if($existing && (int)$existing['status'] === 1 && (int)$existing['uid'] > 0){
+				$DB->commit();
+				return (int)$existing['uid'];
+			}
+			throw new \RuntimeException('付费注册正在处理，请稍后重试');
+		}
+
+		$raw = $CACHE->read('reg_'.$tradeNo);
+		$info = is_string($raw) ? @unserialize($raw, ['allowed_classes'=>false]) : false;
+		if(!is_array($info) || !isset($info['verifytype'],$info['email'],$info['phone'],$info['pwd'],$info['upid'])){
+			throw new \RuntimeException('付费注册资料已失效，需要人工核对');
+		}
+
+		$email = trim((string)$info['email']);
+		$phone = trim((string)$info['phone']);
+		if($email !== ''){
+			$email = \lib\EmailAddress::normalize($email);
+			\lib\EmailAddress::assertStorageCapacity($DB, $email, ['user.email']);
+			if($DB->getRow('SELECT uid FROM pre_user WHERE email=:email LIMIT 1', [':email'=>$email])) throw new \RuntimeException('付费注册邮箱已被使用，需要人工核对');
+		}
+		if($phone !== '' && $DB->getRow('SELECT uid FROM pre_user WHERE phone=:phone LIMIT 1', [':phone'=>$phone])) throw new \RuntimeException('付费注册手机号已被使用，需要人工核对');
+
+		$addmoney = (float)$srow['getmoney'];
+		if($addmoney > 0){
+			$payerUid = (int)$srow['uid'];
+			$oldmoney = $DB->getColumn('SELECT money FROM pre_user WHERE uid=:uid LIMIT 1 FOR UPDATE', [':uid'=>$payerUid]);
+			if($oldmoney === false || $oldmoney === null) throw new \RuntimeException('注册收款商户不存在');
+			$newmoney = round((float)$oldmoney + $addmoney, 2);
+			$stmt = $DB->query('UPDATE pre_user SET money=:money WHERE uid=:uid', [':money'=>$newmoney, ':uid'=>$payerUid]);
+			if($stmt === false || $stmt->rowCount() !== 1) throw new \RuntimeException('注册订单入账失败');
+			if($DB->insert('record', ['uid'=>$payerUid, 'action'=>1, 'money'=>$addmoney, 'oldmoney'=>$oldmoney, 'newmoney'=>$newmoney, 'type'=>'订单收入', 'trade_no'=>$tradeNo, 'date'=>'NOW()']) === false){
+				throw new \RuntimeException('注册订单资金记录写入失败');
+			}
+		}
+
+		$key = random(32);
+		$paystatus = $conf['user_review']==1?2:1;
+		$uid = $DB->insert('user', ['upid'=>(int)$info['upid'], 'key'=>$key, 'money'=>'0.00', 'email'=>$email, 'phone'=>$phone, 'addtime'=>'NOW()', 'pay'=>$paystatus, 'settle'=>1, 'keylogin'=>0, 'apply'=>0, 'status'=>1]);
+		if($uid === false) throw new \RuntimeException('付费注册商户创建失败');
+		$uid = (int)$uid;
+		$pwd = getMd5Pwd((string)$info['pwd'], $uid);
+		$stmt = $DB->query('UPDATE pre_user SET pwd=:pwd WHERE uid=:uid', [':pwd'=>$pwd, ':uid'=>$uid]);
+		if($stmt === false || $stmt->rowCount() !== 1) throw new \RuntimeException('付费注册密码写入失败');
+		if($email !== '') \lib\EmailAddress::assertUserStored($DB, $uid, $email);
+
+		if(isset($info['invitecodeid']) && (int)$info['invitecodeid'] > 0){
+			if($DB->update('invitecode', ['status'=>1, 'uid'=>$uid, 'usetime'=>'NOW()'], ['id'=>(int)$info['invitecodeid']]) === false){
+				throw new \RuntimeException('付费注册邀请码更新失败');
+			}
+		}
+
+		$stmt = $DB->query('UPDATE pre_registration_completion SET uid=:uid,status=1,completed_at=NOW() WHERE trade_no=:trade_no AND status=0', [':uid'=>$uid, ':trade_no'=>$tradeNo]);
+		if($stmt === false || $stmt->rowCount() !== 1) throw new \RuntimeException('付费注册完成状态写入失败');
+		if(!$DB->commit()) throw new \RuntimeException('提交付费注册事务失败');
+	}catch(\Throwable $e){
+		try{ $DB->rollBack(); }catch(\Throwable $ignored){}
+		throw $e;
+	}
+
+	$CACHE->delete('reg_'.$tradeNo);
+	if($email !== ''){
+		$sub = $conf['sitename'].' - 注册成功通知';
+		$msg = '<h2>商户注册成功通知</h2>感谢您注册'.$conf['sitename'].'！<br/>您的登录账号：'.$email.'<br/>您的商户ID：'.$uid.'<br/>您的商户秘钥：'.$key.'<br/>'.$conf['sitename'].'官网：<a href="http://'.$_SERVER['HTTP_HOST'].'/" target="_blank">'.$_SERVER['HTTP_HOST'].'</a><br/>【<a href="http://'.$_SERVER['HTTP_HOST'].'/user/" target="_blank">商户管理后台</a>】';
+		send_mail($email, $sub, $msg);
+	}
+	if($paystatus == 2) \lib\MsgNotice::send('regaudit', 0, ['uid'=>$uid, 'account'=>$email !== '' ? $email : $phone]);
+	return $uid;
+}
+
 function processOrder($srow,$notify=true){
 	global $DB,$CACHE,$conf,$channel;
 	$addmoney = $srow['getmoney'];
@@ -807,29 +892,7 @@ function processOrder($srow,$notify=true){
 	$DB->update('order', ['profitmoney'=>$profitmoney], ['trade_no'=>$srow['trade_no']]);
 
 	if($srow['tid']==1){ //商户注册
-		changeUserMoney($srow['uid'], $addmoney, true, '订单收入', $srow['trade_no']);
-		$info = unserialize($CACHE->read('reg_'.$srow['trade_no']));
-		if($info){
-			$key = random(32);
-			$paystatus = $conf['user_review']==1?2:1;
-			$sds=$DB->exec("INSERT INTO `pre_user` (`upid`, `key`, `money`, `email`, `phone`, `addtime`, `pay`, `settle`, `keylogin`, `apply`, `status`) VALUES (:upid, :key, '0.00', :email, :phone, NOW(), :paystatus, 1, 0, 0, 1)", [':upid'=>$info['upid'], ':key'=>$key, ':email'=>$info['email'], ':phone'=>$info['phone'], ':paystatus'=>$paystatus]);
-			$uid=$DB->lastInsertId();
-			$pwd = getMd5Pwd($info['pwd'], $uid);
-			$DB->exec("UPDATE `pre_user` SET `pwd`='{$pwd}' WHERE `uid`='$uid'");
-			if($sds){
-				if(!empty($info['email'])){
-					$sub = $conf['sitename'].' - 注册成功通知';
-					$msg = '<h2>商户注册成功通知</h2>感谢您注册'.$conf['sitename'].'！<br/>您的登录账号：'.$info['email'].'<br/>您的商户ID：'.$uid.'<br/>您的商户秘钥：'.$key.'<br/>'.$conf['sitename'].'官网：<a href="http://'.$_SERVER['HTTP_HOST'].'/" target="_blank">'.$_SERVER['HTTP_HOST'].'</a><br/>【<a href="http://'.$_SERVER['HTTP_HOST'].'/user/" target="_blank">商户管理后台</a>】';
-					send_mail($info['email'], $sub, $msg);
-				}
-				if(isset($info['invitecodeid']) && $info['invitecodeid']>0){
-					$DB->update('invitecode', ['status'=>1, 'uid'=>$uid, 'usetime'=>'NOW()'], ['id'=>$info['invitecodeid']]);
-				}
-				if($paystatus == 2){
-					\lib\MsgNotice::send('regaudit', 0, ['uid'=>$uid, 'account'=>$info['email']?$info['email']:$info['phone']]);
-				}
-			}
-		}
+		completePaidRegistration($srow);
 	}else if($srow['tid']==2){ //充值余额
 		changeUserMoney($srow['uid'], $addmoney, true, '余额充值', $srow['trade_no']);
 	}else if($srow['tid']==3){ //聚合收款码

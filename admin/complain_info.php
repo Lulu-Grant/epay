@@ -478,7 +478,7 @@ function apirefund() {
 				layer.open({
 					area: [Math.min(360, Math.max(240, window.innerWidth - 24))+'px'],
 					title: 'API退款确认',
-					content: '<p>此操作将直接原路退款该订单，每个订单只能操作一次退款，退款金额不能大于订单金额。</p><div class="form-group"><div class="input-group"><div class="input-group-addon">退款金额</div><input type="text" class="form-control" name="refund2" value="'+data.money+'" placeholder="请输入退款金额" autocomplete="off"/></div></div><div class="form-group"><div class="input-group"><div class="input-group-addon">支付密码</div><input type="text" class="form-control" name="paypwd" value="" placeholder="请输入支付密码" autocomplete="off"/></div></div>',
+					content: '<p>此操作将直接原路退款该订单，每个订单只能操作一次退款，退款金额不能大于订单金额。</p><div class="form-group"><label for="complaint-refund-money">退款金额</label><input id="complaint-refund-money" type="text" class="form-control" name="refund2" value="'+data.money+'" placeholder="请输入退款金额" inputmode="decimal" autocomplete="off"/></div><div class="form-group"><label for="complaint-refund-password">支付密码</label><input id="complaint-refund-password" type="password" class="form-control" name="paypwd" value="" placeholder="请输入支付密码" autocomplete="current-password"/></div>',
 					yes: function(){
 						var money = $("input[name='refund2']").val();
 						var paypwd = $("input[name='paypwd']").val();

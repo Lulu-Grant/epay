@@ -18,7 +18,7 @@ if(isset($_GET['invite'])){
     }
 }
 
-$csrf_token = md5(mt_rand(0,999).time());
+$csrf_token = bin2hex(random_bytes(32));
 $_SESSION['csrf_token'] = $csrf_token;
 ?>
 <!DOCTYPE html>
@@ -26,7 +26,7 @@ $_SESSION['csrf_token'] = $csrf_token;
 <head>
 <meta charset="utf-8" />
 <title>申请商户 | <?php echo $conf['sitename']?></title>
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="stylesheet" href="<?php echo $cdnpublic?>twitter-bootstrap/3.4.1/css/bootstrap.min.css" type="text/css" />
 <link rel="stylesheet" href="<?php echo $cdnpublic?>animate.css/3.5.2/animate.min.css" type="text/css" />
 <link rel="stylesheet" href="<?php echo $cdnpublic?>font-awesome/4.7.0/css/font-awesome.min.css" type="text/css" />
@@ -35,15 +35,15 @@ $_SESSION['csrf_token'] = $csrf_token;
 <link rel="stylesheet" href="./assets/css/app.css" type="text/css" />
 <style>input:-webkit-autofill{-webkit-box-shadow:0 0 0px 1000px white inset;-webkit-text-fill-color:#333;}img.logo{width:14px;height:14px;margin:0 5px 0 3px;}</style>
 </head>
-<body>
+<body class="auth-page">
 
-		<div class="modal inmodal fade" id="myModal" tabindex="-1" role="dialog" aria-hidden="true">
+		<div class="modal inmodal fade" id="myModal" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="registration-notice-title" aria-hidden="true">
 			<div class="modal-dialog">
 				<div class="modal-content">
 					<div class="modal-header">
 						<button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">关闭</span>
 						</button>
-						<h4 class="modal-title">注册须知</h4>
+						<h4 class="modal-title" id="registration-notice-title">注册须知</h4>
 					</div>
 					<div class="modal-body">
 <?php echo $conf['zhuce']?>
@@ -56,44 +56,51 @@ $_SESSION['csrf_token'] = $csrf_token;
 		</div>
 
 <div class="app app-header-fixed  ">
-<div class="container w-xxl w-auto-xs" ng-controller="SigninFormController" ng-init="app.settings.container = false;">
+<div class="container w-xxl w-auto-xs auth-shell" ng-controller="SigninFormController" ng-init="app.settings.container = false;">
 <span class="navbar-brand block m-t" id="sitename"><?php echo $conf['sitename']?></span>
 <div class="m-b-lg">
 <div class="wrapper text-center">
 <strong>自助申请商户</strong>
 </div>
-<form name="form" class="form-validation"><input type="hidden" name="csrf_token" value="<?php echo $csrf_token?>"><input type="hidden" name="verifytype" value="<?php echo $conf['verifytype']?>">
+<form name="form" class="form-validation auth-form"><input type="hidden" name="csrf_token" value="<?php echo $csrf_token?>"><input type="hidden" name="verifytype" value="<?php echo $conf['verifytype']?>">
 <?php if($conf['reg_pay']){?><div class="wrapper">商户申请价格为：<b><?php echo $conf['reg_pay_price']?></b>元</div><?php }?>
 <div class="list-group list-group-sm swaplogin">
 <?php if($conf['verifytype']==1){?>
 <div class="list-group-item">
-<input type="text" name="phone" placeholder="手机号码（同时作为登录账号）" class="form-control no-border" required>
+<label class="auth-field-label" for="registration-phone">手机号码（登录账号）</label>
+<input id="registration-phone" type="tel" name="phone" placeholder="请输入手机号码" class="form-control no-border" inputmode="tel" autocomplete="tel" required>
 </div>
 <div class="list-group-item">
+<label class="auth-field-label" for="registration-code">短信验证码</label>
 <div class="input-group">
-<input type="text" name="code" placeholder="短信验证码" class="form-control no-border" required>
-<a class="input-group-addon" id="sendcode">获取验证码</a>
+<input id="registration-code" type="text" name="code" placeholder="请输入短信验证码" class="form-control no-border" inputmode="numeric" autocomplete="one-time-code" required>
+<button type="button" class="input-group-addon auth-code-button" id="sendcode">获取验证码</button>
 </div>
 </div>
 <?php }else{?>
 <div class="list-group-item">
-<input type="email" name="email" placeholder="邮箱（同时作为登录账号）" class="form-control no-border" required>
+<label class="auth-field-label" for="registration-email">邮箱（登录账号）</label>
+<input id="registration-email" type="email" name="email" placeholder="请输入邮箱" class="form-control no-border" inputmode="email" autocomplete="email" required>
 </div>
 <div class="list-group-item">
+<label class="auth-field-label" for="registration-code">邮箱验证码</label>
 <div class="input-group">
-<input type="text" name="code" placeholder="邮箱验证码" class="form-control no-border" required>
-<a class="input-group-addon" id="sendcode">获取验证码</a>
+<input id="registration-code" type="text" name="code" placeholder="请输入邮箱验证码" class="form-control no-border" inputmode="numeric" autocomplete="one-time-code" required>
+<button type="button" class="input-group-addon auth-code-button" id="sendcode">获取验证码</button>
 </div>
 </div>
 <?php }?>
 <div class="list-group-item">
-<input type="password" name="pwd" placeholder="请输入你的密码" class="form-control no-border" required>
+<label class="auth-field-label" for="registration-password">登录密码</label>
+<input id="registration-password" type="password" name="pwd" placeholder="请输入登录密码" class="form-control no-border" autocomplete="new-password" required>
 </div>
 <div class="list-group-item">
-<input type="password" name="pwd2" placeholder="请再次输入密码" class="form-control no-border" required>
+<label class="auth-field-label" for="registration-password-confirm">确认登录密码</label>
+<input id="registration-password-confirm" type="password" name="pwd2" placeholder="请再次输入登录密码" class="form-control no-border" autocomplete="new-password" required>
 </div>
 <?php if($conf['reg_open']==2){?><div class="list-group-item">
-<input type="text" name="invitecode" placeholder="邀请码" class="form-control no-border" required>
+<label class="auth-field-label" for="registration-invite">邀请码</label>
+<input id="registration-invite" type="text" name="invitecode" placeholder="请输入邀请码" class="form-control no-border" autocomplete="off" required>
 </div><?php }?>
 <div class="checkbox m-b-md m-t-none">
 <label class="i-checks">

@@ -5,10 +5,15 @@ create table `pre_config` (
 PRIMARY KEY  (`k`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
-INSERT INTO `pre_config` VALUES ('version', '2038');
+INSERT INTO `pre_config` VALUES ('version', '2039');
 INSERT INTO `pre_config` VALUES ('admin_user', 'admin');
 INSERT INTO `pre_config` VALUES ('admin_pwd', '123456');
 INSERT INTO `pre_config` VALUES ('admin_paypwd', '123456');
+INSERT INTO `pre_config` VALUES ('admin_sso_enabled', '0');
+INSERT INTO `pre_config` VALUES ('admin_sso_admin_origin', '');
+INSERT INTO `pre_config` VALUES ('admin_sso_merchant_origin', '');
+INSERT INTO `pre_config` VALUES ('admin_sso_admin_path', '/admin/sso.php');
+INSERT INTO `pre_config` VALUES ('admin_sso_merchant_path', '/user/sso.php');
 INSERT INTO `pre_config` VALUES ('homepage', '0');
 INSERT INTO `pre_config` VALUES ('sitename', '聚合支付平台');
 INSERT INTO `pre_config` VALUES ('title', '聚合支付 - 行业领先的免签约支付平台');
@@ -242,7 +247,7 @@ CREATE TABLE `pre_user` (
   `qq_uid` varchar(32) DEFAULT NULL,
   `wx_uid` varchar(32) DEFAULT NULL,
   `money` decimal(10,2) NOT NULL,
-  `email` varchar(32) DEFAULT NULL,
+  `email` varchar(254) DEFAULT NULL,
   `phone` varchar(20) DEFAULT NULL,
   `qq` varchar(20) DEFAULT NULL,
   `url` varchar(64) DEFAULT NULL,
@@ -273,7 +278,7 @@ CREATE TABLE `pre_user` (
   `ordername` varchar(255) DEFAULT NULL,
   `msgconfig` varchar(150) DEFAULT NULL,
  PRIMARY KEY (`uid`),
- KEY `email` (`email`),
+  KEY `email` (`email`),
  KEY `phone` (`phone`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 AUTO_INCREMENT=1000;
 
@@ -345,13 +350,78 @@ CREATE TABLE `pre_regcode` (
   `scene` varchar(20) NOT NULL DEFAULT '',
   `type` tinyint(1) NOT NULL DEFAULT '0',
   `code` varchar(32) NOT NULL,
-  `to` varchar(32) DEFAULT NULL,
+  `to` varchar(254) DEFAULT NULL,
   `time` int(11) NOT NULL,
   `ip` varchar(20) DEFAULT NULL,
   `status` tinyint(1) NOT NULL DEFAULT '0',
   `errcount` int(11) NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`),
   KEY `code` (`to`,`type`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+DROP TABLE IF EXISTS `pre_registration_completion`;
+CREATE TABLE `pre_registration_completion` (
+  `trade_no` char(19) NOT NULL,
+  `uid` int(11) unsigned DEFAULT NULL,
+  `status` tinyint(1) NOT NULL DEFAULT '0',
+  `created_at` datetime NOT NULL,
+  `completed_at` datetime DEFAULT NULL,
+  PRIMARY KEY (`trade_no`),
+  KEY `uid` (`uid`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+DROP TABLE IF EXISTS `pre_admin_sso_ticket`;
+CREATE TABLE `pre_admin_sso_ticket` (
+  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `ticket_hash` char(64) NOT NULL,
+  `correlation_id` char(16) NOT NULL,
+  `target_uid` int(11) unsigned NOT NULL,
+  `issuer_hash` char(64) NOT NULL,
+  `issuer_version` char(64) NOT NULL,
+  `flow_hash` char(64) NOT NULL,
+  `audience` varchar(255) NOT NULL,
+  `nonce_hash` char(64) DEFAULT NULL,
+  `status` tinyint(1) NOT NULL DEFAULT '0',
+  `expires_at` datetime NOT NULL,
+  `created_at` datetime NOT NULL,
+  `bound_at` datetime DEFAULT NULL,
+  `consumed_at` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `ticket_hash` (`ticket_hash`),
+  KEY `target_status` (`target_uid`,`status`),
+  KEY `issuer_status` (`issuer_hash`,`status`),
+  KEY `expires_at` (`expires_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+DROP TABLE IF EXISTS `pre_admin_sso_session`;
+CREATE TABLE `pre_admin_sso_session` (
+  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `session_hash` char(64) NOT NULL,
+  `correlation_id` char(16) NOT NULL,
+  `uid` int(11) unsigned NOT NULL,
+  `issuer_hash` char(64) NOT NULL,
+  `issuer_version` char(64) NOT NULL,
+  `created_at` datetime NOT NULL,
+  `expires_at` datetime NOT NULL,
+  `revoked_at` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `session_hash` (`session_hash`),
+  KEY `uid_active` (`uid`,`revoked_at`,`expires_at`),
+  KEY `issuer_active` (`issuer_hash`,`revoked_at`,`expires_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+DROP TABLE IF EXISTS `pre_admin_sso_audit`;
+CREATE TABLE `pre_admin_sso_audit` (
+  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `correlation_id` char(16) DEFAULT NULL,
+  `issuer_hash` char(64) DEFAULT NULL,
+  `uid` int(11) unsigned DEFAULT NULL,
+  `event` varchar(32) NOT NULL,
+  `result` varchar(32) NOT NULL,
+  `created_at` datetime NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `correlation_id` (`correlation_id`),
+  KEY `created_at` (`created_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 DROP TABLE IF EXISTS `pre_risk`;

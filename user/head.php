@@ -1,7 +1,7 @@
 <?php
 @header('Content-Type: text/html; charset=UTF-8');
 if($userrow['status']==0){
-	sysmsg('你的商户由于违反相关法律法规与《<a href="/?mod=agreement">'.$conf['sitename'].'用户协议</a>》，已被禁用！');
+	sysmsg('该商户账户已停用，请联系平台管理员。');
 }
 switch($conf['user_style']){
 	case 1: $style=['bg-black','bg-black','bg-white']; break;
@@ -15,6 +15,10 @@ switch($conf['user_style']){
 }
 $groupconfig = getGroupConfig($userrow['gid']);
 $conf = array_merge($conf, $groupconfig);
+if(!empty($admin_sso_session)){
+	if(empty($_SESSION['admin_sso_logout_csrf'])) $_SESSION['admin_sso_logout_csrf'] = bin2hex(random_bytes(32));
+	$adminSsoExpires = strtotime((string)$admin_sso_session['expires_at']);
+}
 ?>
 <!DOCTYPE html>
 <html lang="zh-CN">
@@ -31,6 +35,7 @@ $conf = array_merge($conf, $groupconfig);
   <link rel="stylesheet" href="./assets/css/app.css" type="text/css" />
   <link rel="stylesheet" href="../assets/css/bootstrap-table.css?v=1"/>
   <link rel="stylesheet" href="../assets/css/dashboard-responsive.css?v=1"/>
+  <style>.admin-sso-indicator{display:flex!important;align-items:center;gap:10px;padding:7px 12px;color:#111827;background:#f7c948}.admin-sso-indicator form{margin:0}.admin-sso-indicator__exit{border:1px solid #111827;border-radius:4px;background:transparent;color:#111827;font-weight:600;padding:4px 9px}.admin-sso-indicator__exit:focus-visible{outline:3px solid #fff;outline-offset:2px}@media(max-width:767px){.admin-sso-indicator{flex-wrap:wrap;font-size:12px}}</style>
 </head>
 <body class="dashboard-responsive">
 <div class="app app-header-fixed  ">
@@ -38,11 +43,11 @@ $conf = array_merge($conf, $groupconfig);
   <header id="header" class="app-header navbar" role="menu">
           <!-- navbar header -->
       <div class="navbar-header <?php echo $style[0]?>">
-        <button class="pull-right visible-xs dk" ui-toggle="show" target=".navbar-collapse">
-          <i class="glyphicon glyphicon-cog"></i>
+        <button type="button" id="merchant-account-toggle" class="pull-right visible-xs dk" ui-toggle="show" target="#merchant-account-menu" aria-label="账户菜单" aria-controls="merchant-account-menu" aria-expanded="false">
+          <i class="glyphicon glyphicon-cog" aria-hidden="true"></i>
         </button>
-        <button class="pull-right visible-xs" ui-toggle="off-screen" target=".app-aside" ui-scroll="app">
-          <i class="glyphicon glyphicon-align-justify"></i>
+        <button type="button" id="merchant-nav-toggle" class="pull-right visible-xs" ui-toggle="off-screen" target="#merchant-primary-nav" aria-label="主导航" aria-controls="merchant-primary-nav" aria-expanded="false">
+          <i class="glyphicon glyphicon-align-justify" aria-hidden="true"></i>
         </button>
         <!-- brand -->
         <a href="./" class="navbar-brand text-lt">
@@ -54,7 +59,7 @@ $conf = array_merge($conf, $groupconfig);
       <!-- / navbar header -->
 
       <!-- navbar collapse -->
-      <div class="collapse pos-rlt navbar-collapse box-shadow <?php echo $style[1]?>">
+      <div id="merchant-account-menu" class="collapse pos-rlt navbar-collapse box-shadow <?php echo $style[1]?>">
         <!-- buttons -->
         <div class="nav navbar-nav hidden-xs">
           <a href="#" class="btn no-shadow navbar-btn" ui-toggle="app-aside-folded" target=".app">
@@ -66,10 +71,20 @@ $conf = array_merge($conf, $groupconfig);
 
         <!-- nabar right -->
         <ul class="nav navbar-nav navbar-right">
+          <?php if(!empty($admin_sso_session)){?>
+          <li class="admin-sso-indicator" role="status">
+            <span>管理员代登录：UID <?php echo intval($uid)?>，有效至 <?php echo date('H:i', $adminSsoExpires)?></span>
+            <form id="admin-sso-exit-menu" method="post" action="<?php echo htmlspecialchars(\lib\AdminSso::endpoint($conf, 'merchant'), ENT_QUOTES, 'UTF-8')?>">
+              <input type="hidden" name="action" value="logout">
+              <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['admin_sso_logout_csrf'], ENT_QUOTES, 'UTF-8')?>">
+              <button type="submit" class="admin-sso-indicator__exit">退出代登录</button>
+            </form>
+          </li>
+          <?php }?>
           <li class="dropdown">
-            <a href="#" data-toggle="dropdown" class="dropdown-toggle clear" data-toggle="dropdown">
+            <a href="#" data-toggle="dropdown" class="dropdown-toggle clear" aria-label="打开商户账户菜单">
               <span class="thumb-sm avatar pull-right m-t-n-sm m-b-n-sm m-l-sm">
-                <img src="<?php echo ($userrow['qq'])?'//q2.qlogo.cn/headimg_dl?bs=qq&dst_uin='.$userrow['qq'].'&src_uin='.$userrow['qq'].'&fid='.$userrow['qq'].'&spec=100&url_enc=0&referer=bu_interface&term_type=PC':'assets/img/user.png'?>">
+                <img src="<?php echo ($userrow['qq'])?'//q2.qlogo.cn/headimg_dl?bs=qq&dst_uin='.$userrow['qq'].'&src_uin='.$userrow['qq'].'&fid='.$userrow['qq'].'&spec=100&url_enc=0&referer=bu_interface&term_type=PC':'assets/img/user.png'?>" alt="商户头像">
                 <i class="on md b-white bottom"></i>
               </span>
               <span class="hidden-sm hidden-md" style="text-transform:uppercase;"><?php echo $uid?></span> <b class="caret"></b>
@@ -93,7 +108,11 @@ $conf = array_merge($conf, $groupconfig);
               </li>
               <li class="divider"></li>
               <li>
+                <?php if(!empty($admin_sso_session)){?>
+                <button type="submit" form="admin-sso-exit-menu" class="btn btn-link">退出代登录</button>
+                <?php }else{?>
                 <a ui-sref="access.signin" href="login.php?logout">退出登录</a>
+                <?php }?>
               </li>
             </ul>
             <!-- / dropdown -->
@@ -105,7 +124,7 @@ $conf = array_merge($conf, $groupconfig);
   </header>
   <!-- / header -->
   <!-- aside -->
-  <aside id="aside" class="app-aside hidden-xs <?php echo $style[2]?>">
+  <aside id="merchant-primary-nav" class="app-aside hidden-xs <?php echo $style[2]?>">
       <div class="aside-wrap">
         <div class="navi-wrap">
 
@@ -187,7 +206,7 @@ $conf = array_merge($conf, $groupconfig);
 			  <li class="<?php echo checkIfActive('apply')?>">
                 <a href="apply.php">
                   <i class="glyphicon glyphicon-edit"></i>
-                  <span>申请提现</span>
+                  <span>申请提现<?php if((int)$userrow['settle']!==1){?> <small class="text-warning">结算受限</small><?php }?></span>
                 </a>
               </li>
 			  <?php }?>

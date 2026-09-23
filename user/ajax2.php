@@ -115,8 +115,11 @@ case 'sendcode':
 		$type = 1;
 	}else{
 		if($situation=='bind'){
-			if(!preg_match('/^[A-z0-9._-]+@[A-z0-9._-]+\.[A-z0-9._-]+$/', $target)){
-				exit('{"code":-1,"msg":"邮箱格式不正确"}');
+			try{
+				$target = \lib\EmailAddress::normalize($target);
+				\lib\EmailAddress::assertStorageCapacity($DB, $target, ['user.email','regcode.to']);
+			}catch(\InvalidArgumentException|\RuntimeException $e){
+				exit(json_encode(['code'=>-1,'msg'=>$e->getMessage()], JSON_UNESCAPED_UNICODE));
 			}
 			if($target==$userrow['email']){
 				exit('{"code":-1,"msg":"你填写的邮箱和之前一样"}');
@@ -164,7 +167,7 @@ case 'completeinfo':
 	$type=intval($_POST['stype']);
 	$account=htmlspecialchars(strip_tags(trim($_POST['account'])));
 	$username=htmlspecialchars(strip_tags(trim($_POST['username'])));
-	$email=htmlspecialchars(strip_tags(trim($_POST['email'])));
+	$email=trim((string)$_POST['email']);
 	$qq=htmlspecialchars(strip_tags(trim($_POST['qq'])));
 	$url=htmlspecialchars(strip_tags(trim($_POST['url'])));
 
@@ -191,10 +194,16 @@ case 'completeinfo':
 	}
 	$data = ['settle_id'=>$type, 'account'=>$account, 'username'=>$username, 'qq'=>$qq, 'url'=>$url];
 	if($conf['verifytype']==1){
-		if(!preg_match('/^[A-z0-9._-]+@[A-z0-9._-]+\.[A-z0-9._-]+$/', $email)){
-			exit('{"code":-1,"msg":"邮箱格式不正确"}');
+		$emailChanged = !hash_equals((string)$userrow['email'], $email);
+		try{
+			if($emailChanged){
+				$email = \lib\EmailAddress::normalize($email);
+				\lib\EmailAddress::assertStorageCapacity($DB, $email, ['user.email']);
+			}
+		}catch(\InvalidArgumentException|\RuntimeException $e){
+			exit(json_encode(['code'=>-1,'msg'=>$e->getMessage()], JSON_UNESCAPED_UNICODE));
 		}
-		if($email!=$userrow['email']){
+		if($emailChanged){
 			$row=$DB->getRow("select * from pre_user where email=:email limit 1", [':email'=>$email]);
 			if($row){
 				exit('{"code":-1,"msg":"该邮箱已经绑定过其它商户，如需找回，请退出登录后找回密码"}');
@@ -202,10 +211,18 @@ case 'completeinfo':
 			$data['email'] = $email;
 		}
 	}
-	if($DB->update('user', $data, ['uid'=>$uid])!==false){
+	try{
+		if(isset($data['email'])) \lib\EmailAddress::updateUser($DB, (int)$uid, $data['email'], $data);
+		elseif($DB->update('user', $data, ['uid'=>$uid])===false) throw new \RuntimeException('保存失败');
+		$saved = true;
+	}catch(\InvalidArgumentException|\RuntimeException $e){
+		$saved = false;
+		$saveError = $e->getMessage();
+	}
+	if($saved){
 		exit('{"code":1,"msg":"succ"}');
 	}else{
-		exit('{"code":-1,"msg":"保存失败！'.$DB->error().'"}');
+		exit(json_encode(['code'=>-1,'msg'=>$saveError ?: '保存失败'], JSON_UNESCAPED_UNICODE));
 	}
 break;
 case 'edit_settle':
@@ -241,7 +258,7 @@ case 'edit_settle':
 	}
 break;
 case 'edit_info':
-	$email=htmlspecialchars(strip_tags(trim($_POST['email'])));
+	$email=trim((string)$_POST['email']);
 	$qq=htmlspecialchars(strip_tags(trim($_POST['qq'])));
 	$url=htmlspecialchars(strip_tags(trim($_POST['url'])));
 	$keylogin=intval($_POST['keylogin']);
@@ -258,23 +275,37 @@ case 'edit_info':
 		exit('{"code":-1,"msg":"请填写正确的网站域名！"}');
 	}
 	if($conf['verifytype']==1){
-		if($email!=$userrow['email']){
+		$emailChanged = !hash_equals((string)$userrow['email'], $email);
+		if($emailChanged){
+			try{
+				$email = \lib\EmailAddress::normalize($email);
+				\lib\EmailAddress::assertStorageCapacity($DB, $email, ['user.email']);
+			}catch(\InvalidArgumentException|\RuntimeException $e){
+				exit(json_encode(['code'=>-1,'msg'=>$e->getMessage()], JSON_UNESCAPED_UNICODE));
+			}
 			$row=$DB->getRow("select * from pre_user where email=:email limit 1", [':email'=>$email]);
 			if($row){
 				exit('{"code":-1,"msg":"该邮箱已经绑定过其它商户，如需找回，请退出登录后找回密码"}');
 			}
-			if(!preg_match('/^[A-z0-9._-]+@[A-z0-9._-]+\.[A-z0-9._-]+$/', $email)){
-				exit('{"code":-1,"msg":"邮箱格式不正确"}');
-			}
 		}
-		$sqs = $DB->update('user', ['email'=>$email, 'qq'=>$qq, 'url'=>$url, 'keylogin'=>$keylogin, 'refund'=>$refund, 'transfer'=>$transfer], ['uid'=>$uid]);
+		if($emailChanged){
+			try{
+				\lib\EmailAddress::updateUser($DB, (int)$uid, $email, ['qq'=>$qq, 'url'=>$url, 'keylogin'=>$keylogin, 'refund'=>$refund, 'transfer'=>$transfer]);
+				$sqs = true;
+			}catch(\InvalidArgumentException|\RuntimeException $e){
+				$sqs = false;
+				$saveError = $e->getMessage();
+			}
+		}else{
+			$sqs = $DB->update('user', ['qq'=>$qq, 'url'=>$url, 'keylogin'=>$keylogin, 'refund'=>$refund, 'transfer'=>$transfer], ['uid'=>$uid]);
+		}
 	}else{
 		$sqs = $DB->update('user', ['qq'=>$qq, 'url'=>$url, 'keylogin'=>$keylogin, 'refund'=>$refund, 'transfer'=>$transfer], ['uid'=>$uid]);
 	}
 	if($sqs!==false){
 		exit('{"code":1,"msg":"succ"}');
 	}else{
-		exit('{"code":-1,"msg":"保存失败！'.$DB->error().'"}');
+		exit(json_encode(['code'=>-1,'msg'=>$saveError ?: ('保存失败！'.$DB->error())], JSON_UNESCAPED_UNICODE));
 	}
 break;
 case 'edit_keytype':
@@ -324,7 +355,7 @@ case 'edit_msgconfig':
 	}
 break;
 case 'edit_bind':
-	$email=htmlspecialchars(strip_tags(trim($_POST['email'])));
+	$email=trim((string)$_POST['email']);
 	$phone=htmlspecialchars(strip_tags(trim($_POST['phone'])));
 	$code=trim($_POST['code']);
 
@@ -342,6 +373,14 @@ case 'edit_bind':
 		$sendto = $phone;
 		$type = 1;
 	}else{
+		try{
+			$email = \lib\EmailAddress::normalize($email);
+			\lib\EmailAddress::assertStorageCapacity($DB, $email, ['user.email','regcode.to']);
+		}catch(\InvalidArgumentException|\RuntimeException $e){
+			exit(json_encode(['code'=>-1,'msg'=>$e->getMessage()], JSON_UNESCAPED_UNICODE));
+		}
+		$existingEmail = $DB->getRow('SELECT uid FROM pre_user WHERE email=:email AND uid<>:uid LIMIT 1', [':email'=>$email, ':uid'=>$uid]);
+		if($existingEmail) exit('{"code":-1,"msg":"该邮箱已经绑定过其它商户"}');
 		$sendto = $email;
 		$type = 0;
 	}
@@ -352,13 +391,19 @@ case 'edit_bind':
 	if($conf['verifytype']==1 || $conf['verifytype']==0 && empty($email) && !empty($phone)){
 		$sqs=$DB->update('user', ['phone'=>$phone], ['uid'=>$uid]);
 	}else{
-		$sqs=$DB->update('user', ['email'=>$email], ['uid'=>$uid]);
+		try{
+			\lib\EmailAddress::updateUser($DB, (int)$uid, $email);
+			$sqs = true;
+		}catch(\InvalidArgumentException|\RuntimeException $e){
+			$sqs = false;
+			$saveError = $e->getMessage();
+		}
 	}
 	if($sqs!==false){
 		\lib\VerifyCode::void_code();
 		exit('{"code":1,"msg":"succ"}');
 	}else{
-		exit('{"code":-1,"msg":"保存失败！'.$DB->error().'"}');
+		exit(json_encode(['code'=>-1,'msg'=>$saveError ?: ('保存失败！'.$DB->error())], JSON_UNESCAPED_UNICODE));
 	}
 break;
 case 'checkbind':

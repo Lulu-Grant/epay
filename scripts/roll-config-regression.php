@@ -16,12 +16,24 @@ function rollReject($callback, $label){
     fwrite(STDERR, $label.' was accepted'.PHP_EOL);
     exit(1);
 }
+function decimalIncrement($value){
+    $digits = str_split((string)$value);
+    for ($index = count($digits) - 1; $index >= 0; $index--) {
+        if ($digits[$index] !== '9') {
+            $digits[$index] = (string)(((int)$digits[$index]) + 1);
+            return implode('', $digits);
+        }
+        $digits[$index] = '0';
+    }
+    return '1'.implode('', $digits);
+}
 
 use lib\RollConfig;
 
 $old = RollConfig::parse('901,902');
 rollAssert($old, [['channel'=>901,'weight'=>1],['channel'=>902,'weight'=>1]], 'legacy sequential weights');
 rollAssert(RollConfig::serialize($old), '901:1,902:1', 'normalization on explicit save');
+rollAssert(RollConfig::equivalent($old, RollConfig::fromInput([['channel'=>'901','weight'=>'1'],['channel'=>'902','weight'=>'1']], $old)), true, 'legacy omitted weights compare as no-op');
 rollAssert(RollConfig::parse('901:0,902:99')[0]['weight'], 0, 'explicit zero preserved');
 rollAssert(RollConfig::chooseWeighted(RollConfig::parse('901:0,902:99'), 1), 902, 'zero weight excluded');
 rollAssert(RollConfig::chooseWeighted(RollConfig::parse('901:0,902:0')), false, 'all zero fails closed');
@@ -30,13 +42,33 @@ rollAssert(RollConfig::chooseWeighted(RollConfig::parse('901:8,902:2'), 9), 902,
 rollAssert(RollConfig::chooseWeighted(RollConfig::parse('901:'.PHP_INT_MAX.',902:1')), false, 'historical weight sum overflow fails closed');
 rollAssert(RollConfig::fromInput([['channel'=>'901','weight'=>'80'],['channel'=>'902','weight'=>'20']]),
     [['channel'=>901,'weight'=>80],['channel'=>902,'weight'=>20]], 'admin input');
+rollAssert(RollConfig::fromInput([['channel'=>'901','weight'=>'100']]), [['channel'=>901,'weight'=>100]], 'legacy 100 is a valid edited weight');
+
+if (PHP_INT_SIZE < 8) {
+    fwrite(STDERR, 'roll config requires a 64-bit PHP integer runtime'.PHP_EOL);
+    exit(1);
+}
+$safeIntegers = ['9007199254740991', '9007199254740992', '9007199254740993', (string)PHP_INT_MAX];
+foreach ($safeIntegers as $weight) {
+    $validated = RollConfig::fromInput([['channel'=>'901','weight'=>$weight]]);
+    rollAssert((string)$validated[0]['weight'], $weight, 'precise decimal round-trip '.$weight);
+    $client = RollConfig::forClient($validated);
+    rollAssert($client[0]['weight'], $weight, 'client weight remains a string '.$weight);
+    rollAssert(is_string($client[0]['weight']), true, 'client weight type '.$weight);
+}
+$storedZero = RollConfig::parse('901:0,902:100');
+rollAssert(RollConfig::fromInput([['channel'=>'901','weight'=>'0'],['channel'=>'902','weight'=>'100']], $storedZero), $storedZero, 'stored zero may remain unchanged');
+rollAssert(RollConfig::sameChannels($storedZero, RollConfig::parse('901:8,902:2')), true, 'weight-only edit keeps channel order');
+rollAssert(RollConfig::sameChannels($storedZero, RollConfig::parse('902:100,901:0')), false, 'channel reorder is detected');
 
 foreach (['901:', '901:-1', '901:1.5', '901:hello', '901,,902', '901:1,901:2'] as $bad) {
     rollReject(function() use ($bad){ RollConfig::parse($bad); }, 'bad stored rule '.$bad);
 }
-foreach (['0','-1','1.5','100','', 'abc'] as $bad) {
+foreach (['0','-1','1.5','1e2','01','+1','', 'abc', decimalIncrement((string)PHP_INT_MAX)] as $bad) {
     rollReject(function() use ($bad){ RollConfig::fromInput([['channel'=>'901','weight'=>$bad]]); }, 'bad new weight '.$bad);
 }
+rollReject(function() use ($storedZero){ RollConfig::fromInput([['channel'=>'901','weight'=>'1'],['channel'=>'902','weight'=>'0']], $storedZero); }, 'zero cannot move to another channel');
+rollReject(function(){ RollConfig::fromInput([['channel'=>'901','weight'=>(string)PHP_INT_MAX],['channel'=>'902','weight'=>'1']]); }, 'new weight sum overflow');
 rollReject(function(){ RollConfig::fromInput([['channel'=>901,'weight'=>1],['channel'=>901,'weight'=>2]]); }, 'duplicate channel');
 
 class RollFakeDb {

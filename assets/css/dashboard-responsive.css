@@ -18,6 +18,19 @@ body.dashboard-responsive .roll-row {
 body.dashboard-responsive .roll-row .roll-channel { min-width: 0; flex: 1 1 auto; }
 body.dashboard-responsive .roll-row .roll-weight { width: 100px; flex: 0 0 100px; }
 body.dashboard-responsive .roll-row .btn-remove { flex: 0 0 auto; }
+body.dashboard-responsive .filter-keyword { min-width: 0; width: 300px; max-width: 100%; }
+body.dashboard-responsive .merchant-stat-grid { display: flex; flex-wrap: wrap; }
+body.dashboard-responsive .merchant-stat-grid > [class*="col-"] { display: flex; }
+body.dashboard-responsive .merchant-stat-card { width: 100%; min-height: 132px; }
+body.dashboard-responsive .merchant-stat-value { color: inherit; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+body.dashboard-responsive .dashboard-empty-state { min-height: 180px; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 24px; text-align: center; }
+body.dashboard-responsive .dashboard-empty-state p { margin: 8px 0 0; }
+body.dashboard-responsive .settlement-restriction { max-width: 760px; }
+body.dashboard-responsive .filter-toolbar { padding: 12px 15px; }
+body.dashboard-responsive .filter-label { display: block; margin: 0 0 4px; font-size: 12px; font-weight: 600; }
+body.dashboard-responsive .filter-date-group { vertical-align: bottom; }
+body.dashboard-responsive .date-clear { min-width: 42px; cursor: pointer; }
+body.dashboard-responsive .table-state:not(.sr-only) { margin: 12px 15px; }
 
 @media (max-width: 767px) {
   body.dashboard-responsive .form-inline .form-group,
@@ -27,10 +40,23 @@ body.dashboard-responsive .roll-row .btn-remove { flex: 0 0 auto; }
     max-width: 100%;
     margin-bottom: 8px;
   }
+  body.dashboard-responsive .filter-keyword { min-width: 0 !important; width: 100% !important; }
+  body.dashboard-responsive .merchant-stat-card { min-height: 112px; }
+  body.dashboard-responsive .merchant-stat-card .round { width: 44px; height: 44px; line-height: 39px; margin-left: 4px; font-size: 20px; }
+  body.dashboard-responsive .merchant-stat-value { font-size: 24px; }
+  body.dashboard-responsive .filter-toolbar { padding: 12px; }
+  body.dashboard-responsive .filter-date-group,
+  body.dashboard-responsive .filter-date-group .input-daterange { display: block; width: 100%; }
+  body.dashboard-responsive .filter-date-group .input-daterange .form-control { float: none; }
+  body.dashboard-responsive .filter-date-group .date-clear { display: block; width: 100%; border-width: 1px; }
   body.dashboard-responsive .form-inline .input-group .form-control { display: table-cell; margin-bottom: 0; }
   body.dashboard-responsive .roll-row { flex-wrap: wrap; }
   body.dashboard-responsive .roll-row .roll-channel { flex: 1 1 100%; margin-bottom: 0; }
   body.dashboard-responsive .roll-row .roll-weight { flex: 1 1 90px; width: auto; margin-bottom: 0; }
   body.dashboard-responsive .roll-modal-body { padding: 12px; }
   body.dashboard-responsive .bootstrap-table .fixed-table-body { overflow-x: auto; }
+}
+
+@media (max-width: 359px) {
+  body.dashboard-responsive .merchant-stat-grid > [class*="col-"] { width: 100%; }
 }

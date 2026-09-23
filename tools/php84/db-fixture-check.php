@@ -153,7 +153,7 @@ try {
     $statementCount = exec_sql_file($pdo, $root . '/install/install.sql', $prefix);
     ok('imported install SQL statements: ' . $statementCount);
 
-    foreach (array('config', 'order', 'user', 'channel', 'settle', 'transfer', 'refundorder', 'record') as $table) {
+    foreach (array('config', 'order', 'user', 'channel', 'settle', 'transfer', 'refundorder', 'record', 'registration_completion', 'admin_sso_ticket', 'admin_sso_session', 'admin_sso_audit') as $table) {
         assert_table($pdo, $prefix, $table);
     }
 
@@ -162,6 +162,14 @@ try {
         fail('Unable to read DB_VERSION from includes/common.php');
     }
     assert_column_value($pdo, $prefix, 'config', 'v', 'k', 'version', $matches[1]);
+    assert_column_value($pdo, $prefix, 'config', 'v', 'k', 'admin_sso_enabled', '0');
+
+    $emailCapacity = $pdo->query('SELECT CHARACTER_MAXIMUM_LENGTH FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=' . $pdo->quote(table_name($prefix, 'user')) . ' AND COLUMN_NAME=\'email\'')->fetchColumn();
+    $recipientCapacity = $pdo->query('SELECT CHARACTER_MAXIMUM_LENGTH FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=' . $pdo->quote(table_name($prefix, 'regcode')) . ' AND COLUMN_NAME=\'to\'')->fetchColumn();
+    if ((int)$emailCapacity !== 254 || (int)$recipientCapacity !== 254) {
+        fail('Email storage capacity is not 254 bytes');
+    }
+    ok('email storage capacity verified: 254');
 
     $now = date('Y-m-d H:i:s');
     $today = date('Y-m-d');

@@ -49,7 +49,14 @@ class VerifyCode{
                 return '短信发送失败 '.$result;
             }
         }else{
-            $email = $sendto;
+            try{
+                $email = EmailAddress::normalize($sendto);
+                $columns = ['regcode.to'];
+                if($scene === 'reg' || $scene === 'edit') $columns[] = 'user.email';
+                EmailAddress::assertStorageCapacity($DB, $email, $columns);
+            }catch(\InvalidArgumentException|\RuntimeException $e){
+                return $e->getMessage();
+            }
             $row=$DB->getRow("select * from pre_regcode where `to`=:email order by id desc limit 1", [':email'=>$email]);
             if($row['time']>time()-60){
                 return '两次发送邮件之间需要相隔60秒！';
@@ -65,11 +72,17 @@ class VerifyCode{
             $code = rand(1111111,9999999);
             $result = self::send_mail_code($email, $code, $scene);
             if($result===true){
-                if($DB->insert('regcode', ['uid'=>$uid, 'scene'=>$scene, 'type'=>$type, 'code'=>$code, 'to'=>$email, 'time'=>time(), 'ip'=>$clientip, 'status'=>0])){
-                    return true;
-                }else{
+                $regcodeid = $DB->insert('regcode', ['uid'=>$uid, 'scene'=>$scene, 'type'=>$type, 'code'=>$code, 'to'=>$email, 'time'=>time(), 'ip'=>$clientip, 'status'=>0]);
+                if(!$regcodeid){
                     return '写入数据库失败。'.$DB->error();
                 }
+                try{
+                    EmailAddress::assertRegcodeStored($DB, (int)$regcodeid, $email);
+                }catch(\RuntimeException $e){
+                    $DB->exec("UPDATE pre_regcode SET status=1 WHERE id=:id", [':id'=>$regcodeid]);
+                    return $e->getMessage();
+                }
+                return true;
             }else{
                 return '邮件发送失败 '.$result;
             }
@@ -106,6 +119,13 @@ class VerifyCode{
      */
     public static function verify_code($scene, $type, $sendto, $code, $uid = 0){
         global $DB;
+        if((int)$type === 0){
+            try{
+                $sendto = EmailAddress::normalize($sendto);
+            }catch(\InvalidArgumentException $e){
+                return $e->getMessage();
+            }
+        }
         $where = ['scene'=>$scene, 'type'=>$type, 'to'=>$sendto];
         if($uid > 0) $where['uid'] = $uid;
         $row = $DB->find('regcode', '*', $where, 'id DESC', 1);
