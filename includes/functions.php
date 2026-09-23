@@ -760,10 +760,15 @@ function scheduleMerchantNotifyRetry($order, $attempt){
 	return $DB->update('order', ['notify'=>intval($attempt), 'notifytime'=>$notifytime], ['trade_no'=>$order['trade_no']]);
 }
 
+function generate_trade_no(){
+	// P5 keeps the LP prefix for all newly created system orders.
+	return 'LP'.date('YmdHis').rand(11111, 99999);
+}
+
 function logPaymentCallbackEvent($event, $trade_no = null, $channel_id = null, $reason = null){
 	$data = [
 		'event' => preg_replace('/[^a-z0-9_.-]/i', '', (string)$event),
-		'trade_no' => preg_replace('/[^0-9]/', '', (string)$trade_no),
+		'trade_no' => preg_replace('/[^A-Za-z0-9]/', '', (string)$trade_no),
 		'channel' => intval($channel_id),
 		'reason' => str_replace(["\r", "\n"], ' ', (string)$reason),
 	];
@@ -802,7 +807,7 @@ function processNotify($order, $api_trade_no=null, $buyer=null){
 function completePaidRegistration($srow){
 	global $DB,$CACHE,$conf;
 	$tradeNo = isset($srow['trade_no']) ? (string)$srow['trade_no'] : '';
-	if(!preg_match('/^[0-9]{19}$/D', $tradeNo)) throw new \RuntimeException('注册订单号无效');
+	if(!preg_match('/^(?:LP)?[0-9]{19}$/D', $tradeNo)) throw new \RuntimeException('注册订单号无效');
 
 	if(!$DB->beginTransaction()) throw new \RuntimeException('无法开始付费注册事务');
 	try{
