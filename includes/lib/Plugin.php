@@ -38,7 +38,7 @@ class Plugin {
 
 	static public function loadForPay($s){
 		global $DB,$conf,$order,$channel,$ordername;
-		if(preg_match('/^(.[a-zA-Z0-9]+)\/([0-9]+)\/$/',$s, $matchs)){
+		if(preg_match('/^(.[a-zA-Z0-9]+)\/([A-Za-z0-9]+)\/$/',$s, $matchs)){
 			$func = $matchs[1];
 			$trade_no = $matchs[2];
 			
@@ -71,7 +71,7 @@ class Plugin {
 
 	static public function loadForSubmit($plugin, $trade_no, $ismapi=false){
 		global $DB,$conf,$order,$channel,$ordername,$userrow;
-		if(preg_match('/^(.[a-zA-Z0-9]+)$/',$plugin) && preg_match('/^(.[0-9]+)$/',$trade_no)){
+		if(preg_match('/^(.[a-zA-Z0-9]+)$/',$plugin) && preg_match('/^[A-Za-z0-9]+$/',$trade_no)){
 			$func = 'submit';
 			if($ismapi) $func = 'mapi';
 			
@@ -138,7 +138,7 @@ class Plugin {
 
 	static public function refund($refund_no, $trade_no, $money, &$message){
 		global $order,$channel,$DB;
-		if(!preg_match('/^(.[0-9]+)$/',$trade_no))return false;
+		if(!preg_match('/^[A-Za-z0-9]+$/',$trade_no))return false;
 		$channel = $order['subchannel'] > 0 ? \lib\Channel::getSub($order['subchannel']) : \lib\Channel::get($order['channel'], $DB->findColumn('user', 'channelinfo', ['uid'=>$order['uid']]));
 		if(!$channel){
 			$message = '当前支付通道信息不存在';

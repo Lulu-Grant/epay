@@ -39,6 +39,21 @@ foreach ($callSites as $relativePath => $minimumCalls) {
     );
 }
 
+$pluginLoader = file_get_contents(dirname(__DIR__).'/includes/lib/Plugin.php');
+order_number_assert($pluginLoader !== false, 'cannot read includes/lib/Plugin.php');
+order_number_assert(
+    strpos($pluginLoader, '([A-Za-z0-9]+)\\/$/') !== false,
+    'payment route rejects the LP order number prefix'
+);
+order_number_assert(
+    substr_count($pluginLoader, "preg_match('/^[A-Za-z0-9]+$/',\$trade_no)") >= 2,
+    'plugin submit or refund validation rejects the LP order number prefix'
+);
+order_number_assert(
+    strpos($pluginLoader, "preg_match('/^(.[0-9]+)$/',\$trade_no)") === false,
+    'legacy numeric-only plugin validation must not return'
+);
+
 $schemaFiles = [
     'install/install.sql',
     'install/update2.sql',
