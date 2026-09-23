@@ -1,8 +1,8 @@
 # P5 UI 优化实施与发布记录
 
-版本：1.1 · 2026-09-23
+版本：1.3 · 2026-09-23
 
-状态：GitHub 同步、PHP 8.4 CI、P5 数据库迁移与生产部署均已完成；管理员代登录保持关闭。
+状态：GitHub 同步、PHP 8.4 CI、P5 数据库迁移、生产部署与拉单热修复均已完成；管理员代登录保持关闭。
 
 ## 1. 交付快照
 
@@ -10,7 +10,7 @@
 
 | 交付件 | 基线 | 实现提交 | 工作树 |
 |---|---|---|---|
-| 主仓库（业务、权限、通用 UI） | `af97d2e34b1e5bba7baf478d289647d5b7000d80` | `e5f19ebbe2a5d8c9f7b949a97a3783a80f2dbf71`；发布头 `421a4093256f0a77735f7aa3317ced2769c7e924` | `C:\Users\winadmin\Documents\epay-p5-ui-optimization` |
+| 主仓库（业务、权限、通用 UI） | `af97d2e34b1e5bba7baf478d289647d5b7000d80` | UI 实现 `e5f19ebbe2a5d8c9f7b949a97a3783a80f2dbf71`；发布门禁 `421a4093256f0a77735f7aa3317ced2769c7e924`；订单恢复 `663fa9162dc12df7811fbd19c399ce9fc93d5f3f`；完整防复发 `c2096f7e9962743f09a1c6e9e96bd545d768dd50` | `C:\Users\winadmin\Documents\epay-p5-ui-optimization` |
 | 乐跑暗色覆盖层 | `3062de202c43289657cddbf17dd9f83e8c4f1d82` | `7032fb9b5720d75d15966a1718cb8b1d909609c4` | `C:\Users\winadmin\Documents\epay-lp-dark-ui-optimization` |
 
 两个仓库均保留审计分支 `codex/p5-ui-optimization`。主仓库已快进同步到 `upgrade/php-84-compatible`，乐跑覆盖层已快进同步到 `main`。原工作目录及其中已有未提交内容没有被修改或清理。
@@ -92,6 +92,7 @@ admin_sso_enabled=0
 | 付费注册完成幂等 | 通过 |
 | 管理员代登录 | 通过 |
 | 支付回调 | 通过，伪造金额、订单号和签名均被拒绝 |
+| P5 订单号与拉单入口 | `LP` + 19 位数字格式通过；API、网页、商城、测试支付、注册、充值和会员购买入口均使用同一生成器 |
 | UI 结构契约 | 主仓库 + 乐跑覆盖层通过 |
 | 响应式浏览器 | 320、360、390、414、667、768、1440px 均无页面横向溢出 |
 | 轮询浏览器交互 | 10 行、全部移除、重新添加、序列化通过 |
@@ -99,9 +100,9 @@ admin_sso_enabled=0
 | 插件元数据 | 44 个插件完成检查；6 条既有可选方法警告，无失败 |
 | 签名、下载安全、重写规则 | 全部通过 |
 | 差异与敏感材料 | 两仓 `git diff --check` 通过；变更/新增文件未发现密钥标记或已知敏感文件名 |
-| GitHub PHP 8.4 CI | 运行 `35837688960` 通过；静态检查与 MariaDB 数据库夹具两个作业均成功 |
+| GitHub PHP 8.4 CI | UI 发布运行 `35837688960` 通过；订单号恢复运行 `35847359386` 通过；最终防复发运行 `35850030992` 的静态检查和 MariaDB 安装环境均通过 |
 | 生产候选 | 71 个发布文件摘要通过，60 个变更 PHP 文件语法通过，PHP 8.4 环境与自动加载通过 |
-| 生产数据库 | 2038→2039 通过；邮箱列均为 254，四张新增表齐全，SSO 保持关闭 |
+| 生产数据库 | 2038→2039 通过；邮箱列均为 254；系统订单引用列均可保存 21 位 `LP` 订单号；四张新增表齐全，SSO 保持关闭 |
 | 生产 HTTP | 商户登录、注册、帮助、商城、通用响应式 CSS、`lp18` 主题 CSS 均为 200；未授权管理入口保持 401 |
 | 生产后台抽检 | 投诉页和可用通道选择器正常；轮询组 107 列表与配置窗口均显示两个权重为 100/100，未执行保存 |
 
@@ -123,17 +124,27 @@ admin_sso_enabled=0
 
 | 项目 | 结果 |
 |---|---|
-| GitHub 主仓库 | 生产运行时发布头为 `421a4093256f0a77735f7aa3317ced2769c7e924`；本部署记录随后的文档提交继续快进维护分支与审计分支 |
+| GitHub 主仓库 | `upgrade/php-84-compatible` 与审计分支已快进到运行时修复 `c2096f7e9962743f09a1c6e9e96bd545d768dd50`；本发布记录的文档提交继续快进两分支 |
 | GitHub 覆盖层 | `main` 与审计分支均指向 `7032fb9b5720d75d15966a1718cb8b1d909609c4` |
-| GitHub CI | [PHP 8.4 Compatibility #20](https://github.com/Lulu-Grant/epay/actions/runs/35837688960) 全部通过 |
-| 新发布目录 | `/srv/epay/releases/20260923-p5-ui-421a409-7032fb9` |
-| 上一发布目录 | `/srv/epay/releases/20260922-php84-p5-af97d2e`，保留为代码回滚点 |
+| GitHub CI | [最终 PHP 8.4 防复发运行](https://github.com/Lulu-Grant/epay/actions/runs/35850030992) 全部通过；静态检查与 MariaDB 安装、升级、HTTP 拉单、插件回调两个作业均成功 |
+| 当前发布目录 | `/srv/epay/releases/20260923-p5-order-complete-c2096f7` |
+| 保留发布目录 | 上一正常发布 `/srv/epay/releases/20260923-p5-order-prefix-663fa91`、UI 初始发布 `/srv/epay/releases/20260923-p5-ui-421a409-7032fb9`、第一阶段热修复 `/srv/epay/releases/20260923-p5-order-hotfix-1a1f3b1` 与部署前版本 `/srv/epay/releases/20260922-php84-p5-af97d2e` |
 | 数据库备份 | `/srv/epay/backups/20260923-p5-ui-421a409-7032fb9/database-before.sql`，权限 0600，SHA-256 已复核 |
-| 数据库迁移 | 2038→2039；邮箱列扩至 254，新增四张表，配置缓存已刷新 |
+| 数据库迁移 | 2038→2039；邮箱列扩至 254，新增四张表；`pre_complain.trade_no` 与 `pre_registration_completion.trade_no` 已扩至 `varchar(32)`，配置缓存已刷新 |
 | 管理员代登录 | 固定域名与路径已配置，`admin_sso_enabled=0` |
 | 切换 | `current` 原子切换并重载 PHP 8.4 FPM；Nginx、PHP-FPM、MariaDB 均为 active |
 
 上线抽检发现生产库此前未安装 `pre_complain`。在已有全库备份之后，使用仓库内 CLI 安装器 `tools/complain-plugin/install.php` 创建了正式 17 列表结构和四个既有索引；既有投诉自动处理配置未被覆盖。创建后投诉列表、空状态和可用通道选择器正常。由于生产当前启用了自动回复，发布验收没有发起真实上游拉取，避免在验证过程中向投诉方自动发送内容。
+
+### 7.1 拉单故障与修复
+
+初始 UI 发布在 16:49 切换后，`mapi.php` 和 `submit.php` 的新建订单请求开始返回 500。PHP-FPM 日志确认生产调用 `generate_trade_no()` 时找不到函数。原因是 P5 原发布目录在 Git 基线之外保留了 `LP` 订单号适配，而本轮 `includes/functions.php` 属于变更文件，发布覆盖时遗漏了该生产差异。
+
+处置没有回滚数据库。先恢复订单号函数并发布 `/srv/epay/releases/20260923-p5-order-hotfix-1a1f3b1`，随后把 API、网页、商城、测试支付、付费注册、充值和会员购买入口统一到共享生成器，发布 `/srv/epay/releases/20260923-p5-order-prefix-663fa91`。18:08 的真实 `mapi.php` 请求恢复为 200 并生成 `LP` 订单号，后续支付提交返回 303。
+
+防复发阶段把安装和升级脚本中的系统订单引用列统一扩至 `varchar(32)`，并把支付路由、插件提交与退款入口正式改为接受字母数字订单号，与 P5 原生产适配保持一致。变更数据库列之前已生成定点备份 `/srv/epay/backups/20260923-p5-ui-421a409-7032fb9/order-columns-before-varchar32.json`，权限 0600，行数在变更前后保持一致。GitHub 新增并接入 `scripts/order-number-regression.php`，最终运行 `35850030992` 全部通过。
+
+最终发布 `/srv/epay/releases/20260923-p5-order-complete-c2096f7` 在部署锁内从上一正常版本复制、覆盖已验证文件并原子切换。切换后 Nginx、PHP 8.4 FPM、MariaDB 均为 active；真实生产流量新增 3 笔订单，全部为 `LP` 订单号，其中 2 笔已支付；3 次 `mapi.php` 均为 200，3 次后续支付提交均为 303，新发布目录没有新增 PHP 致命错误。
 
 ## 8. 回滚
 
