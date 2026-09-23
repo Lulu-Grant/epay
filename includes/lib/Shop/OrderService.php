@@ -68,7 +68,7 @@ class OrderService
     {
         global $DB;
         for ($i = 0; $i < 10; $i++) {
-            $tradeNo = date('YmdHis').mt_rand(11111, 99999);
+            $tradeNo = generate_trade_no();
             $exists = $DB->getColumn("SELECT trade_no FROM pre_order WHERE trade_no=:trade_no LIMIT 1", array(':trade_no' => $tradeNo));
             if (!$exists) {
                 return $tradeNo;

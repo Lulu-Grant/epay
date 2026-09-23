@@ -47,6 +47,7 @@ jobs:
           php scripts/registration-completion-regression.php
           php scripts/admin-sso-regression.php
           php scripts/payment-callback-regression.php
+          php scripts/order-number-regression.php
           php scripts/ui-contract-regression.php
 
       - name: Check download endpoint safety
