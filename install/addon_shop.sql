@@ -62,7 +62,7 @@ WHERE NOT EXISTS (SELECT 1 FROM `pre_shop_goods` WHERE `name`='DeepSeek API È¢ùÂ
 CREATE TABLE IF NOT EXISTS `pre_shop_orders` (
   `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
   `shop_trade_no` char(22) NOT NULL,
-  `pay_trade_no` char(19) CHARACTER SET utf8 NOT NULL,
+  `pay_trade_no` varchar(32) CHARACTER SET utf8 NOT NULL,
   `out_trade_no` varchar(150) NOT NULL,
   `goods_id` int(11) unsigned NOT NULL,
   `goods_name` varchar(120) NOT NULL,

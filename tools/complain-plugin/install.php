@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS `pre_complain` (
   `subchannel` int(11) NOT NULL DEFAULT '0',
   `source` tinyint(1) NOT NULL DEFAULT '0',
   `uid` int(11) NOT NULL,
-  `trade_no` char(19) NOT NULL,
+  `trade_no` varchar(32) NOT NULL,
   `thirdid` varchar(100) NOT NULL,
   `type` varchar(30) NOT NULL,
   `title` varchar(300) DEFAULT NULL,
@@ -41,6 +41,16 @@ SQL;
 
 if ($DB->exec($sql) === false) {
     exit('create table failed: '.$DB->error()."\n");
+}
+
+$tradeNoColumn = $DB->getRow("SHOW COLUMNS FROM pre_complain LIKE 'trade_no'");
+if (!$tradeNoColumn || !preg_match('/^(?:var)?char\(([0-9]+)\)/i', (string)$tradeNoColumn['Type'], $matches)) {
+    exit("unexpected complain trade_no column\n");
+}
+if ((int)$matches[1] < 32) {
+    if ($DB->exec("ALTER TABLE pre_complain MODIFY COLUMN `trade_no` varchar(32) NOT NULL") === false) {
+        exit('expand trade_no column failed: '.$DB->error()."\n");
+    }
 }
 
 if (!$DB->getRow("SHOW COLUMNS FROM pre_complain LIKE 'info'")) {

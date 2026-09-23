@@ -168,7 +168,7 @@ CREATE TABLE `pre_weixin` (
 
 DROP TABLE IF EXISTS `pre_order`;
 CREATE TABLE `pre_order` (
-  `trade_no` char(19) NOT NULL,
+  `trade_no` varchar(32) NOT NULL,
   `out_trade_no` varchar(150) NOT NULL,
   `api_trade_no` varchar(150) DEFAULT NULL,
   `uid` int(11) unsigned NOT NULL,
@@ -361,7 +361,7 @@ CREATE TABLE `pre_regcode` (
 
 DROP TABLE IF EXISTS `pre_registration_completion`;
 CREATE TABLE `pre_registration_completion` (
-  `trade_no` char(19) NOT NULL,
+  `trade_no` varchar(32) NOT NULL,
   `uid` int(11) unsigned DEFAULT NULL,
   `status` tinyint(1) NOT NULL DEFAULT '0',
   `created_at` datetime NOT NULL,
@@ -468,7 +468,7 @@ DROP TABLE IF EXISTS `pre_psorder`;
 CREATE TABLE `pre_psorder` (
   `id` int(11) unsigned NOT NULL auto_increment,
   `rid` int(11) NOT NULL,
-  `trade_no` char(19) NOT NULL,
+  `trade_no` varchar(32) NOT NULL,
   `api_trade_no` varchar(150) NOT NULL,
   `settle_no` varchar(150) DEFAULT NULL,
   `money` decimal(10,2) NOT NULL,
@@ -560,7 +560,7 @@ CREATE TABLE `pre_wxkfaccount` (
 
 DROP TABLE IF EXISTS `pre_wxkflog`;
 CREATE TABLE `pre_wxkflog` (
-  `trade_no` char(19) NOT NULL,
+  `trade_no` varchar(32) NOT NULL,
   `aid` int(11) unsigned NOT NULL,
   `sid` char(32) NOT NULL,
   `payurl` varchar(500) NOT NULL,
@@ -607,7 +607,7 @@ DROP TABLE IF EXISTS `pre_refundorder`;
 CREATE TABLE `pre_refundorder` (
   `refund_no` char(19) NOT NULL,
   `out_refund_no` varchar(150) NOT NULL,
-  `trade_no` char(19) NOT NULL,
+  `trade_no` varchar(32) NOT NULL,
   `uid` int(11) NOT NULL DEFAULT '0',
   `money` decimal(10,2) NOT NULL,
   `reducemoney` decimal(10,2) DEFAULT NULL,

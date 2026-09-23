@@ -39,4 +39,20 @@ foreach ($callSites as $relativePath => $minimumCalls) {
     );
 }
 
+$schemaFiles = [
+    'install/install.sql',
+    'install/update2.sql',
+    'install/update3.sql',
+    'install/addon_shop.sql',
+    'tools/complain-plugin/install.php',
+];
+foreach ($schemaFiles as $relativePath) {
+    $contents = file_get_contents(dirname(__DIR__).'/'.$relativePath);
+    order_number_assert($contents !== false, "cannot read {$relativePath}");
+    order_number_assert(
+        preg_match('/`(?:pay_)?trade_no`\s+char\(19\)/i', $contents) !== 1,
+        "{$relativePath} cannot store a prefixed P5 order number"
+    );
+}
+
 echo "order_number_regression_ok\n";

@@ -4,8 +4,20 @@ MODIFY COLUMN `email` varchar(254) DEFAULT NULL;
 ALTER TABLE `pre_regcode`
 MODIFY COLUMN `to` varchar(254) DEFAULT NULL;
 
+ALTER TABLE `pre_order`
+MODIFY COLUMN `trade_no` varchar(32) NOT NULL;
+
+ALTER TABLE `pre_psorder`
+MODIFY COLUMN `trade_no` varchar(32) NOT NULL;
+
+ALTER TABLE `pre_wxkflog`
+MODIFY COLUMN `trade_no` varchar(32) NOT NULL;
+
+ALTER TABLE `pre_refundorder`
+MODIFY COLUMN `trade_no` varchar(32) NOT NULL;
+
 CREATE TABLE IF NOT EXISTS `pre_registration_completion` (
-  `trade_no` char(19) NOT NULL,
+  `trade_no` varchar(32) NOT NULL,
   `uid` int(11) unsigned DEFAULT NULL,
   `status` tinyint(1) NOT NULL DEFAULT '0',
   `created_at` datetime NOT NULL,
@@ -13,6 +25,9 @@ CREATE TABLE IF NOT EXISTS `pre_registration_completion` (
   PRIMARY KEY (`trade_no`),
   KEY `uid` (`uid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+ALTER TABLE `pre_registration_completion`
+MODIFY COLUMN `trade_no` varchar(32) NOT NULL;
 
 INSERT INTO `pre_config` (`k`,`v`) VALUES
 ('admin_sso_enabled','0'),

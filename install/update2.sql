@@ -103,7 +103,7 @@ CREATE TABLE IF NOT EXISTS `pre_psreceiver` (
 CREATE TABLE IF NOT EXISTS `pre_psorder` (
   `id` int(11) unsigned NOT NULL auto_increment,
   `rid` int(11) NOT NULL,
-  `trade_no` char(19) NOT NULL,
+  `trade_no` varchar(32) NOT NULL,
   `api_trade_no` varchar(150) NOT NULL,
   `settle_no` varchar(150) DEFAULT NULL,
   `money` decimal(10,2) NOT NULL,
@@ -198,7 +198,7 @@ CREATE TABLE IF NOT EXISTS `pre_wxkfaccount` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 CREATE TABLE IF NOT EXISTS `pre_wxkflog` (
-  `trade_no` char(19) NOT NULL,
+  `trade_no` varchar(32) NOT NULL,
   `aid` int(11) unsigned NOT NULL,
   `sid` char(32) NOT NULL,
   `payurl` varchar(500) NOT NULL,
@@ -284,7 +284,7 @@ ADD COLUMN `publickey` varchar(500) DEFAULT NULL;
 CREATE TABLE IF NOT EXISTS `pre_refundorder` (
   `refund_no` char(19) NOT NULL,
   `out_refund_no` varchar(150) NOT NULL,
-  `trade_no` char(19) NOT NULL,
+  `trade_no` varchar(32) NOT NULL,
   `uid` int(11) NOT NULL DEFAULT '0',
   `money` decimal(10,2) NOT NULL,
   `reducemoney` decimal(10,2) DEFAULT NULL,
