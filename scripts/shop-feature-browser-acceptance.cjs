@@ -93,7 +93,8 @@ async function assertNoOverflow(page, label) {
     const shadowRow = admin.locator('tr').filter({ hasText: '无感影子订单' }).first();
     await shadowRow.getByRole('button', { name: '详情/物流' }).click();
     await admin.locator('#order-modal').waitFor({ state: 'visible' });
-    await assertText(admin.locator('#order-modal'), '无感影子订单');
+    await assertText(admin.locator('#order-modal'), '原商户UID');
+    if (await admin.locator('#order-modal').getByText('记录模式', {exact:true}).count()) throw new Error('Detail must not display record mode');
     await assertNoOverflow(admin, 'admin shadow order list');
     await admin.screenshot({ path: path.join(screenDir, 'shadow-admin-desktop.png'), fullPage: true });
     await admin.locator('#order-modal .modal-footer').getByRole('button',{name:'关闭',exact:true}).click();
