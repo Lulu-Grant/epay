@@ -81,6 +81,8 @@ ON DUPLICATE KEY UPDATE pay=1,status=1,mode=0;
 INSERT INTO pay_channel (id,mode,type,plugin,name,rate,status,apptype,daystatus,paymin,paymax)
 VALUES (1,0,1,'alipay','Shadow acceptance channel',100.00,1,'3',0,1,3000)
 ON DUPLICATE KEY UPDATE status=1,apptype='3',daystatus=0,rate=100.00,plugin='alipay',type=1,paymin=1,paymax=3000;
+-- Match an installed site's JSON channel format; do not trigger the legacy migration on dashboard entry.
+UPDATE pay_channel SET config='{}' WHERE id=1;
 UPDATE pay_config SET v='0' WHERE k='captcha_open';
 UPDATE pay_cache SET v='' WHERE k='config';
 SQL
@@ -335,7 +337,7 @@ disabled_shop_count=$("${MYSQL_APP[@]}" -e "SELECT COUNT(*) FROM pay_shop_orders
 [[ "$disabled_shop_count" == "0" ]] || fail "disabled shop creates no shadow record"
 pass "disabled shop creates no shadow record"
 
-unexpected_fatals=$(grep -Ei 'Fatal error|Uncaught|Parse error' "$TMP_ROOT/php.log" | grep -Ev 'Cannot redeclare class [a-zA-Z0-9_]+_plugin' || true)
+unexpected_fatals=$(grep -Ei 'Fatal error|Uncaught|Parse error' "$TMP_ROOT/php.log" || true)
 if [[ -n "$unexpected_fatals" ]]; then
   printf '%s\n' "$unexpected_fatals" >&2
   fail "PHP server log contains fatal errors"
