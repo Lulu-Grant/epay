@@ -1,10 +1,12 @@
 # 无感商城影子订单模式开发文档
 
+> 2026-09-24 更新：P5 的索引修复、补偿状态保护、PHP 8.4/MariaDB 定时任务及上线证据见 [本次修复记录](P5_SHOP_SHADOW_REPAIR_REPORT.md)。本文保留初始设计背景，生产操作以新记录为准。
+
 ## 1. 文档信息
 
 | 项目 | 内容 |
 | --- | --- |
-| 文档状态 | 待实施 |
+| 文档状态 | 初始设计已实施；P5 当前修复与部署见上方记录 |
 | 目标模式 | `shadow` 无感影子订单 |
 | 兼容范围 | PHP 8.4.x、MySQL 5.7+ |
 | 原支付事实表 | `pre_order` |
@@ -453,13 +455,15 @@ pre_order.type           = pre_shop_orders.pay_type（通道分配后）
 9. 连续监控 30 分钟、2 小时和 4 小时指标。
 10. 验收后将 `shadow` 作为新安装的默认模式。
 
-线上 PHP 8.4 计划任务示例：
+P5 使用 systemd timer，每分钟运行一次；不要再同时添加 cron。对应文件：`tools/systemd/epay-shop-shadow.service` 和 `.timer`。只读检查示例：
 
-```cron
-* * * * * /usr/bin/php8.4 /srv/epay/current/scripts/shop-shadow-reconcile.php --limit=200 >> /var/log/epay/shop-shadow-reconcile.log 2>&1
+```sh
+systemctl status epay-shop-shadow.timer
+runuser -u www-data -- env EPAY_SHOP_LOCK_DIR=/run/epay-shop-shadow \
+  php8.4 /srv/epay/current/scripts/shop-shadow-reconcile.php --dry-run --limit=200
 ```
 
-脚本内部已按站点路径使用进程锁，不需要对公网暴露调度 URL。
+脚本按站点数据库身份生成锁名，生产固定使用版本目录外的 `/run/epay-shop-shadow`，手工运行也须使用同一用户与锁目录。仅支持 CLI，不对公网暴露调度 URL。任务只同步原支付状态 0/1；特殊状态不会被当成已支付处理。
 
 ## 18. 回滚方案
 
