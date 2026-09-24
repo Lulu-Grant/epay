@@ -236,28 +236,49 @@ class OrderService
     public static function reconcilePaymentOrder($payTradeNo)
     {
         global $DB;
-        $paymentOrder = $DB->getRow("SELECT * FROM pre_order WHERE trade_no=:trade_no LIMIT 1", array(':trade_no' => $payTradeNo));
-        if (!$paymentOrder || intval($paymentOrder['tid']) !== 0) {
-            return false;
-        }
-        $exists = $DB->getColumn("SELECT id FROM pre_shop_orders WHERE pay_trade_no=:trade_no LIMIT 1", array(':trade_no' => $payTradeNo));
-        if (!$exists) {
-            if (!ConfigService::shouldRecordMerchant($paymentOrder['uid'])) {
+        if (!$DB->beginTransaction()) throw new Exception('商城补偿事务启动失败');
+        try {
+            // All projection writers lock payment -> shop -> goods in this order.
+            $statement = $DB->query("SELECT * FROM pre_order WHERE trade_no=:trade_no LIMIT 1 FOR UPDATE", [':trade_no'=>$payTradeNo]);
+            if ($statement === false) throw new Exception('商城补偿读取原单失败');
+            $paymentOrder = $statement->fetch(\PDO::FETCH_ASSOC);
+            if (!$paymentOrder) {
+                $DB->rollBack();
                 return false;
             }
-            self::recordPaymentOrder($payTradeNo);
+            if (intval($paymentOrder['tid']) !== 0 || !in_array(intval($paymentOrder['status']), [0,1], true)) {
+                $DB->rollBack();
+                return false;
+            }
+            $statement = $DB->query("SELECT id,deleted,pay_status,order_status FROM pre_shop_orders WHERE pay_trade_no=:trade_no LIMIT 1 FOR UPDATE", [':trade_no'=>$payTradeNo]);
+            if ($statement === false) throw new Exception('商城补偿读取商城单失败');
+            $existing = $statement->fetch(\PDO::FETCH_ASSOC);
+            if ($existing && (intval($existing['deleted']) !== 0 || !in_array(intval($existing['pay_status']), [0,1], true) || intval($existing['order_status']) === self::ORDER_CANCELLED)) {
+                $DB->rollBack();
+                return false;
+            }
+            if (!$existing) {
+                if (!ConfigService::shouldRecordMerchant($paymentOrder['uid'])) {
+                    $DB->rollBack();
+                    return false;
+                }
+                self::recordPaymentOrder($payTradeNo);
+            }
+            self::syncPaymentRoute($payTradeNo);
+            if (intval($paymentOrder['status']) === 1) self::markPaidLocked($paymentOrder);
+            if (!$DB->commit()) throw new Exception('商城补偿事务提交失败');
+            return true;
+        } catch (\Throwable $e) {
+            if ($DB->db->inTransaction()) $DB->rollBack();
+            throw $e;
         }
-        self::syncPaymentRoute($payTradeNo);
-        if (intval($paymentOrder['status']) > 0) {
-            self::markPaidFromPaymentOrder($paymentOrder);
-        }
-        return true;
     }
 
-    public static function reconcilePending($limit = 200)
+    public static function reconcilePending($limit = 200, $dryRun = false, $maxSeconds = 45)
     {
         global $DB;
-        $result = array('scanned' => 0, 'reconciled' => 0, 'skipped' => 0, 'failed' => 0, 'errors' => array());
+        $deadline = microtime(true) + max(1, min(45, intval($maxSeconds)));
+        $result = ['scanned'=>0, 'reconciled'=>0, 'created'=>0, 'synced'=>0, 'skipped'=>0, 'protected'=>0, 'failed'=>0, 'dry_run'=>(bool)$dryRun, 'errors'=>[]];
         if (!ConfigService::isEnabled() || !ConfigService::isShadowMode()) {
             $result['disabled'] = true;
             return $result;
@@ -267,32 +288,44 @@ class OrderService
             $result['missing_started_at'] = true;
             return $result;
         }
-        $limit = max(1, min(1000, intval($limit)));
+        $limit = max(1, min(200, intval($limit)));
         $excludedUids = ConfigService::getExcludedUids();
         $missingCondition = 'S.id IS NULL';
         if (!empty($excludedUids)) {
             $missingCondition = '(S.id IS NULL AND P.uid NOT IN ('.implode(',', array_map('intval', $excludedUids)).'))';
         }
-        $rows = $DB->getAll("SELECT P.trade_no,P.uid,S.id shop_id FROM pre_order P LEFT JOIN pre_shop_orders S ON S.pay_trade_no=P.trade_no WHERE P.tid=0 AND P.addtime>=:started_at AND (".$missingCondition." OR (S.id IS NOT NULL AND P.type>0 AND S.pay_type<>P.type) OR (S.id IS NOT NULL AND P.status>0 AND (S.pay_status<>1 OR S.order_status IN (0,1)))) ORDER BY P.addtime ASC LIMIT ".$limit, array(':started_at' => $startedAt));
+        $from = " FROM pre_order P LEFT JOIN pre_shop_orders S ON ".TradeJoin::condition('P', 'S', 'shop');
+        $base = " P.tid=0 AND P.addtime>=:started_at AND (S.id IS NULL OR S.deleted=0)";
+        $protected = "(P.status NOT IN (0,1) OR (S.id IS NOT NULL AND (S.pay_status NOT IN (0,1) OR S.order_status=5)))";
+        $count = $DB->getColumn("SELECT COUNT(*)".$from." WHERE ".$base." AND ".$protected, [':started_at'=>$startedAt]);
+        if ($count === false) throw new Exception('商城补偿状态统计失败');
+        $result['protected'] = intval($count);
+        $rows = $DB->getAll("SELECT P.trade_no,P.uid,S.id shop_id".$from." WHERE ".$base." AND NOT ".$protected." AND (".$missingCondition." OR (S.id IS NOT NULL AND P.type>0 AND S.pay_type<>P.type) OR (S.id IS NOT NULL AND P.status=1 AND (S.pay_status<>1 OR S.order_status IN (0,1)))) ORDER BY P.addtime ASC,P.trade_no ASC LIMIT ".$limit, array(':started_at' => $startedAt));
         if (!is_array($rows)) {
-            throw new Exception('扫描商城影子订单失败：'.$DB->error());
+            throw new Exception('扫描商城影子订单失败');
         }
         foreach ($rows as $row) {
+            if (microtime(true) >= $deadline) { $result['time_limited'] = true; break; }
             $result['scanned']++;
             if (empty($row['shop_id']) && !ConfigService::shouldRecordMerchant($row['uid'])) {
                 $result['skipped']++;
                 continue;
             }
             try {
+                if ($dryRun) {
+                    $result[empty($row['shop_id']) ? 'created' : 'synced']++;
+                    continue;
+                }
                 if (self::reconcilePaymentOrder($row['trade_no'])) {
                     $result['reconciled']++;
+                    $result[empty($row['shop_id']) ? 'created' : 'synced']++;
                 } else {
                     $result['skipped']++;
                 }
-            } catch (Exception $e) {
+            } catch (\Throwable $e) {
                 $result['failed']++;
                 if (count($result['errors']) < 20) {
-                    $result['errors'][] = array('trade_no' => $row['trade_no'], 'message' => $e->getMessage());
+                    $result['errors'][] = ['order_ref'=>substr(hash('sha256', $row['trade_no']),0,16), 'reason'=>'projection_write_failed'];
                 }
             }
         }
@@ -369,12 +402,28 @@ class OrderService
     public static function markPaidFromPaymentOrder($paymentOrder)
     {
         global $DB;
-        $shopTradeNo = self::parseShopTradeNo(isset($paymentOrder['param']) ? $paymentOrder['param'] : null);
-
-        $transactionOpen = false;
-        $DB->beginTransaction();
-        $transactionOpen = true;
+        if (!$DB->beginTransaction()) throw new Exception('商城付款同步事务启动失败');
         try {
+            $statement = $DB->query("SELECT * FROM pre_order WHERE trade_no=:trade_no LIMIT 1 FOR UPDATE", [':trade_no'=>$paymentOrder['trade_no'] ?? '']);
+            if ($statement === false) throw new Exception('商城付款同步读取原单失败');
+            $current = $statement->fetch(\PDO::FETCH_ASSOC);
+            if (!$current || intval($current['status']) !== 1 || intval($current['tid']) !== 0) {
+                $DB->rollBack();
+                return false;
+            }
+            $result = self::markPaidLocked($current);
+            if (!$DB->commit()) throw new Exception('商城付款同步事务提交失败');
+            return $result;
+        } catch (\Throwable $e) {
+            if ($DB->db->inTransaction()) $DB->rollBack();
+            throw $e;
+        }
+    }
+
+    private static function markPaidLocked($paymentOrder)
+    {
+        global $DB;
+        $shopTradeNo = self::parseShopTradeNo($paymentOrder['param'] ?? null);
             if ($shopTradeNo) {
                 $order = $DB->getRow("SELECT * FROM pre_shop_orders WHERE shop_trade_no=:trade_no LIMIT 1 FOR UPDATE", array(':trade_no' => $shopTradeNo));
             } else {
@@ -383,6 +432,7 @@ class OrderService
             if (!$order) {
                 throw new Exception('非商城支付订单');
             }
+            if (intval($order['deleted']) !== 0 || !in_array(intval($order['pay_status']), [0,1], true) || intval($order['order_status']) === self::ORDER_CANCELLED) return false;
             $shopTradeNo = $order['shop_trade_no'];
             if ($order['pay_trade_no'] !== $paymentOrder['trade_no']) {
                 throw new Exception('商城订单与支付订单不匹配');
@@ -420,8 +470,6 @@ class OrderService
                         throw new Exception('更新商城自动发货状态失败：'.$DB->error());
                     }
                 }
-                $DB->commit();
-                $transactionOpen = false;
                 return array('code' => 0, 'msg' => '商城订单已支付并发货');
             }
 
@@ -432,7 +480,7 @@ class OrderService
                     $times = $decoded;
                 }
             }
-            $paidAt = date('Y-m-d H:i:s');
+            $paidAt = !empty($paymentOrder['endtime']) ? $paymentOrder['endtime'] : date('Y-m-d H:i:s');
             $times['paid'] = $paidAt;
             $times['shipped'] = $paidAt;
 
@@ -452,8 +500,8 @@ class OrderService
 
             $ok = $DB->update('shop_orders', array(
                 'pay_status' => self::PAY_PAID,
-                'order_status' => self::ORDER_SHIPPED,
-                'paytime' => 'NOW()',
+                'order_status' => max(self::ORDER_SHIPPED, intval($order['order_status'])),
+                'paytime' => $paidAt,
                 'pay_api_trade_no' => isset($paymentOrder['api_trade_no']) ? $paymentOrder['api_trade_no'] : null,
                 'status_times' => json_encode($times, JSON_UNESCAPED_UNICODE),
                 'updatetime' => 'NOW()',
@@ -462,15 +510,7 @@ class OrderService
                 throw new Exception('更新商城订单状态失败：'.$DB->error());
             }
 
-            $DB->commit();
-            $transactionOpen = false;
             return array('code' => 0, 'msg' => '商城订单已支付并自动发货');
-        } catch (Exception $e) {
-            if ($transactionOpen) {
-                $DB->rollBack();
-            }
-            throw $e;
-        }
     }
 
     public static function repay($shopTradeNo, $queryToken)

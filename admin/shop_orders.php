@@ -138,6 +138,7 @@ $(function(){
     sidePagination: 'server',
     pagination: true,
     pageSize: 20,
+    queryParamsType: 'limit',
     queryParams: queryParams,
     classes: 'table table-striped table-hover table-bordered',
     columns: [
@@ -180,6 +181,7 @@ function openOrder(id){
     var html = '<table class="table table-bordered">'+
       '<tr><th>商城订单号</th><td>'+escapeHtml(r.shop_trade_no)+'</td><th>支付订单号</th><td>'+escapeHtml(r.pay_trade_no)+'</td></tr>'+
       '<tr><th>原商户UID</th><td colspan="3">'+escapeHtml(r.merchant_uid || '')+'</td></tr>'+
+      '<tr><th>记录模式</th><td colspan="3">'+escapeHtml(r.record_source_text || '')+'</td></tr>'+
       '<tr><th>原订单参数</th><td colspan="3">'+escapeHtml(r.merchant_param || '')+'</td></tr>'+
       '<tr><th>商品</th><td>'+escapeHtml(r.goods_name)+' × '+escapeHtml(r.quantity)+'</td><th>金额</th><td>￥'+escapeHtml(r.money)+'</td></tr>'+
       '<tr><th>购买人</th><td>'+escapeHtml(r.buyer_name)+'</td><th>联系方式</th><td>'+escapeHtml(r.buyer_contact)+'</td></tr>'+

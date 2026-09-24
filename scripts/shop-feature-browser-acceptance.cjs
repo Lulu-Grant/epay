@@ -71,18 +71,42 @@ async function assertNoOverflow(page, label) {
     await assertText(admin, '原商户UID');
     await assertText(admin, '记录模式');
     await assertText(admin, '无感影子订单');
+    await admin.evaluate(() => $('#ordersTable').bootstrapTable('refreshOptions', {pageSize:2}));
+    await admin.waitForFunction(() => $('#ordersTable').bootstrapTable('getData').length === 2);
+    const firstId = await admin.evaluate(() => $('#ordersTable').bootstrapTable('getData')[0].id);
+    await admin.evaluate(() => $('#ordersTable').bootstrapTable('selectPage', 2));
+    await admin.waitForFunction(id => $('#ordersTable').bootstrapTable('getData')[0].id !== id, firstId);
+    await admin.route('**/ajax_shop.php?act=orderList', route => route.fulfill({status:503,body:'unavailable'}));
+    await admin.evaluate(() => retryOrders());
+    await admin.locator('#shop-order-error').waitFor({state:'visible'});
+    if (await admin.locator('.fixed-table-loading.open').count()) throw new Error('Loading did not stop on error');
+    await admin.unroute('**/ajax_shop.php?act=orderList');
+    await admin.locator('#shop-order-error').getByRole('button',{name:'重试'}).click();
+    await admin.locator('#shop-order-error').waitFor({state:'hidden'});
+    await admin.waitForFunction(() => $('#ordersTable').bootstrapTable('getData').length > 0);
+    await admin.route('**/ajax_shop.php?act=orderList', route => route.fulfill({status:200,contentType:'application/json',body:'{"code":-1,"msg":"fixture query failure"}'}));
+    await admin.evaluate(() => retryOrders());
+    await admin.locator('#shop-order-error').waitFor({state:'visible'});
+    await admin.unroute('**/ajax_shop.php?act=orderList');
+    await admin.locator('#shop-order-error').getByRole('button',{name:'重试'}).click();
+    await admin.waitForFunction(() => $('#ordersTable').bootstrapTable('getData').length > 0);
     const shadowRow = admin.locator('tr').filter({ hasText: '无感影子订单' }).first();
     await shadowRow.getByRole('button', { name: '详情/物流' }).click();
     await admin.locator('#order-modal').waitFor({ state: 'visible' });
     await assertText(admin.locator('#order-modal'), '无感影子订单');
     await assertNoOverflow(admin, 'admin shadow order list');
     await admin.screenshot({ path: path.join(screenDir, 'shadow-admin-desktop.png'), fullPage: true });
+    await admin.locator('#order-modal').getByRole('button',{name:'关闭',exact:true}).click();
+    await admin.setViewportSize({width:390,height:844});
+    await assertNoOverflow(admin,'mobile admin list');
+    await admin.screenshot({path:path.join(screenDir,'shadow-admin-mobile.png'),fullPage:true});
     await desktop.close();
   } finally {
     await browser.close();
   }
 
-  if (errors.length) throw new Error(errors.join('\n'));
+  const unexpected = errors.filter(message => !message.includes('503 (Service Unavailable)'));
+  if (unexpected.length) throw new Error(unexpected.join('\n'));
   for (const file of ['shadow-query-mobile.png', 'shadow-catalog-desktop.png', 'shadow-admin-desktop.png']) {
     const target = path.join(screenDir, file);
     if (!fs.existsSync(target) || fs.statSync(target).size === 0) throw new Error(`Missing screenshot: ${file}`);

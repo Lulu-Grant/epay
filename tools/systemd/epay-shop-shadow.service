@@ -1,0 +1,25 @@
+[Unit]
+Description=Epay shop shadow order reconciliation
+After=mariadb.service
+
+[Service]
+Type=oneshot
+User=www-data
+Group=www-data
+WorkingDirectory=/srv/epay/current
+RuntimeDirectory=epay-shop-shadow
+RuntimeDirectoryMode=0700
+RuntimeDirectoryPreserve=yes
+Environment=EPAY_SHOP_LOCK_DIR=/run/epay-shop-shadow
+ExecStart=/usr/bin/php8.4 /srv/epay/current/scripts/shop-shadow-reconcile.php --limit=200
+TimeoutStartSec=55
+TimeoutStopSec=5
+UMask=0077
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/run/epay-shop-shadow
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=epay-shop-shadow
+

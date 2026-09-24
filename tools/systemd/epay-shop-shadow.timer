@@ -1,0 +1,11 @@
+[Unit]
+Description=Reconcile Epay shop shadow orders every minute
+
+[Timer]
+OnCalendar=*-*-* *:*:00
+AccuracySec=1s
+Persistent=false
+Unit=epay-shop-shadow.service
+
+[Install]
+WantedBy=timers.target

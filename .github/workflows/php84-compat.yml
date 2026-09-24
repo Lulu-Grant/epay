@@ -9,6 +9,30 @@ on:
       - 'codex/p5-shop-shadow-repair'
 
 jobs:
+  shop-browser:
+    name: PHP 8.4 shop flow and browser
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: pdo_mysql, curl, openssl, mbstring, gd, gmp, bcmath
+          coverage: none
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install isolated shop test dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y mariadb-server mariadb-client rsync
+          npm install --prefix "$RUNNER_TEMP/shop-browser" playwright@1.51.1
+          "$RUNNER_TEMP/shop-browser/node_modules/.bin/playwright" install --with-deps chromium
+      - name: Shop payment, compensation and browser acceptance
+        env:
+          SHOP_TEST_REQUIRE_BROWSER: '1'
+          SHOP_TEST_NODE_PATH: ${{ runner.temp }}/shop-browser/node_modules
+        run: SHOP_TEST_NODE_BIN="$(command -v node)" bash scripts/shop-feature-local-acceptance.sh
   static-checks:
     name: PHP 8.4 static checks
     runs-on: ubuntu-latest
