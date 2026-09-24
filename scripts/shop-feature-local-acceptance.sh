@@ -21,6 +21,11 @@ contains(){ local hay="$1" needle="$2" label="$3"; [[ "$hay" == *"$needle"* ]] &
 not_contains(){ local hay="$1" needle="$2" label="$3"; [[ "$hay" != *"$needle"* ]] && pass "$label" || fail "$label"; }
 
 cleanup(){
+  if [[ -n "${SHOP_TEST_ARTIFACT_DIR:-}" ]]; then
+    mkdir -p "$SHOP_TEST_ARTIFACT_DIR"
+    cp -a "$SCREEN_DIR" "$SHOP_TEST_ARTIFACT_DIR/" 2>/dev/null || true
+    cp "$TMP_ROOT/php.log" "$DB_DIR/mysql.err" "$SHOP_TEST_ARTIFACT_DIR/" 2>/dev/null || true
+  fi
   if [[ -n "$PHP_PID" ]] && kill -0 "$PHP_PID" 2>/dev/null; then
     kill "$PHP_PID" 2>/dev/null || true
     wait "$PHP_PID" 2>/dev/null || true
@@ -45,7 +50,7 @@ done
 mkdir -p "$SITE_DIR" "$DB_DIR" "$SCREEN_DIR"
 rsync -a --exclude='.git' "$ROOT_DIR"/ "$SITE_DIR"/
 mariadb-install-db --no-defaults --auth-root-authentication-method=normal --skip-test-db --datadir="$DB_DIR/data" >/dev/null
-mariadbd --no-defaults --datadir="$DB_DIR/data" --socket="$DB_DIR/mysql.sock" --pid-file="$DB_DIR/mysql.pid" --bind-address=127.0.0.1 --port="$DB_PORT" --log-error="$DB_DIR/mysql.err" &
+mariadbd --no-defaults --default-time-zone=+08:00 --datadir="$DB_DIR/data" --socket="$DB_DIR/mysql.sock" --pid-file="$DB_DIR/mysql.pid" --bind-address=127.0.0.1 --port="$DB_PORT" --log-error="$DB_DIR/mysql.err" &
 DB_SESSION_PID=$!
 for _ in $(seq 1 60); do
   "${MYSQL_ROOT[@]}" -e 'SELECT 1' >/dev/null 2>&1 && break
