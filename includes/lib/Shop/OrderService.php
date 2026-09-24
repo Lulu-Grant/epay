@@ -552,9 +552,17 @@ class OrderService
         }
         $offset = max(0, intval($offset));
         $limit = max(1, min(100, intval($limit)));
-        $countJoin = $hasKeyword ? " LEFT JOIN pre_order P ON P.trade_no=A.pay_trade_no" : '';
-        $total = intval($DB->getColumn("SELECT COUNT(*) FROM pre_shop_orders A".$countJoin." WHERE ".$where, $bind));
-        $rows = $DB->getAll("SELECT A.*,P.uid merchant_uid FROM pre_shop_orders A LEFT JOIN pre_order P ON P.trade_no=A.pay_trade_no WHERE ".$where." ORDER BY A.id DESC LIMIT ".$offset.",".$limit, $bind);
+        $join = " LEFT JOIN pre_order P ON ".TradeJoin::condition('P', 'A');
+        $countJoin = $hasKeyword ? $join : '';
+        $total = $DB->getColumn("SELECT COUNT(*) FROM pre_shop_orders A".$countJoin." WHERE ".$where, $bind);
+        if ($total === false) {
+            throw new Exception('商城订单统计查询失败，请重试');
+        }
+        $total = intval($total);
+        $rows = $DB->getAll("SELECT A.*,P.uid merchant_uid FROM pre_shop_orders A".$join." WHERE ".$where." ORDER BY A.id DESC LIMIT ".$offset.",".$limit, $bind);
+        if (!is_array($rows)) {
+            throw new Exception('商城订单列表查询失败，请重试');
+        }
         if (is_array($rows)) {
             foreach ($rows as &$row) {
                 $row['record_source_text'] = self::recordSourceText($row['status_times']);
@@ -567,7 +575,7 @@ class OrderService
     public static function adminGet($id)
     {
         global $DB;
-        $row = $DB->getRow("SELECT A.*,P.uid merchant_uid,P.param merchant_param FROM pre_shop_orders A LEFT JOIN pre_order P ON P.trade_no=A.pay_trade_no WHERE A.id=:id AND A.deleted=0 LIMIT 1", array(':id' => intval($id)));
+        $row = $DB->getRow("SELECT A.*,P.uid merchant_uid,P.param merchant_param FROM pre_shop_orders A LEFT JOIN pre_order P ON ".TradeJoin::condition('P', 'A')." WHERE A.id=:id AND A.deleted=0 LIMIT 1", array(':id' => intval($id)));
         if ($row) {
             $row['record_source_text'] = self::recordSourceText($row['status_times']);
         }
@@ -731,7 +739,7 @@ class OrderService
         if (!preg_match('/^S[0-9]{21}$/', (string)$shopTradeNo) || $queryToken === '') {
             throw new Exception('购买确认凭证不正确');
         }
-        $sql = "SELECT A.*,P.uid merchant_uid,P.status payment_status,P.param merchant_param,P.notify_url merchant_notify_url,P.return_url merchant_return_url,P.name original_name,P.money original_money,U.gid merchant_gid FROM pre_shop_orders A INNER JOIN pre_order P ON P.trade_no=A.pay_trade_no LEFT JOIN pre_user U ON U.uid=P.uid WHERE A.shop_trade_no=:trade_no AND A.deleted=0 LIMIT 1";
+        $sql = "SELECT A.*,P.uid merchant_uid,P.status payment_status,P.param merchant_param,P.notify_url merchant_notify_url,P.return_url merchant_return_url,P.name original_name,P.money original_money,U.gid merchant_gid FROM pre_shop_orders A INNER JOIN pre_order P ON ".TradeJoin::condition('P', 'A')." LEFT JOIN pre_user U ON U.uid=P.uid WHERE A.shop_trade_no=:trade_no AND A.deleted=0 LIMIT 1";
         if ($forUpdate) {
             $sql .= " FOR UPDATE";
         }

@@ -50,6 +50,10 @@ $csrf_token = $_SESSION['shop_csrf_token'];
         <a href="./shop_goods.php" class="btn btn-default">商品管理</a>
       </form>
     </div>
+    <div id="shop-order-error" class="alert alert-danger" role="alert" hidden>
+      <span id="shop-order-error-message"></span>
+      <button type="button" class="btn btn-default btn-sm" onclick="retryOrders()">重试</button>
+    </div>
     <table id="ordersTable"></table>
   </div>
 </div>
@@ -108,6 +112,7 @@ function escapeHtml(str){
 function payText(v){ return {0:'未支付',1:'已支付',2:'已取消',3:'已退款'}[parseInt(v,10)] || '未知'; }
 function orderText(v){ return {0:'待支付',1:'待发货',2:'已发货',3:'已签收',4:'已完成',5:'已取消'}[parseInt(v,10)] || '未知'; }
 function queryParams(params){
+  $('#shop-order-error').prop('hidden', true);
   var form = $('#toolbar form').serializeArray();
   $.each(form, function(_, item){ params[item.name] = item.value; });
   return params;
@@ -117,6 +122,18 @@ $(function(){
   $('#ordersTable').bootstrapTable({
     url: 'ajax_shop.php?act=orderList',
     method: 'post',
+    contentType: 'application/x-www-form-urlencoded',
+    ajaxOptions: {timeout:15000},
+    responseHandler: function(data){
+      if(!data || data.code != null && data.code !== 0 || !Array.isArray(data.rows)){
+        showOrderError('商城订单查询失败，请重试。');
+        return {total:0,rows:[]};
+      }
+      return data;
+    },
+    onLoadError: function(status){
+      showOrderError(status === 0 ? '商城订单加载超时或网络中断，请重试。' : '商城订单服务暂时不可用，请重试。');
+    },
     toolbar: '#toolbar',
     sidePagination: 'server',
     pagination: true,
@@ -145,6 +162,12 @@ function loadSummary(){
   });
 }
 function searchOrders(){ $('#ordersTable').bootstrapTable('refresh', {pageNumber:1}); loadSummary(); return false; }
+function showOrderError(message){
+  $('#shop-order-error-message').text(message);
+  $('#shop-order-error').prop('hidden', false);
+  $('#ordersTable').bootstrapTable('hideLoading');
+}
+function retryOrders(){ $('#ordersTable').bootstrapTable('refresh'); }
 function resetOrders(){ $('#toolbar form')[0].reset(); searchOrders(); }
 function openOrder(id){
   $.getJSON('ajax_shop.php?act=getOrder&id='+id, function(data){

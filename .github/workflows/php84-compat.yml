@@ -6,6 +6,7 @@ on:
     branches:
       - main
       - 'upgrade/**'
+      - 'codex/p5-shop-shadow-repair'
 
 jobs:
   static-checks:
@@ -107,6 +108,14 @@ jobs:
           EPAY_DB_USER: root
           EPAY_DB_PASSWORD: epay_test
         run: php tools/php84/rollback-rehearsal-check.php
+
+      - name: Shop mixed charset and performance regression
+        env:
+          EPAY_DB_HOST: 127.0.0.1
+          EPAY_DB_PORT: 3306
+          EPAY_DB_USER: root
+          EPAY_DB_PASSWORD: epay_test
+        run: php tools/php84/shop-repair-check.php
 
       - name: Installed HTTP smoke checks
         env:
