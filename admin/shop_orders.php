@@ -58,12 +58,12 @@ $csrf_token = $_SESSION['shop_csrf_token'];
   </div>
 </div>
 
-<div class="modal" id="order-modal" role="dialog" aria-hidden="true" data-backdrop="static">
+<div class="modal" id="order-modal" role="dialog" tabindex="-1" aria-labelledby="order-modal-title" data-backdrop="static">
   <div class="modal-dialog modal-lg">
     <div class="modal-content">
       <div class="modal-header">
-        <button type="button" class="close" data-dismiss="modal">&times;</button>
-        <h4 class="modal-title">商城订单详情</h4>
+        <button type="button" class="close" data-dismiss="modal" aria-label="关闭">&times;</button>
+        <h4 class="modal-title" id="order-modal-title">商城订单详情</h4>
       </div>
       <div class="modal-body">
         <div id="order-detail"></div>

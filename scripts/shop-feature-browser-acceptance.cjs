@@ -96,7 +96,8 @@ async function assertNoOverflow(page, label) {
     await assertText(admin.locator('#order-modal'), '无感影子订单');
     await assertNoOverflow(admin, 'admin shadow order list');
     await admin.screenshot({ path: path.join(screenDir, 'shadow-admin-desktop.png'), fullPage: true });
-    await admin.locator('#order-modal').getByRole('button',{name:'关闭',exact:true}).click();
+    await admin.locator('#order-modal .modal-footer').getByRole('button',{name:'关闭',exact:true}).click();
+    await admin.locator('#order-modal').waitFor({state:'hidden'});
     await admin.setViewportSize({width:390,height:844});
     await assertNoOverflow(admin,'mobile admin list');
     await admin.screenshot({path:path.join(screenDir,'shadow-admin-mobile.png'),fullPage:true});
