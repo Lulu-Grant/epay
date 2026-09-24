@@ -35,7 +35,7 @@ try {
         $result = ['code'=>0, 'locked'=>true, 'dry_run'=>$dryRun];
         $exitCode = 0;
     } else {
-        $DB = new \lib\PdoHelper($dbconfig);
+        $DB = new \lib\PdoHelper($dbconfig, true);
         $version = (string)$DB->getColumn('SELECT VERSION()');
         if (!str_contains($version, 'MariaDB')) throw new RuntimeException('bounded_worker_requires_mariadb');
         if ($DB->exec('SET SESSION max_statement_time=5') === false || $DB->exec('SET SESSION innodb_lock_wait_timeout=3') === false) {

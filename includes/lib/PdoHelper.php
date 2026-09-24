@@ -13,13 +13,15 @@ class PdoHelper
 	 * PdoHelper constructor.
 	 *
 	 * @param array $dbconfig 数据库信息
+	 * @param bool $throwOnConnectionFailure CLI workers need a catchable failure and nonzero exit.
 	 */
-	function __construct($dbconfig)
+	function __construct($dbconfig, $throwOnConnectionFailure = false)
 	{
 		$this->prefix = $dbconfig['dbqz'].'_';
 		try {
 			$this->db = new \PDO("mysql:host={$dbconfig['host']};dbname={$dbconfig['dbname']};port={$dbconfig['port']}",$dbconfig['user'],$dbconfig['pwd']);
 		} catch (\Exception $e) {
+			if ($throwOnConnectionFailure) throw new \RuntimeException('database_connection_failed');
 			exit('链接数据库失败:' . $e->getMessage());
 		}
 		$this->db->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_SILENT);

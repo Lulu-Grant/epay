@@ -97,6 +97,10 @@ try {
     [$rc,$result]=$cliRun($roots[0],['--limit=1']);
     shopCheck($rc===0 && intval(shopRow($blocked)['pay_status'])===1,'retry after concurrent lock released');
     [$rc,$result]=$cliRun($roots[0],['--invalid']);shopCheck($rc===1,'invalid CLI option rejected');
+    $badConfig=$config;$badConfig['pwd']='invalid-fixture-password';
+    file_put_contents($roots[1].'/config.php','<?php $dbconfig='.var_export($badConfig,true).';');
+    [$rc,$result]=$cliRun($roots[1],['--dry-run']);
+    shopCheck($rc===1 && $result['reason']==='reconciliation_failed','connection failure returns safe JSON and nonzero exit');
     unlink($lockPath);
 } finally {
     foreach($roots as $path) {
