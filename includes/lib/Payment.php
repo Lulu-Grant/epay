@@ -240,12 +240,14 @@ class Payment {
         if($order['status']==0 || $order['status']==4){
             $statusStmt = $DB->query('UPDATE pre_order SET status=1 WHERE trade_no=:trade_no AND status IN (0,4)', [':trade_no'=>$order['trade_no']]);
             if($statusStmt !== false && $statusStmt->rowCount() === 1){
+                invalidateListReadCache('payment', $order['uid']);
 
                 $data = ['endtime'=>'NOW()', 'date'=>'CURDATE()'];
                 if(!empty($api_trade_no)) $data['api_trade_no'] = $api_trade_no;
                 if(!empty($buyer)) $data['buyer'] = $buyer;
                 if($order['settle']>0) $data['settle'] = $order['settle'];
                 $DB->update('order', $data, ['trade_no'=>$order['trade_no']]);
+                invalidateListReadCache('payment', $order['uid']);
                 $order['api_trade_no'] = $api_trade_no;
 
                 // 同步返回先到达时，商户通知失败也必须进入重试队列。
@@ -255,9 +257,11 @@ class Payment {
             $data = ['api_trade_no'=>$api_trade_no];
             if(!empty($buyer)) $data['buyer'] = $buyer;
             $DB->update('order', $data, ['trade_no'=>$order['trade_no']]);
+            invalidateListReadCache('payment', $order['uid']);
         }elseif(empty($order['buyer']) && !empty($buyer)){
             $data['buyer'] = $buyer;
             $DB->update('order', $data, ['trade_no'=>$order['trade_no']]);
+            invalidateListReadCache('payment', $order['uid']);
         }
         // A previous callback may have committed the paid order status before a
         // transient registration write failed. The completion ledger makes this
@@ -293,6 +297,7 @@ class Payment {
         if(!empty($buyer)) $data['buyer'] = $buyer;
         if($status) $data['status'] = $status;
         $DB->update('order', $data, ['trade_no'=>$trade_no]);
+        invalidateListReadCache('payment');
     }
 
     // 更新订单扩展信息

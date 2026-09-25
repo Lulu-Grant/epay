@@ -54,6 +54,7 @@ include './head.php';
 <script src="../assets/js/bootstrap-table.min.js"></script>
 <script src="../assets/js/bootstrap-table-page-jump-to.min.js"></script>
 <script src="../assets/js/custom.js"></script>
+<script src="../assets/js/list-read-ui.js?v=1"></script>
 <script>
 $(document).ready(function(){
 	updateToolbar();
@@ -62,6 +63,7 @@ $(document).ready(function(){
 	const pageSize = typeof window.$_GET['pageSize'] != 'undefined' ? parseInt(window.$_GET['pageSize']) : defaultPageSize;
 
 	$("#listTable").bootstrapTable({
+        ajax: ListReadUI.ajax('#listTable'),
 		url: 'ajax2.php?act=recordList',
 		pageNumber: pageNumber,
 		pageSize: pageSize,

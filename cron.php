@@ -60,6 +60,7 @@ elseif($_GET['do']=='order'){
 
 	$CACHE->clean();
 	$DB->exec("delete from pre_order where status=0 and addtime<'{$thtime}'");
+	invalidateListReadCache('payment');
 	$DB->exec("delete from pre_regcode where `time`<'".(time()-3600*24)."'");
 	$DB->exec("delete from pre_blacklist where endtime is not null and endtime<NOW()");
 	$DB->exec("delete from pay_wxkflog where addtime<'".date("Y-m-d H:i:s", strtotime('-48 hours'))."'");
@@ -145,10 +146,12 @@ elseif($_GET['do']=='notify'){
 			$url=creat_callback($srow);
 			if(do_notify($url['notify'], $srow['uid'])){
 				$DB->update('order', ['notify'=>0, 'notifytime'=>null], ['trade_no'=>$srow['trade_no']]);
+				invalidateListReadCache('payment', $srow['uid']);
 				echo $srow['trade_no'].' 重新通知成功（第'.$attempt.'次）<br/>';
 			}else{
 				if($attempt >= 5){
 					$DB->update('order', ['notify'=>-1, 'notifytime'=>null], ['trade_no'=>$srow['trade_no']]);
+					invalidateListReadCache('payment', $srow['uid']);
 					logPaymentCallbackEvent('merchant_notify_exhausted', $srow['trade_no'], $srow['channel'], 'retry attempt 5 failed');
 				}else{
 					if(!scheduleMerchantNotifyRetry($srow, $attempt + 1)){
@@ -173,6 +176,7 @@ elseif($_GET['do']=='notify2'){
 		$url=creat_callback($srow);
 		if(do_notify($url['notify'], $srow['uid'])){
 			$DB->exec("UPDATE pre_order SET notify=0,notifytime=NULL WHERE trade_no='{$srow['trade_no']}'");
+			invalidateListReadCache('payment', $srow['uid']);
 			echo $srow['trade_no'].' 重新通知成功<br/>';
 		}else{
 			echo $srow['trade_no'].' 重新通知失败<br/>';

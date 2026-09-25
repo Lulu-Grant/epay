@@ -18,8 +18,7 @@ UMask=0077
 NoNewPrivileges=yes
 ProtectSystem=strict
 ProtectHome=yes
-ReadWritePaths=/run/epay-shop-shadow
+ReadWritePaths=/run/epay-shop-shadow -/srv/epay/shared/cache/list-read
 StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=epay-shop-shadow
-

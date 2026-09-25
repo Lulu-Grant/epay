@@ -100,6 +100,7 @@ $csrf_token = $_SESSION['shop_csrf_token'];
 <script src="<?php echo $cdnpublic?>layer/3.1.1/layer.min.js"></script>
 <script src="../assets/js/bootstrap-table.min.js"></script>
 <script src="../assets/js/bootstrap-table-page-jump-to.min.js"></script>
+<script src="../assets/js/list-read-ui.js?v=1"></script>
 <script>
 var shopCsrfToken = <?php echo json_encode($csrf_token);?>;
 function escapeHtml(str){
@@ -113,7 +114,9 @@ function queryParams(params){
 $(function(){
   $('#goodsTable').bootstrapTable({
     url: 'ajax_shop.php?act=goodsList',
+    ajax: ListReadUI.ajax('#goodsTable'),
     method: 'post',
+    contentType: 'application/x-www-form-urlencoded',
     toolbar: '#toolbar',
     sidePagination: 'server',
     pagination: true,
@@ -165,20 +168,20 @@ function openGoodsModal(id){
 function saveGoods(){
   var ii = layer.load(2, {shade:[0.1,'#fff']});
   $.ajax({type:'POST', url:'ajax_shop.php?act=saveGoods', data:$('#goods-form').serialize(), dataType:'json',
-    success:function(data){ layer.close(ii); if(data.code===0){ $('#goods-modal').modal('hide'); $('#goodsTable').bootstrapTable('refresh'); layer.msg(data.msg,{icon:1}); }else{ layer.alert(data.msg,{icon:2}); } },
+    success:function(data){ layer.close(ii); if(data.code===0){ $('#goods-modal').modal('hide'); ListReadUI.refresh('#goodsTable'); layer.msg(data.msg,{icon:1}); }else{ layer.alert(data.msg,{icon:2}); } },
     error:function(){ layer.close(ii); layer.msg('服务器错误'); }
   });
 }
 function setGoodsStatus(id,status){
   $.post('ajax_shop.php?act=setGoodsStatus', {id:id,status:status,csrf_token:shopCsrfToken}, function(data){
-    if(data.code===0){ $('#goodsTable').bootstrapTable('refresh'); }else{ layer.alert(data.msg,{icon:2}); }
+    if(data.code===0){ ListReadUI.refresh('#goodsTable'); }else{ layer.alert(data.msg,{icon:2}); }
   }, 'json');
 }
 function deleteGoods(id){
   layer.confirm('确认删除该商品？删除后前台不可见。', {icon:0}, function(index){
     layer.close(index);
     $.post('ajax_shop.php?act=deleteGoods', {id:id,csrf_token:shopCsrfToken}, function(data){
-      if(data.code===0){ $('#goodsTable').bootstrapTable('refresh'); }else{ layer.alert(data.msg,{icon:2}); }
+      if(data.code===0){ ListReadUI.refresh('#goodsTable'); }else{ layer.alert(data.msg,{icon:2}); }
     }, 'json');
   });
 }

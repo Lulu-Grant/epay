@@ -57,6 +57,21 @@ body.dashboard-responsive .table-state:not(.sr-only) { margin: 12px 15px; }
   body.dashboard-responsive .bootstrap-table .fixed-table-body { overflow-x: auto; }
 }
 
+.list-read-status { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 12px; }
+.list-read-status span { overflow-wrap: anywhere; }
+
+/* Admin navigation has more items than Bootstrap's 768px desktop breakpoint fits. */
+@media (min-width: 768px) and (max-width: 1199px) {
+  body.dashboard-responsive > .navbar .navbar-header { float: none; }
+  body.dashboard-responsive > .navbar .navbar-toggle { display: block; }
+  body.dashboard-responsive > .navbar .navbar-collapse.collapse { display: none !important; }
+  body.dashboard-responsive > .navbar .navbar-collapse.collapse.in { display: block !important; }
+  body.dashboard-responsive > .navbar .navbar-collapse { max-height: calc(100vh - 60px); overflow-y: auto !important; }
+  body.dashboard-responsive > .navbar .navbar-nav { float: none !important; margin: 7.5px -15px; }
+  body.dashboard-responsive > .navbar .navbar-nav > li { float: none; }
+  body.dashboard-responsive > .navbar .navbar-nav .open .dropdown-menu { position: static; float: none; width: auto; background: transparent; border: 0; box-shadow: none; }
+}
+
 @media (max-width: 359px) {
   body.dashboard-responsive .merchant-stat-grid > [class*="col-"] { width: 100%; }
 }

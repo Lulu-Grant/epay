@@ -13,6 +13,7 @@ class Order
         if($row['getmoney']>0){
             changeUserMoney($row['uid'], $row['getmoney'], false, '订单冻结', $trade_no);
             $DB->exec("update pre_order set status='3' where trade_no='$trade_no'");
+            invalidateListReadCache('payment', $row['uid']);
         }
         return ['code'=>0, 'msg'=>'已成功从UID:'.$row['uid'].'冻结'.$row['getmoney'].'元余额'];
     }
@@ -27,6 +28,7 @@ class Order
         if($row['getmoney']>0){
             changeUserMoney($row['uid'], $row['getmoney'], true, '订单解冻', $trade_no);
             $DB->exec("update pre_order set status='1' where trade_no='$trade_no'");
+            invalidateListReadCache('payment', $row['uid']);
         }
         return ['code'=>0, 'msg'=>'已成功为UID:'.$row['uid'].'恢复'.$row['getmoney'].'元余额'];
     }
@@ -104,9 +106,11 @@ class Order
         if($api == 1){
             $refundmoney = !empty($refunded) ? round($refunded + $money, 2) : $money;
             $DB->update('order', ['status'=>2, 'refundmoney'=>$refundmoney], ['trade_no'=>$trade_no]);
+            invalidateListReadCache('payment', $order['uid']);
             $DB->insert('refundorder', ['refund_no'=>$refund_no, 'out_refund_no'=>$out_refund_no, 'trade_no'=>$trade_no, 'uid'=>$order['uid'], 'money'=>$money, 'reducemoney'=>$reducemoney, 'addtime'=>date('Y-m-d H:i:s'), 'endtime'=>date('Y-m-d H:i:s'), 'status'=>1]);
         }else{
             $DB->update('order', ['status'=>2], ['trade_no'=>$trade_no]);
+            invalidateListReadCache('payment', $order['uid']);
         }
         
         return ['code'=>0, 'refund_no'=>$refund_no, 'out_refund_no'=>$out_refund_no, 'trade_no'=>$trade_no, 'out_trade_no'=>$order['out_trade_no'], 'uid'=>$order['uid'], 'money'=>$money, 'reducemoney'=>$reducemoney];

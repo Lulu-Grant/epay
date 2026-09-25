@@ -50,13 +50,12 @@ try {
 
         case 'goodsList':
             shop_close_read_session();
-            $offset = isset($_POST['offset']) ? intval($_POST['offset']) : 0;
-            $limit = isset($_POST['limit']) ? intval($_POST['limit']) : 20;
+            [$offset, $limit] = \lib\ListQueryFilter::pagination($_POST['offset'] ?? 0, $_POST['limit'] ?? 20);
             $filters = array(
-                'keyword' => isset($_POST['keyword']) ? trim($_POST['keyword']) : '',
+                'keyword' => $_POST['keyword'] ?? '',
                 'status' => isset($_POST['status']) ? $_POST['status'] : '-1',
             );
-            shop_json(\lib\Shop\GoodsService::adminList($filters, $offset, $limit));
+            shop_json(\lib\Shop\GoodsService::adminList($filters, $offset, $limit, \lib\ListQueryFilter::fresh($_POST)));
             break;
 
         case 'getGoods':
@@ -93,14 +92,14 @@ try {
 
         case 'orderList':
             shop_close_read_session();
-            $offset = isset($_POST['offset']) ? intval($_POST['offset']) : 0;
-            $limit = isset($_POST['limit']) ? intval($_POST['limit']) : 20;
+            [$offset, $limit] = \lib\ListQueryFilter::pagination($_POST['offset'] ?? 0, $_POST['limit'] ?? 20);
             $filters = array(
-                'keyword' => isset($_POST['keyword']) ? trim($_POST['keyword']) : '',
+                'keyword' => $_POST['keyword'] ?? '',
+                'search_field' => $_POST['search_field'] ?? 'all',
                 'pay_status' => isset($_POST['pay_status']) ? $_POST['pay_status'] : '-1',
                 'order_status' => isset($_POST['order_status']) ? $_POST['order_status'] : '-1',
             );
-            shop_json(\lib\Shop\OrderService::adminList($filters, $offset, $limit));
+            shop_json(\lib\Shop\OrderService::adminList($filters, $offset, $limit, \lib\ListQueryFilter::fresh($_POST)));
             break;
 
         case 'getOrder':
@@ -133,12 +132,17 @@ try {
 
         case 'summary':
             shop_close_read_session();
-            shop_json(array('code' => 0, 'data' => \lib\Shop\OrderService::summary()));
+            shop_json(\lib\Shop\OrderService::summaryResult(\lib\ListQueryFilter::fresh($_GET)));
             break;
 
         default:
             shop_json(array('code' => -1, 'msg' => 'Unknown Action'));
     }
-} catch (Exception $e) {
+} catch (\Throwable $e) {
+    $readAction = in_array($act, ['goodsList', 'orderList', 'summary'], true);
+    if (($readAction && !($e instanceof \InvalidArgumentException)) || !($e instanceof \Exception)) {
+        error_log('list_query_failed shop_read');
+        shop_json(['code'=>-1, 'msg'=>'商城查询失败，请重试']);
+    }
     shop_json(array('code' => -1, 'msg' => $e->getMessage()));
 }

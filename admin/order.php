@@ -80,6 +80,7 @@ unset($rs);
 <script src="../assets/js/bootstrap-table.min.js"></script>
 <script src="../assets/js/bootstrap-table-page-jump-to.min.js"></script>
 <script src="../assets/js/custom.js"></script>
+<script src="../assets/js/list-read-ui.js?v=1"></script>
 <script>
 $(document).ready(function(){
 	updateToolbar();
@@ -88,6 +89,7 @@ $(document).ready(function(){
 	const pageSize = typeof window.$_GET['pageSize'] != 'undefined' ? parseInt(window.$_GET['pageSize']) : defaultPageSize;
 
 	$("#listTable").bootstrapTable({
+        ajax: ListReadUI.ajax('#listTable'),
 		url: 'ajax_order.php?act=orderList',
 		pageNumber: pageNumber,
 		pageSize: pageSize,
@@ -265,12 +267,12 @@ function percentText(value){
 	if(isNaN(number)) number = 0;
 	return number.toFixed(2) + '%';
 }
-function showOrderSummary(){
+function showOrderSummary(fresh){
 	var ii = layer.load(2, {shade:[0.1,'#fff']});
 	$.ajax({
 		type : 'POST',
 		url : 'ajax_order.php?act=orderSummary',
-		data : getOrderSearchParams(),
+		data : $.extend({}, getOrderSearchParams(), fresh === true ? {fresh:1} : {}),
 		dataType : 'json',
 		success : function(ret) {
 			layer.close(ii);
@@ -288,6 +290,7 @@ function showOrderSummary(){
 			content += '<tr><td>通知异常订单：<b>'+countText(data.notify_bad_count)+'</b></td><td colspan="2">订单成功率：<b>'+percentText(data.success_rate)+'</b></td></tr>';
 			content += '</table>';
 			content += '<div class="order-summary-note">统计范围：当前订单列表筛选条件；时间筛选按订单创建时间计算。</div>';
+            content += '<div class="order-summary-note">'+ListReadUI.summaryText(ret.meta)+' <button type="button" class="btn btn-default btn-sm" onclick="layer.closeAll();showOrderSummary(true)">刷新统计</button></div>';
 			content += '</div>';
 			layer.open({
 				type: 1,
@@ -323,7 +326,7 @@ function operation(status){
 		success : function(data) {
 			layer.close(ii);
 			if(data.code == 0){
-				searchSubmit();
+				searchSubmit(true);
 				layer.alert(data.msg);
 			}else{
 				layer.alert(data.msg);
@@ -331,7 +334,7 @@ function operation(status){
 		},
 		error:function(data){
 			layer.msg('请求超时');
-			searchSubmit();
+			searchSubmit(true);
 		}
 	});
 	return false;
@@ -406,7 +409,7 @@ function callnotify(trade_no){
 			if(data.code == 0){
 				$("#vurl").attr("href",data.url);
 				document.getElementById("vurl").click();
-				searchSubmit();
+				searchSubmit(true);
 			}else{
 				layer.alert(data.msg);
 			}
@@ -429,7 +432,7 @@ function callreturn(trade_no){
 			if(data.code == 0){
 				$("#vurl").attr("href",data.url);
 				document.getElementById("vurl").click();
-				searchSubmit();
+				searchSubmit(true);
 			}else{
 				layer.alert(data.msg);
 			}
@@ -468,7 +471,7 @@ function refund(trade_no) {
 							success : function(data) {
 								layer.close(ii);
 								if(data.code == 0){
-									layer.alert(data.msg, {icon:1}, function(){ layer.closeAll();searchSubmit(); });
+									layer.alert(data.msg, {icon:1}, function(){ layer.closeAll();searchSubmit(true); });
 								}else{
 									layer.alert(data.msg, {icon:7});
 								}
@@ -519,7 +522,7 @@ function apirefund(trade_no) {
 							success : function(data) {
 								layer.close(ii);
 								if(data.code == 0){
-									layer.alert(data.msg, {icon:1}, function(){ layer.closeAll();searchSubmit(); });
+									layer.alert(data.msg, {icon:1}, function(){ layer.closeAll();searchSubmit(true); });
 								}else{
 									layer.alert(data.msg, {icon:7});
 								}
@@ -551,7 +554,7 @@ function freeze(trade_no) {
 		success : function(data) {
 			layer.close(ii);
 			if(data.code == 0){
-				layer.alert(data.msg, {icon:1}, function(){ layer.closeAll();searchSubmit(); });
+				layer.alert(data.msg, {icon:1}, function(){ layer.closeAll();searchSubmit(true); });
 			}else{
 				layer.alert(data.msg);
 			}
@@ -572,7 +575,7 @@ function unfreeze(trade_no) {
 		success : function(data) {
 			layer.close(ii);
 			if(data.code == 0){
-				layer.alert(data.msg, {icon:1}, function(){ layer.closeAll();searchSubmit(); });
+				layer.alert(data.msg, {icon:1}, function(){ layer.closeAll();searchSubmit(true); });
 			}else{
 				layer.alert(data.msg);
 			}
@@ -607,7 +610,7 @@ function setStatusDo(trade_no, status) {
 				alert(ret['msg'] ? ret['msg'] : '操作失败');
 			}
 			layer.closeAll();
-			searchSubmit();
+			searchSubmit(true);
 		},
 		error:function(data){
 			layer.close(ii);
@@ -628,7 +631,7 @@ function fillorder(trade_no) {
 			success : function(data) {
 				layer.close(ii);
 				if(data.code == 0){
-					layer.alert(data.msg, {icon:1}, function(){ layer.closeAll();searchSubmit(); });
+					layer.alert(data.msg, {icon:1}, function(){ layer.closeAll();searchSubmit(true); });
 				}else{
 					layer.alert(data.msg);
 				}
@@ -652,7 +655,7 @@ function alipaydSettle(trade_no) {
 		success : function(data) {
 			layer.close(ii);
 			if(data.code == 0){
-				layer.alert(data.msg, {icon:1}, function(){ layer.closeAll();searchSubmit(); });
+				layer.alert(data.msg, {icon:1}, function(){ layer.closeAll();searchSubmit(true); });
 			}else{
 				layer.alert(data.msg, {icon:2});
 			}
@@ -673,7 +676,7 @@ function alipayPreAuthPay(trade_no) {
 		success : function(data) {
 			layer.close(ii);
 			if(data.code == 0){
-				layer.alert(data.msg, {icon:1}, function(){ layer.closeAll();searchSubmit(); });
+				layer.alert(data.msg, {icon:1}, function(){ layer.closeAll();searchSubmit(true); });
 			}else{
 				layer.alert(data.msg, {icon:2});
 			}
@@ -694,7 +697,7 @@ function alipayUnfreeze(trade_no) {
 		success : function(data) {
 			layer.close(ii);
 			if(data.code == 0){
-				layer.alert(data.msg, {icon:1}, function(){ layer.closeAll();searchSubmit(); });
+				layer.alert(data.msg, {icon:1}, function(){ layer.closeAll();searchSubmit(true); });
 			}else{
 				layer.alert(data.msg, {icon:2});
 			}
@@ -753,7 +756,7 @@ function alipayRedPacketTansfer(trade_no){
 		success : function(data) {
 			layer.close(ii);
 			if(data.code == 0){
-				layer.alert(data.msg, {icon:1}, function(){ layer.closeAll();searchSubmit(); });
+				layer.alert(data.msg, {icon:1}, function(){ layer.closeAll();searchSubmit(true); });
 			}else{
 				layer.alert(data.msg, {icon:2});
 			}

@@ -127,6 +127,7 @@ class OrderService
         if ($existing) {
             if (intval($existing['pay_type']) === 0 && $payType > 0) {
                 $DB->update('shop_orders', array('pay_type' => $payType, 'updatetime' => 'NOW()'), array('id' => intval($existing['id'])));
+                \lib\ListCacheInvalidator::changed('shop');
                 $existing['pay_type'] = $payType;
             }
             return self::attachmentResult($existing);
@@ -181,6 +182,7 @@ class OrderService
             throw new Exception('创建商城购买记录失败：'.$DB->error());
         }
 
+        \lib\ListCacheInvalidator::changed('shop');
         return array(
             'shop_trade_no' => $shopTradeNo,
             'pay_trade_no' => $paymentOrder['trade_no'],
@@ -230,6 +232,7 @@ class OrderService
         if ($ok === false) {
             throw new Exception('同步商城支付方式失败：'.$DB->error());
         }
+        \lib\ListCacheInvalidator::changed('shop');
         return true;
     }
 
@@ -267,6 +270,7 @@ class OrderService
             self::syncPaymentRoute($payTradeNo);
             if (intval($paymentOrder['status']) === 1) self::markPaidLocked($paymentOrder);
             if (!$DB->commit()) throw new Exception('商城补偿事务提交失败');
+            \lib\ListCacheInvalidator::changed('shop_stock');
             return true;
         } catch (\Throwable $e) {
             if ($DB->db->inTransaction()) $DB->rollBack();
@@ -381,6 +385,7 @@ class OrderService
             }
             $DB->commit();
             $transactionOpen = false;
+            \lib\ListCacheInvalidator::changed('shop');
             return array(
                 'pay_url' => self::buildPayUrl($order['pay_trade_no'], $payType),
                 'query_url' => $siteurl.'shopping.php?act=query&trade_no='.rawurlencode($order['shop_trade_no']).'&token='.$order['query_token'],
@@ -413,6 +418,7 @@ class OrderService
             }
             $result = self::markPaidLocked($current);
             if (!$DB->commit()) throw new Exception('商城付款同步事务提交失败');
+            \lib\ListCacheInvalidator::changed('shop_stock');
             return $result;
         } catch (\Throwable $e) {
             if ($DB->db->inTransaction()) $DB->rollBack();
@@ -570,48 +576,35 @@ class OrderService
         return $order;
     }
 
-    public static function adminList($filters, $offset, $limit)
+    public static function adminList($filters, $offset, $limit, bool $fresh = false)
     {
         global $DB;
-        $where = "A.deleted=0";
-        $bind = array();
-        $hasKeyword = isset($filters['keyword']) && trim($filters['keyword']) !== '';
-        if (isset($filters['pay_status']) && $filters['pay_status'] !== '' && intval($filters['pay_status']) > -1) {
-            $where .= " AND A.pay_status=:pay_status";
-            $bind[':pay_status'] = intval($filters['pay_status']);
+        $filter = \lib\ListQueryFilter::shop($filters);
+        [$offset, $limit] = \lib\ListQueryFilter::pagination($offset, $limit);
+        $displayJoin = ' LEFT JOIN pre_order P ON '.TradeJoin::condition('P', 'A');
+        $countFrom = ' FROM pre_shop_orders A';
+        if ($filter->needsPayment) {
+            $countFrom = $filter->searchField === 'merchant_uid'
+                ? ' FROM pre_order P STRAIGHT_JOIN pre_shop_orders A ON '.TradeJoin::condition('P', 'A', 'shop')
+                : $countFrom.$displayJoin;
         }
-        if (isset($filters['order_status']) && $filters['order_status'] !== '' && intval($filters['order_status']) > -1) {
-            $where .= " AND A.order_status=:order_status";
-            $bind[':order_status'] = intval($filters['order_status']);
-        }
-        if ($hasKeyword) {
-            $where .= " AND (A.shop_trade_no=:keyword OR A.pay_trade_no=:keyword OR A.buyer_contact=:keyword OR P.uid=:merchant_uid OR A.goods_name LIKE :keyword_like)";
-            $bind[':keyword'] = trim($filters['keyword']);
-            $bind[':merchant_uid'] = intval($filters['keyword']);
-            $bind[':keyword_like'] = '%'.trim($filters['keyword']).'%';
-        }
-        $offset = max(0, intval($offset));
-        $limit = max(1, min(100, intval($limit)));
-        $join = " LEFT JOIN pre_order P ON ".TradeJoin::condition('P', 'A');
-        $countJoin = $hasKeyword ? $join : '';
-        $total = $DB->getColumn("SELECT COUNT(*) FROM pre_shop_orders A".$countJoin." WHERE ".$where, $bind);
-        if ($total === false) {
-            throw new Exception('商城订单统计查询失败，请重试');
-        }
-        $total = intval($total);
-        $rows = $DB->getAll("SELECT A.*,P.uid merchant_uid FROM pre_shop_orders A".$join." WHERE ".$where." ORDER BY A.id DESC LIMIT ".$offset.",".$limit, $bind);
-        if (!is_array($rows)) {
-            throw new Exception('商城订单列表查询失败，请重试');
-        }
-        if (is_array($rows)) {
-            foreach ($rows as &$row) {
-                $row['record_source_text'] = self::recordSourceText($row['status_times']);
-            }
-            unset($row);
-        }
-        return array('total' => $total, 'rows' => is_array($rows) ? $rows : array());
+        $result = \lib\ListQueryReader::page($DB, 'shop.orders.count.v1', \lib\ListQueryReader::scope(),
+            $filter->key(), $filter->needsPayment ? ['shop.orders', 'payment.bulk', 'payment.global'] : ['shop.orders'],
+            fn()=>\lib\ListQueryReader::count($DB, 'SELECT COUNT(*)'.$countFrom.' WHERE '.$filter->where, $filter->bind),
+            function (int $start, int $size) use ($DB, $filter, $displayJoin, $countFrom) {
+                if ($start >= 1000) {
+                    $sql = 'SELECT A.*,P.uid merchant_uid FROM (SELECT A.id'.$countFrom.' WHERE '.$filter->where.
+                        ' ORDER BY A.id DESC LIMIT '.$start.','.$size.') page_ids JOIN pre_shop_orders A ON A.id=page_ids.id'.
+                        $displayJoin.' ORDER BY A.id DESC';
+                } else {
+                    $from = $filter->needsPayment ? $countFrom : ' FROM pre_shop_orders A'.$displayJoin;
+                    $sql = 'SELECT A.*,P.uid merchant_uid'.$from.' WHERE '.$filter->where.' ORDER BY A.id DESC LIMIT '.$start.','.$size;
+                }
+                return $DB->getAll($sql, $filter->bind);
+            }, $offset, $limit, $fresh);
+        foreach ($result['rows'] as &$row) $row['record_source_text'] = self::recordSourceText($row['status_times']);
+        return $result;
     }
-
     public static function adminGet($id)
     {
         global $DB;
@@ -666,6 +659,7 @@ class OrderService
         if ($ok === false) {
             throw new Exception('保存物流信息失败：'.$DB->error());
         }
+        \lib\ListCacheInvalidator::changed('shop');
         return true;
     }
 
@@ -680,19 +674,26 @@ class OrderService
         if ($ok === false) {
             throw new Exception('删除商城订单失败：'.$DB->error());
         }
+        \lib\ListCacheInvalidator::changed('shop');
         return true;
     }
 
     public static function summary()
     {
-        global $DB;
-        $row = $DB->getRow("SELECT COUNT(*) total_count, SUM(CASE WHEN pay_status=1 THEN 1 ELSE 0 END) paid_count, ROUND(COALESCE(SUM(money),0),2) total_money, ROUND(COALESCE(SUM(CASE WHEN pay_status=1 THEN money ELSE 0 END),0),2) paid_money FROM pre_shop_orders WHERE deleted=0");
-        if (!$row) {
-            $row = array('total_count' => 0, 'paid_count' => 0, 'total_money' => '0.00', 'paid_money' => '0.00');
-        }
-        return $row;
+        return self::summaryResult()['data'];
     }
 
+    public static function summaryResult(bool $fresh = false): array
+    {
+        global $DB;
+        $result = \lib\ListReadCache::forSite()->remember('summaries', 'shop.orders.summary.v1',
+            \lib\ListQueryReader::scope(), [], ['shop.orders'], function () use ($DB) {
+                $row = $DB->getRow('SELECT COUNT(*) total_count, SUM(CASE WHEN pay_status=1 THEN 1 ELSE 0 END) paid_count, ROUND(COALESCE(SUM(money),0),2) total_money, ROUND(COALESCE(SUM(CASE WHEN pay_status=1 THEN money ELSE 0 END),0),2) paid_money FROM pre_shop_orders WHERE deleted=0');
+                if (!is_array($row)) throw new Exception('商城订单统计查询失败，请重试');
+                return $row;
+            }, $fresh);
+        return ['code'=>0, 'data'=>$result['value'], 'meta'=>$result['meta']];
+    }
     public static function payStatusText($status)
     {
         $map = array(self::PAY_PENDING => '未支付', self::PAY_PAID => '已支付', self::PAY_CANCELLED => '已取消', self::PAY_REFUNDED => '已退款');

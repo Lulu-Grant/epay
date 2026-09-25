@@ -91,26 +91,18 @@ class GoodsService
         return $DB->getAll("SELECT * FROM pre_shop_goods WHERE status=1 AND deleted=0 ORDER BY sort DESC,id DESC LIMIT ".$limit);
     }
 
-    public static function adminList($filters, $offset, $limit)
+    public static function adminList($filters, $offset, $limit, bool $fresh = false)
     {
         global $DB;
-        $where = "deleted=0";
-        $bind = array();
-        if (isset($filters['status']) && $filters['status'] !== '' && intval($filters['status']) > -1) {
-            $where .= " AND status=:status";
-            $bind[':status'] = intval($filters['status']);
-        }
-        if (isset($filters['keyword']) && trim($filters['keyword']) !== '') {
-            $where .= " AND name LIKE :keyword";
-            $bind[':keyword'] = '%'.trim($filters['keyword']).'%';
-        }
-        $offset = max(0, intval($offset));
-        $limit = max(1, min(100, intval($limit)));
-        $total = intval($DB->getColumn("SELECT COUNT(*) FROM pre_shop_goods WHERE ".$where, $bind));
-        $rows = $DB->getAll("SELECT * FROM pre_shop_goods WHERE ".$where." ORDER BY sort DESC,id DESC LIMIT ".$offset.",".$limit, $bind);
-        return array('total' => $total, 'rows' => is_array($rows) ? $rows : array());
+        $filter = \lib\ListQueryFilter::goods($filters);
+        [$offset, $limit] = \lib\ListQueryFilter::pagination($offset, $limit);
+        return \lib\ListQueryReader::page($DB, 'shop.goods.count.v1', \lib\ListQueryReader::scope(),
+            $filter->key(), ['shop.goods'],
+            fn()=>\lib\ListQueryReader::count($DB, 'SELECT COUNT(*) FROM pre_shop_goods A WHERE '.$filter->where, $filter->bind),
+            fn(int $start, int $size)=>$DB->getAll('SELECT A.* FROM pre_shop_goods A WHERE '.$filter->where.
+                ' ORDER BY A.sort DESC,A.id DESC LIMIT '.$start.','.$size, $filter->bind),
+            $offset, $limit, $fresh);
     }
-
     public static function create($data)
     {
         global $DB;
@@ -122,6 +114,7 @@ class GoodsService
         if (!$id) {
             throw new Exception('新增商品失败：'.$DB->error());
         }
+        \lib\ListCacheInvalidator::changed('goods');
         return intval($id);
     }
 
@@ -138,6 +131,7 @@ class GoodsService
         if ($ok === false) {
             throw new Exception('更新商品失败：'.$DB->error());
         }
+        \lib\ListCacheInvalidator::changed('goods');
         return true;
     }
 
@@ -152,6 +146,7 @@ class GoodsService
         if ($ok === false) {
             throw new Exception('修改商品状态失败：'.$DB->error());
         }
+        \lib\ListCacheInvalidator::changed('goods');
         return true;
     }
 
@@ -166,6 +161,7 @@ class GoodsService
         if ($ok === false) {
             throw new Exception('删除商品失败：'.$DB->error());
         }
+        \lib\ListCacheInvalidator::changed('goods');
         return true;
     }
 }

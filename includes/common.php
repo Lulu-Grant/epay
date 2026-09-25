@@ -63,7 +63,7 @@ exit();
 
 $DB = new \lib\PdoHelper($dbconfig);
 
-if($DB->query("select * from pre_config where 1")==FALSE)//检测安装2
+if($DB->query("SELECT 1 FROM pre_config LIMIT 1")==FALSE)//检测安装2
 {
 header('Content-type:text/html;charset=utf-8');
 echo '你还没安装！<a href="/install/">点此安装</a>';

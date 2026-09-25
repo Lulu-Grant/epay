@@ -23,7 +23,18 @@ $csrf_token = $_SESSION['shop_csrf_token'];
     <div class="alert alert-info shop-summary" id="shop-summary">正在加载商城订单概况...</div>
     <div id="toolbar" class="shop-order-toolbar">
       <form class="form-inline" onsubmit="return searchOrders()">
-        <div class="form-group"><input type="text" class="form-control" name="keyword" placeholder="订单号/商户UID/商品/联系"></div>
+        <div class="form-group">
+          <label class="sr-only" for="shop-search-field">搜索字段</label>
+          <select id="shop-search-field" class="form-control" name="search_field">
+            <option value="pay_trade_no">支付单号（精确）</option>
+            <option value="shop_trade_no">商城单号（精确）</option>
+            <option value="merchant_uid">商户 UID</option>
+            <option value="goods_name">商品名称</option>
+            <option value="buyer_contact">联系方式（精确）</option>
+            <option value="all">全部字段（较慢）</option>
+          </select>
+        </div>
+        <div class="form-group"><label class="sr-only" for="shop-search-keyword">关键词</label><input id="shop-search-keyword" type="text" class="form-control" name="keyword" maxlength="255" placeholder="输入完整支付单号"></div>
         <div class="form-group">
           <select class="form-control" name="pay_status">
             <option value="-1">全部支付状态</option>
@@ -104,6 +115,7 @@ $csrf_token = $_SESSION['shop_csrf_token'];
 <script src="<?php echo $cdnpublic?>layer/3.1.1/layer.min.js"></script>
 <script src="../assets/js/bootstrap-table.min.js"></script>
 <script src="../assets/js/bootstrap-table-page-jump-to.min.js"></script>
+<script src="../assets/js/list-read-ui.js?v=1"></script>
 <script>
 var shopCsrfToken = <?php echo json_encode($csrf_token);?>;
 function escapeHtml(str){
@@ -115,12 +127,26 @@ function queryParams(params){
   $('#shop-order-error').prop('hidden', true);
   var form = $('#toolbar form').serializeArray();
   $.each(form, function(_, item){ params[item.name] = item.value; });
+  var url = new URL(window.location.href);
+  $.each(form, function(_, item){ if(item.value !== '') url.searchParams.set(item.name,item.value); else url.searchParams.delete(item.name); });
+  url.searchParams.set('pageNumber',Math.floor(params.offset/params.limit)+1);
+  url.searchParams.set('pageSize',params.limit);
+  history.replaceState({},'',url.toString());
   return params;
 }
 $(function(){
+  var initial = new URL(window.location.href).searchParams;
+  $('#toolbar form :input[name]').each(function(){ if(initial.has(this.name)) $(this).val(initial.get(this.name)); });
+  if(initial.has('keyword') && !initial.has('search_field')) $('#shop-search-field').val('all');
+  $('#shop-search-field').on('change', function(){
+    var hints = {pay_trade_no:'输入完整支付单号',shop_trade_no:'输入完整商城单号',merchant_uid:'输入商户 UID',goods_name:'输入商品名称关键词',buyer_contact:'输入完整联系方式',all:'订单号/商户UID/商品/联系'};
+    $('#shop-search-keyword').attr('placeholder',hints[this.value] || hints.all);
+  }).trigger('change');
+  $('#ordersTable').on('listread:refresh', function(){ loadSummary(true); });
   loadSummary();
   $('#ordersTable').bootstrapTable({
     url: 'ajax_shop.php?act=orderList',
+    ajax: ListReadUI.ajax('#ordersTable'),
     method: 'post',
     contentType: 'application/x-www-form-urlencoded',
     ajaxOptions: {timeout:15000},
@@ -137,7 +163,8 @@ $(function(){
     toolbar: '#toolbar',
     sidePagination: 'server',
     pagination: true,
-    pageSize: 20,
+    pageNumber: Math.max(1,parseInt(initial.get('pageNumber'),10)||1),
+    pageSize: Math.max(1,Math.min(100,parseInt(initial.get('pageSize'),10)||20)),
     queryParamsType: 'limit',
     queryParams: queryParams,
     classes: 'table table-striped table-hover table-bordered',
@@ -155,21 +182,23 @@ $(function(){
     ]
   });
 });
-function loadSummary(){
-  $.getJSON('ajax_shop.php?act=summary', function(data){
+var shopSummaryRequest = null;
+function loadSummary(fresh){
+  if(shopSummaryRequest) shopSummaryRequest.abort();
+  shopSummaryRequest = $.ajax({url:'ajax_shop.php?act=summary',data:fresh === true ? {fresh:1} : {},dataType:'json',timeout:15000}).done(function(data){
     if(data.code !== 0){ $('#shop-summary').text('商城订单概况加载失败'); return; }
     var d = data.data;
-    $('#shop-summary').html('商城订单总数：<b>'+escapeHtml(d.total_count)+'</b>，已支付订单：<b>'+escapeHtml(d.paid_count)+'</b>，订单总金额：￥<b>'+escapeHtml(d.total_money)+'</b>，已支付金额：￥<b>'+escapeHtml(d.paid_money)+'</b>');
-  });
+    $('#shop-summary').html('全部商城订单：<b>'+escapeHtml(d.total_count)+'</b>，已支付订单：<b>'+escapeHtml(d.paid_count)+'</b>，订单总金额：￥<b>'+escapeHtml(d.total_money)+'</b>，已支付金额：￥<b>'+escapeHtml(d.paid_money)+'</b><br><small>'+escapeHtml(ListReadUI.summaryText(data.meta))+'</small>');
+  }).fail(function(xhr,status){ if(status !== 'abort') $('#shop-summary').text('商城订单概况加载失败，请点击列表刷新重试。'); });
 }
-function searchOrders(){ $('#ordersTable').bootstrapTable('refresh', {pageNumber:1}); loadSummary(); return false; }
+function searchOrders(){ $('#ordersTable').bootstrapTable('refresh', {pageNumber:1}); return false; }
 function showOrderError(message){
   $('#shop-order-error-message').text(message);
   $('#shop-order-error').prop('hidden', false);
   $('#ordersTable').bootstrapTable('hideLoading');
 }
-function retryOrders(){ $('#ordersTable').bootstrapTable('refresh'); }
-function resetOrders(){ $('#toolbar form')[0].reset(); searchOrders(); }
+function retryOrders(){ ListReadUI.refresh('#ordersTable'); }
+function resetOrders(){ $('#toolbar form')[0].reset(); $('#shop-search-field').trigger('change'); searchOrders(); }
 function openOrder(id){
   $.getJSON('ajax_shop.php?act=getOrder&id='+id, function(data){
     if(data.code !== 0){ layer.alert(data.msg,{icon:2}); return; }
@@ -194,7 +223,7 @@ function openOrder(id){
 function saveLogistics(){
   var ii = layer.load(2, {shade:[0.1,'#fff']});
   $.ajax({type:'POST', url:'ajax_shop.php?act=saveLogistics', data:$('#logistics-form').serialize(), dataType:'json',
-    success:function(data){ layer.close(ii); if(data.code===0){ $('#order-modal').modal('hide'); $('#ordersTable').bootstrapTable('refresh'); layer.msg(data.msg,{icon:1}); }else{ layer.alert(data.msg,{icon:2}); } },
+    success:function(data){ layer.close(ii); if(data.code===0){ $('#order-modal').modal('hide'); ListReadUI.refresh('#ordersTable'); layer.msg(data.msg,{icon:1}); }else{ layer.alert(data.msg,{icon:2}); } },
     error:function(){ layer.close(ii); layer.msg('服务器错误'); }
   });
 }
@@ -202,7 +231,7 @@ function deleteOrder(id){
   layer.confirm('确认删除该商城订单记录？', {icon:0}, function(index){
     layer.close(index);
     $.post('ajax_shop.php?act=deleteOrder', {id:id,csrf_token:shopCsrfToken}, function(data){
-      if(data.code===0){ $('#ordersTable').bootstrapTable('refresh'); loadSummary(); }else{ layer.alert(data.msg,{icon:2}); }
+      if(data.code===0){ ListReadUI.refresh('#ordersTable'); }else{ layer.alert(data.msg,{icon:2}); }
     }, 'json');
   });
 }

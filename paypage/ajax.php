@@ -40,6 +40,7 @@ $trade_no=generate_trade_no();
 $return_url=$siteurl.'paypage/success.php?trade_no='.$trade_no;
 $domain=getdomain($return_url);
 if(!$DB->exec("INSERT INTO `pre_order` (`trade_no`,`out_trade_no`,`uid`,`tid`,`addtime`,`name`,`money`,`notify_url`,`return_url`,`param`,`domain`,`ip`,`buyer`,`status`) VALUES (:trade_no, :out_trade_no, :uid, 3, NOW(), :name, :money, :notify_url, :return_url, :param, :domain, :clientip, :buyer, 0)", [':trade_no'=>$trade_no, ':out_trade_no'=>$trade_no, ':uid'=>$uid, ':name'=>'在线收款', ':money'=>$money, ':notify_url'=>$return_url, ':return_url'=>$return_url, ':domain'=>$domain, ':clientip'=>$clientip, ':buyer'=>$payer, ':param'=>$param]))showerrorjson('创建订单失败，请返回重试！');
+invalidateListReadCache('payment', $uid);
 
 $_SESSION['paypage_trade_no'] = $trade_no;
 
@@ -68,6 +69,7 @@ if(!empty($paytype) && isset($_SESSION['paypage_typeid']) && isset($_SESSION['pa
 		if(!empty($conf['pay_payaddstart'])&&$conf['pay_payaddstart']!=0&&!empty($conf['pay_payaddmin'])&&$conf['pay_payaddmin']!=0&&!empty($conf['pay_payaddmax'])&&$conf['pay_payaddmax']!=0&&$realmoney>=$conf['pay_payaddstart'])$realmoney = round($realmoney + randomFloat(round($conf['pay_payaddmin'],2),round($conf['pay_payaddmax'],2)), 2);
 
 		$DB->update('order', ['type'=>$typeid, 'channel'=>$channelid, 'subchannel'=>$subchannelid, 'realmoney'=>$realmoney, 'getmoney'=>$getmoney], ['trade_no'=>$trade_no]);
+		invalidateListReadCache('payment', $uid);
 		try{
 			\lib\Shop\OrderService::syncPaymentRoute($trade_no);
 		}catch(Exception $e){

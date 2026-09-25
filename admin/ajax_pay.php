@@ -49,7 +49,7 @@ case 'setPayType':
 	if(!$row)
 		exit('{"code":-1,"msg":"当前支付方式不存在！"}');
 	$sql = "UPDATE pre_type SET status='$status' WHERE id='$id'";
-	if($DB->exec($sql))exit('{"code":0,"msg":"修改支付方式成功！"}');
+	if($DB->exec($sql)){ invalidateListReadCache('types'); exit('{"code":0,"msg":"修改支付方式成功！"}'); }
 	else exit('{"code":-1,"msg":"修改支付方式失败['.$DB->error().']"}');
 break;
 case 'delPayType':
@@ -61,7 +61,7 @@ case 'delPayType':
 	if($row)
 		exit('{"code":-1,"msg":"删除失败，存在使用该支付方式的支付通道"}');
 	$sql = "DELETE FROM pre_type WHERE id='$id'";
-	if($DB->exec($sql))exit('{"code":0,"msg":"删除支付方式成功！"}');
+	if($DB->exec($sql)){ invalidateListReadCache('types'); exit('{"code":0,"msg":"删除支付方式成功！"}'); }
 	else exit('{"code":-1,"msg":"删除支付方式失败['.$DB->error().']"}');
 break;
 case 'savePayType':
@@ -76,7 +76,7 @@ case 'savePayType':
 		if($row)
 			exit('{"code":-1,"msg":"同一个调用值+支持设备不能重复"}');
 		$data = ['name'=>$name, 'showname'=>$showname, 'device'=>$device, 'status'=>1];
-		if($DB->insert('type', $data))exit('{"code":0,"msg":"新增支付方式成功！"}');
+		if($DB->insert('type', $data)){ invalidateListReadCache('types'); exit('{"code":0,"msg":"新增支付方式成功！"}'); }
 		else exit('{"code":-1,"msg":"新增支付方式失败['.$DB->error().']"}');
 	}else{
 		$id=intval($_POST['id']);
@@ -90,7 +90,7 @@ case 'savePayType':
 		if($row)
 			exit('{"code":-1,"msg":"同一个调用值+支持设备不能重复"}');
 		$data = ['name'=>$name, 'showname'=>$showname, 'device'=>$device];
-		if($DB->update('type', $data, ['id'=>$id])!==false)exit('{"code":0,"msg":"修改支付方式成功！"}');
+		if($DB->update('type', $data, ['id'=>$id])!==false){ invalidateListReadCache('types'); exit('{"code":0,"msg":"修改支付方式成功！"}'); }
 		else exit('{"code":-1,"msg":"修改支付方式失败['.$DB->error().']"}');
 	}
 break;
@@ -581,6 +581,7 @@ case 'testpay':
 	$return_url=$siteurl.'user/test.php?ok=1&trade_no='.$trade_no;
 	$domain=getdomain($return_url);
 	if(!$DB->exec("INSERT INTO `pre_order` (`trade_no`,`out_trade_no`,`uid`,`tid`,`addtime`,`name`,`money`,`type`,`channel`,`subchannel`,`realmoney`,`getmoney`,`notify_url`,`return_url`,`domain`,`ip`,`status`) VALUES (:trade_no, :out_trade_no, :uid, 3, NOW(), :name, :money, :type, :channel, :subchannel, :realmoney, :getmoney, :notify_url, :return_url, :domain, :clientip, 0)", [':trade_no'=>$trade_no, ':out_trade_no'=>$trade_no, ':uid'=>$conf['test_pay_uid'], ':name'=>$name, ':money'=>$money, ':type'=>$row['type'], ':channel'=>$channel, ':subchannel'=>$subchannel, ':realmoney'=>$money, ':getmoney'=>$money, ':notify_url'=>$return_url, ':return_url'=>$return_url, ':domain'=>$domain, ':clientip'=>$clientip]))exit('{"code":-1,"msg":"创建订单失败，请返回重试！"}');
+	invalidateListReadCache('payment', $conf['test_pay_uid']);
 	$result = ['code'=>0, 'msg'=>'succ', 'url'=>'./testsubmit.php?trade_no='.$trade_no];
 	exit(json_encode($result));
 break;

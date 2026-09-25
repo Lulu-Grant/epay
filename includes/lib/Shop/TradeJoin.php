@@ -21,6 +21,7 @@ class TradeJoin
         }
         self::$metadata ??= new \WeakMap();
         if (!isset(self::$metadata[$DB])) {
+            $result = \lib\ListReadCache::forSite()->remember('metadata', 'shop.trade_join.v1', ['audience'=>'schema'], [], ['schema'], function () use ($DB) {
             $columns = [];
             foreach (['payment' => ['order', 'trade_no'], 'shop' => ['shop_orders', 'pay_trade_no']] as $key => [$table, $field]) {
                 $column = $DB->getRow("SHOW FULL COLUMNS FROM pre_{$table} WHERE Field=:field", [':field' => $field]);
@@ -35,9 +36,18 @@ class TradeJoin
                 }
                 $columns[$key] = [$charset, $collation];
             }
-            self::$metadata[$DB] = $columns;
+            return $columns;
+            });
+            self::$metadata[$DB] = $result['value'];
         }
         $columns = self::$metadata[$DB];
+        foreach (['payment', 'shop'] as $key) {
+            if (!isset($columns[$key][0], $columns[$key][1])
+                || !in_array($columns[$key][0], ['utf8', 'utf8mb3', 'utf8mb4'], true)
+                || !is_string($columns[$key][1]) || !preg_match('/^(utf8|utf8mb3|utf8mb4)_[a-z0-9_]+$/D', $columns[$key][1])) {
+                throw new RuntimeException('商城订单号字符集不受支持');
+            }
+        }
         $fields = ['payment' => $paymentAlias.'.trade_no', 'shop' => $shopAlias.'.pay_trade_no'];
         $outer = $indexed === 'payment' ? 'shop' : 'payment';
         if ($columns['payment'] === $columns['shop']) {

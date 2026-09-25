@@ -97,6 +97,7 @@ unset($rs);
 <script src="../assets/js/bootstrap-table.min.js"></script>
 <script src="../assets/js/bootstrap-table-page-jump-to.min.js"></script>
 <script src="../assets/js/custom.js"></script>
+<script src="../assets/js/list-read-ui.js?v=1"></script>
 <script>
 var is_user_refund = '<?php echo $conf['user_refund']?>';
 $(document).ready(function(){
@@ -106,6 +107,7 @@ $(document).ready(function(){
 	const pageSize = typeof window.$_GET['pageSize'] != 'undefined' ? parseInt(window.$_GET['pageSize']) : defaultPageSize;
 
 	$("#listTable").bootstrapTable({
+        ajax: ListReadUI.ajax('#listTable'),
 		url: 'ajax2.php?act=orderList',
 		pageNumber: pageNumber,
 		pageSize: pageSize,
@@ -208,12 +210,12 @@ function percentText(value){
 	if(isNaN(number)) number = 0;
 	return number.toFixed(2) + '%';
 }
-function showOrderSummary(){
+function showOrderSummary(fresh){
 	var ii = layer.load(2, {shade:[0.1,'#fff']});
 	$.ajax({
 		type : 'POST',
 		url : 'ajax2.php?act=orderSummary',
-		data : getOrderSearchParams(),
+		data : $.extend({}, getOrderSearchParams(), fresh === true ? {fresh:1} : {}),
 		dataType : 'json',
 		success : function(ret) {
 			layer.close(ii);
@@ -231,6 +233,7 @@ function showOrderSummary(){
 			content += '<tr><td>通知异常订单：<b>'+countText(data.notify_bad_count)+'</b></td><td colspan="2">订单成功率：<b>'+percentText(data.success_rate)+'</b></td></tr>';
 			content += '</table>';
 			content += '<div class="order-summary-note">统计范围：当前订单列表筛选条件；时间筛选按订单创建时间计算。</div>';
+            content += '<div class="order-summary-note">'+ListReadUI.summaryText(ret.meta)+' <button type="button" class="btn btn-default btn-sm" onclick="layer.closeAll();showOrderSummary(true)">刷新统计</button></div>';
 			content += '</div>';
 			layer.open({
 				type: 1,
@@ -322,7 +325,7 @@ function refund(trade_no) {
 							success : function(data) {
 								layer.close(ii);
 								if(data.code == 0){
-									layer.alert(data.msg, {icon:1}, function(){ layer.closeAll();searchSubmit(); });
+									layer.alert(data.msg, {icon:1}, function(){ layer.closeAll();searchSubmit(true); });
 								}else{
 									layer.alert(data.msg, {icon:7});
 								}

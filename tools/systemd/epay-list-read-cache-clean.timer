@@ -1,0 +1,11 @@
+[Unit]
+Description=Clean expired Epay display aggregates every five minutes
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=5min
+AccuracySec=30s
+Unit=epay-list-read-cache-clean.service
+
+[Install]
+WantedBy=timers.target
