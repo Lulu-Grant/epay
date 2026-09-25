@@ -12,7 +12,7 @@ SCREEN_DIR="$TMP_ROOT/screens"
 PHP_PID=""
 DB_SESSION_PID=""
 
-MYSQL_ROOT=(mysql --no-defaults -h127.0.0.1 -P"$DB_PORT" -uroot)
+MYSQL_ROOT=(mysql --no-defaults --protocol=SOCKET --socket="$DB_DIR/mysql.sock" -uroot)
 MYSQL_APP=(mysql --no-defaults -h127.0.0.1 -P"$DB_PORT" -uepaytest -pepaypass epay_acceptance -N -B)
 
 pass(){ printf 'PASS %s\n' "$1"; }
@@ -30,7 +30,7 @@ cleanup(){
     kill "$PHP_PID" 2>/dev/null || true
     wait "$PHP_PID" 2>/dev/null || true
   fi
-  mysqladmin --no-defaults -h127.0.0.1 -P"$DB_PORT" -uroot shutdown >/dev/null 2>&1 || true
+  mysqladmin --no-defaults --protocol=SOCKET --socket="$DB_DIR/mysql.sock" -uroot shutdown >/dev/null 2>&1 || true
   if [[ -n "$DB_SESSION_PID" ]]; then
     wait "$DB_SESSION_PID" 2>/dev/null || true
   fi
@@ -38,7 +38,7 @@ cleanup(){
   if [[ "${KEEP_SHOP_TEST_TMP:-0}" == "1" ]]; then
     printf 'KEEP_SHOP_TEST_TMP=1, kept temp dir: %s\n' "$TMP_ROOT"
   else
-    rm -rf "$TMP_ROOT"
+    case "$TMP_ROOT" in /tmp/epay-shop-shadow-acceptance.*) rm -rf -- "$TMP_ROOT";; esac
   fi
 }
 trap cleanup EXIT
@@ -48,6 +48,17 @@ for cmd in rsync php curl mysql mysqladmin mariadb-install-db mariadbd; do
 done
 
 mkdir -p "$SITE_DIR" "$DB_DIR" "$SCREEN_DIR"
+export EPAY_LIST_CACHE_CONFIG="$TMP_ROOT/list-control.json" EPAY_LIST_TEST_CACHE="$TMP_ROOT/list-cache"
+mkdir -m 700 "$EPAY_LIST_TEST_CACHE"
+case "${SHOP_TEST_LIST_CACHE_MODE:-off}" in
+  off) cache_enabled=false;;
+  on|fault) cache_enabled=true;;
+  *) fail 'invalid test cache mode';;
+esac
+cache_directory="$EPAY_LIST_TEST_CACHE"
+if [[ "${SHOP_TEST_LIST_CACHE_MODE:-off}" == fault ]]; then cache_directory="$TMP_ROOT/missing-cache"; fi
+printf '{"directory":"%s","counts_enabled":%s,"summaries_enabled":%s,"dictionaries_enabled":%s,"metadata_enabled":%s,"admin_enabled":true,"merchants_enabled":true,"metrics_sample_permille":1000}' \
+  "$cache_directory" "$cache_enabled" "$cache_enabled" "$cache_enabled" "$cache_enabled" > "$EPAY_LIST_CACHE_CONFIG"
 rsync -a --exclude='.git' "$ROOT_DIR"/ "$SITE_DIR"/
 mariadb-install-db --no-defaults --auth-root-authentication-method=normal --skip-test-db --datadir="$DB_DIR/data" >/dev/null
 mariadbd --no-defaults --default-time-zone=+08:00 --datadir="$DB_DIR/data" --socket="$DB_DIR/mysql.sock" --pid-file="$DB_DIR/mysql.pid" --bind-address=127.0.0.1 --port="$DB_PORT" --log-error="$DB_DIR/mysql.err" &
@@ -57,6 +68,8 @@ for _ in $(seq 1 60); do
   sleep 0.25
 done
 "${MYSQL_ROOT[@]}" -e 'SELECT 1' >/dev/null 2>&1 || fail "temporary MariaDB did not start"
+tcp_data=$(mysql --no-defaults --protocol=TCP -h127.0.0.1 -P"$DB_PORT" -uroot -N -B -e 'SELECT @@datadir')
+[[ "$tcp_data" == "$DB_DIR/data/" ]] || fail 'test database port belongs to another server'
 
 "${MYSQL_ROOT[@]}" <<SQL
 CREATE DATABASE epay_acceptance DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
@@ -242,6 +255,11 @@ pass "payment credits original merchant once"
 paid_state=$("${MYSQL_APP[@]}" -e "SELECT CONCAT(P.status,'|',P.notify,'|',P.param,'|',S.pay_status,'|',S.order_status,'|',COALESCE(S.pay_api_trade_no,'')) FROM pay_order P INNER JOIN pay_shop_orders S ON S.pay_trade_no=P.trade_no WHERE P.trade_no='$pay_trade_no'")
 [[ "$paid_state" == "1|0|original-param-value|1|2|api-shadow-1" ]] || fail "shadow auto shipment and merchant callback both succeed"
 pass "shadow auto shipment and merchant callback both succeed"
+
+if [[ "${SHOP_TEST_LIST_BENCHMARK:-0}" == 1 ]]; then
+  (cd "$SITE_DIR" && EPAY_LIST_TEST_ISOLATED=1 LIST_TEST_NOTIFY_URL="$BASE/shopping.php?act=notify" \
+    EPAY_LIST_TEST_REPORT="$SCREEN_DIR/payment-cache-report.json" php scripts/list-payment-cache-regression.php)
+fi
 
 failure_out="shadow-write-failure-$(date +%s)"
 "${MYSQL_APP[@]}" -e "RENAME TABLE pay_shop_orders TO pay_shop_orders_unavailable"

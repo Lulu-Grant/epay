@@ -7,11 +7,16 @@ on:
       - main
       - 'upgrade/**'
       - 'codex/p5-shop-shadow-repair'
+      - 'feature/p5-list-query-cache'
 
 jobs:
   shop-browser:
     name: PHP 8.4 shop flow and browser
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        cache: ['off', 'on', 'fault']
     steps:
       - uses: actions/checkout@v4
       - uses: shivammathur/setup-php@v2
@@ -31,15 +36,26 @@ jobs:
       - name: Shop payment, compensation and browser acceptance
         env:
           SHOP_TEST_REQUIRE_BROWSER: '1'
+          SHOP_TEST_LIST_CACHE_MODE: ${{ matrix.cache }}
+          SHOP_TEST_LIST_BENCHMARK: ${{ matrix.cache == 'on' && '1' || '0' }}
           SHOP_TEST_NODE_PATH: ${{ runner.temp }}/shop-browser/node_modules
           SHOP_TEST_ARTIFACT_DIR: ${{ runner.temp }}/shop-acceptance
         run: SHOP_TEST_NODE_BIN="$(command -v node)" bash scripts/shop-feature-local-acceptance.sh
+      - name: 100k list SQL, HTTP and responsive browser acceptance
+        if: matrix.cache == 'on'
+        env:
+          LIST_TEST_REQUIRE_BROWSER: '1'
+          LIST_TEST_NODE_PATH: ${{ runner.temp }}/shop-browser/node_modules
+          LIST_TEST_ARTIFACT_DIR: ${{ runner.temp }}/list-acceptance
+        run: LIST_TEST_NODE_BIN="$(command -v node)" bash scripts/list-query-local-acceptance.sh
       - name: Preserve shop browser evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: shop-acceptance
-          path: ${{ runner.temp }}/shop-acceptance
+          name: shop-list-acceptance-${{ matrix.cache }}
+          path: |
+            ${{ runner.temp }}/shop-acceptance
+            ${{ runner.temp }}/list-acceptance
   static-checks:
     name: PHP 8.4 static checks
     runs-on: ubuntu-latest
@@ -81,6 +97,7 @@ jobs:
           php scripts/payment-callback-regression.php
           php scripts/order-number-regression.php
           php scripts/ui-contract-regression.php
+          php scripts/list-read-cache-regression.php
 
       - name: Check download endpoint safety
         run: php tools/php84/check-download-safety.php

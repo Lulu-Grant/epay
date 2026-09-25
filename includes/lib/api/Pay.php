@@ -117,6 +117,7 @@ class Pay
             $version = defined('API_INIT') ? 1 : 0;
             $trade_no=generate_trade_no();
             if(!$DB->exec("INSERT INTO `pre_order` (`trade_no`,`out_trade_no`,`uid`,`addtime`,`name`,`money`,`notify_url`,`return_url`,`param`,`domain`,`ip`,`status`,`version`) VALUES (:trade_no, :out_trade_no, :uid, NOW(), :name, :money, :notify_url, :return_url, :param, :domain, :clientip, 0, :version)", [':trade_no'=>$trade_no, ':out_trade_no'=>$out_trade_no, ':uid'=>$pid, ':name'=>$name, ':money'=>$money, ':notify_url'=>$notify_url, ':return_url'=>$return_url, ':domain'=>$domain, ':clientip'=>$clientip, ':param'=>$param, ':version'=>$version]))sysmsg('创建订单失败，请返回重试！');
+            invalidateListReadCache('payment', $pid);
         }
 
         if(\lib\Shop\ConfigService::shouldRecordMerchant($pid)){
@@ -192,6 +193,7 @@ class Pay
             if(!empty($conf['pay_payaddstart'])&&$conf['pay_payaddstart']!=0&&!empty($conf['pay_payaddmin'])&&$conf['pay_payaddmin']!=0&&!empty($conf['pay_payaddmax'])&&$conf['pay_payaddmax']!=0&&$realmoney>=$conf['pay_payaddstart'])$realmoney = round($realmoney + randomFloat(round($conf['pay_payaddmin'],2),round($conf['pay_payaddmax'],2)), 2);
 
             $DB->update('order', ['type'=>$submitData['typeid'], 'channel'=>$submitData['channel'], 'subchannel'=>$submitData['subchannel'], 'realmoney'=>$realmoney, 'getmoney'=>$getmoney], ['trade_no'=>$trade_no]);
+            invalidateListReadCache('payment', $pid);
             try{
                 \lib\Shop\OrderService::syncPaymentRoute($trade_no);
             }catch(Exception $e){
@@ -344,6 +346,7 @@ class Pay
             $version = defined('API_INIT') ? 1 : 0;
             $trade_no=generate_trade_no();
             if(!$DB->exec("INSERT INTO `pre_order` (`trade_no`,`out_trade_no`,`uid`,`addtime`,`name`,`money`,`notify_url`,`return_url`,`param`,`domain`,`ip`,`status`,`version`) VALUES (:trade_no, :out_trade_no, :uid, NOW(), :name, :money, :notify_url, :return_url, :param, :domain, :clientip, 0, :version)", [':trade_no'=>$trade_no, ':out_trade_no'=>$out_trade_no, ':uid'=>$pid, ':name'=>$name, ':money'=>$money, ':notify_url'=>$notify_url, ':return_url'=>$return_url, ':domain'=>$domain, ':clientip'=>$clientip, ':param'=>$param, ':version'=>$version]))echojsonmsg('创建订单失败，请返回重试！');
+            invalidateListReadCache('payment', $pid);
         }
 
         if(\lib\Shop\ConfigService::shouldRecordMerchant($pid)){
@@ -418,6 +421,7 @@ class Pay
             if(!empty($conf['pay_payaddstart'])&&$conf['pay_payaddstart']!=0&&!empty($conf['pay_payaddmin'])&&$conf['pay_payaddmin']!=0&&!empty($conf['pay_payaddmax'])&&$conf['pay_payaddmax']!=0&&$realmoney>=$conf['pay_payaddstart'])$realmoney = $realmoney + randomFloat(round($conf['pay_payaddmin'],2),round($conf['pay_payaddmax'],2));
 
             $DB->update('order', ['type'=>$submitData['typeid'], 'channel'=>$submitData['channel'], 'subchannel'=>$submitData['subchannel'], 'realmoney'=>$realmoney, 'getmoney'=>$getmoney], ['trade_no'=>$trade_no]);
+            invalidateListReadCache('payment', $pid);
             try{
                 \lib\Shop\OrderService::syncPaymentRoute($trade_no);
             }catch(Exception $e){

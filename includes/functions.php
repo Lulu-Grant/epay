@@ -748,6 +748,14 @@ function getMerchantNotifyRetryTime($endtime, $attempt, $now = null){
 	return date('Y-m-d H:i:s', $target);
 }
 
+function invalidateListReadCache($kind, $uid = null){
+	try {
+		\lib\ListCacheInvalidator::changed($kind, $uid === null ? null : (int)$uid);
+	} catch (\Throwable $e) {
+		// Standalone tools may not load the autoloader; cache failure never affects business writes.
+	}
+}
+
 function scheduleMerchantNotifyRetry($order, $attempt){
 	global $DB;
 	if(!is_array($order) || empty($order['trade_no'])){
@@ -757,7 +765,9 @@ function scheduleMerchantNotifyRetry($order, $attempt){
 	if($notifytime === false){
 		return false;
 	}
-	return $DB->update('order', ['notify'=>intval($attempt), 'notifytime'=>$notifytime], ['trade_no'=>$order['trade_no']]);
+	$result = $DB->update('order', ['notify'=>intval($attempt), 'notifytime'=>$notifytime], ['trade_no'=>$order['trade_no']]);
+	if($result !== false) invalidateListReadCache('payment', $order['uid'] ?? null);
+	return $result;
 }
 
 function generate_trade_no(){
@@ -778,6 +788,7 @@ function logPaymentCallbackEvent($event, $trade_no = null, $channel_id = null, $
 function checkBlockUser($openid, $trade_no){
 	global $DB, $conf;
 	$DB->update('order', ['buyer'=>$openid], ['trade_no'=>$trade_no]);
+	invalidateListReadCache('payment');
 	$black = $DB->find('blacklist', '*', ['type'=>0, 'content'=>$openid], null, 1);
 	if($black){
 		return ['type'=>'error','msg'=>'系统异常无法完成付款'];
@@ -869,6 +880,7 @@ function completePaidRegistration($srow){
 		$stmt = $DB->query('UPDATE pre_registration_completion SET uid=:uid,status=1,completed_at=NOW() WHERE trade_no=:trade_no AND status=0', [':uid'=>$uid, ':trade_no'=>$tradeNo]);
 		if($stmt === false || $stmt->rowCount() !== 1) throw new \RuntimeException('付费注册完成状态写入失败');
 		if(!$DB->commit()) throw new \RuntimeException('提交付费注册事务失败');
+		invalidateListReadCache('ledger', $srow['uid']);
 	}catch(\Throwable $e){
 		try{ $DB->rollBack(); }catch(\Throwable $ignored){}
 		throw $e;
@@ -895,6 +907,7 @@ function processOrder($srow,$notify=true){
 		$profitmoney = round($profitmoney - $srow['realmoney'] * $channel['costrate'] / 100, 2);
 	}
 	$DB->update('order', ['profitmoney'=>$profitmoney], ['trade_no'=>$srow['trade_no']]);
+	invalidateListReadCache('payment', $srow['uid']);
 
 	if($srow['tid']==1){ //商户注册
 		completePaidRegistration($srow);
@@ -930,6 +943,7 @@ function processOrder($srow,$notify=true){
 				}
 				if(do_notify($url['notify'], $srow['uid'])){
 					$DB->update('order', ['notify'=>0, 'notifytime'=>null], ['trade_no'=>$srow['trade_no']]);
+					invalidateListReadCache('payment', $srow['uid']);
 				}
 	}
 	if($srow['tid']==0 || $srow['tid']==3){
@@ -989,6 +1003,7 @@ function changeUserMoney($uid, $money, $add=true, $type=null, $orderid=null){
 	$res = $DB->exec("UPDATE pre_user SET money=:money WHERE uid=:uid", [':money'=>$newmoney, ':uid'=>$uid]);
 	$DB->insert('record', ['uid'=>$uid, 'action'=>$action, 'money'=>$money, 'oldmoney'=>$oldmoney, 'newmoney'=>$newmoney, 'type'=>$type, 'trade_no'=>$orderid, 'date'=>'NOW()']);
 	$DB->commit();
+	invalidateListReadCache('ledger', $uid);
 	return $res;
 }
 

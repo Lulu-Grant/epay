@@ -7,100 +7,22 @@ if(!checkRefererHost())exit('{"code":403}');
 
 @header('Content-Type: application/json; charset=UTF-8');
 
-function buildOrderWhere(){
-	$allow_columns = ['trade_no', 'out_trade_no', 'api_trade_no', 'name', 'money', 'realmoney', 'getmoney', 'domain', 'buyer', 'ip'];
-	$sql=" 1=1";
-	if(isset($_POST['uid']) && !empty($_POST['uid'])) {
-		$uid = intval($_POST['uid']);
-		$sql.=" AND A.`uid`='$uid'";
-	}
-	if(isset($_POST['type']) && !empty($_POST['type'])) {
-		$type = intval($_POST['type']);
-		$sql.=" AND A.`type`='$type'";
-	}elseif(isset($_POST['channel']) && !empty($_POST['channel'])) {
-		$channel = intval($_POST['channel']);
-		$sql.=" AND A.`channel`='$channel'";
-	}elseif(isset($_POST['subchannel']) && !empty($_POST['subchannel'])) {
-		$subchannel = intval($_POST['subchannel']);
-		$sql.=" AND A.`subchannel`='$subchannel'";
-	}
-	if(isset($_POST['dstatus']) && $_POST['dstatus']>-1) {
-		$dstatus = intval($_POST['dstatus']);
-		$sql.=" AND A.status={$dstatus}";
-	}
-	if(!empty($_POST['starttime']) || !empty($_POST['endtime'])){
-		if(!empty($_POST['starttime'])){
-			$starttime = daddslashes($_POST['starttime']);
-			$sql.=" AND A.addtime>='{$starttime} 00:00:00'";
-		}
-		if(!empty($_POST['endtime'])){
-			$endtime = daddslashes($_POST['endtime']);
-			$sql.=" AND A.addtime<='{$endtime} 23:59:59'";
-		}
-	}
-	if(isset($_POST['value']) && $_POST['value'] !== '') {
-		$column = isset($_POST['column']) ? $_POST['column'] : '';
-		if(in_array($column, $allow_columns, true)){
-			$value = daddslashes($_POST['value']);
-			if($column == 'name'){
-				$sql.=" AND A.`{$column}` like '%{$value}%'";
-			}else{
-				$sql.=" AND A.`{$column}`='{$value}'";
-			}
-		}
-	}
-	return $sql;
-}
-
 switch($act){
 case 'orderList':
-	$paytype = [];
-	$paytypes = [];
-	$rs = $DB->getAll("SELECT * FROM pre_type");
-	foreach($rs as $row){
-		$paytype[$row['id']] = $row['showname'];
-		$paytypes[$row['id']] = $row['name'];
-	}
-	unset($rs);
-
-	$sql = buildOrderWhere();
-	$offset = intval($_POST['offset']);
-	$limit = intval($_POST['limit']);
-	$total = $DB->getColumn("SELECT count(*) from pre_order A WHERE{$sql}");
-	$list = $DB->getAll("SELECT A.*,B.plugin FROM pre_order A LEFT JOIN pre_channel B ON A.channel=B.id WHERE{$sql} order by trade_no desc limit $offset,$limit");
-	$list2 = [];
-	foreach($list as $row){
-		$row['typename'] = $paytypes[$row['type']];
-		$row['typeshowname'] = $paytype[$row['type']];
-		$list2[] = $row;
-	}
-
-	exit(json_encode(['total'=>$total, 'rows'=>$list2]));
-break;
-
 case 'orderSummary':
-	$sql = buildOrderWhere();
-	$row = $DB->getRow("SELECT
-		COUNT(*) total_count,
-		ROUND(COALESCE(SUM(A.money),0),2) total_money,
-		ROUND(COALESCE(SUM(CASE WHEN A.status=1 THEN COALESCE(A.realmoney,A.money,0) ELSE 0 END),0),2) paid_money,
-		ROUND(COALESCE(SUM(CASE WHEN A.status=0 THEN COALESCE(A.money,0) ELSE 0 END),0),2) unpaid_money,
-		ROUND(COALESCE(SUM(CASE WHEN A.status=2 THEN COALESCE(A.refundmoney,A.realmoney,A.money,0) ELSE 0 END),0),2) refund_money,
-		ROUND(COALESCE(SUM(CASE WHEN A.status=3 THEN COALESCE(A.realmoney,A.money,0) ELSE 0 END),0),2) frozen_money,
-		ROUND(COALESCE(SUM(CASE WHEN A.status=1 THEN COALESCE(A.profitmoney,0) ELSE 0 END),0),2) profit_money,
-		SUM(CASE WHEN A.status=1 THEN 1 ELSE 0 END) paid_count,
-		SUM(CASE WHEN A.status=0 THEN 1 ELSE 0 END) unpaid_count,
-		SUM(CASE WHEN A.status=2 THEN 1 ELSE 0 END) refund_count,
-		SUM(CASE WHEN A.status=3 THEN 1 ELSE 0 END) frozen_count,
-		SUM(CASE WHEN A.status=4 THEN 1 ELSE 0 END) preauth_count,
-		SUM(CASE WHEN A.status>0 AND A.notify<>0 THEN 1 ELSE 0 END) notify_bad_count
-		FROM pre_order A WHERE{$sql}");
-	$total_count = intval($row['total_count']);
-	$paid_count = intval($row['paid_count']);
-	$row['success_rate'] = $total_count > 0 ? round($paid_count / $total_count * 100, 2) : 0;
-	exit(json_encode(['code'=>0, 'data'=>$row]));
+    try {
+        if (session_status() === PHP_SESSION_ACTIVE) session_write_close();
+        $result = $act === 'orderList'
+            ? \lib\ListQueryReader::paymentList($DB, $_POST)
+            : \lib\ListQueryReader::paymentSummary($DB, $_POST);
+        exit(json_encode($result, JSON_UNESCAPED_UNICODE));
+    } catch (\InvalidArgumentException $e) {
+        exit(json_encode(['code'=>-1, 'msg'=>$e->getMessage()], JSON_UNESCAPED_UNICODE));
+    } catch (\Throwable $e) {
+        error_log('list_query_failed admin_payment');
+        exit(json_encode(['code'=>-1, 'msg'=>'订单查询失败，请重试'], JSON_UNESCAPED_UNICODE));
+    }
 break;
-
 case 'riskList':
 	$sql=" 1=1";
 	if(isset($_POST['value']) && !empty($_POST['value'])) {
@@ -122,13 +44,17 @@ case 'setStatus': //改变订单状态
 	$trade_no=trim($_GET['trade_no']);
 	$status=is_numeric($_GET['status'])?intval($_GET['status']):exit('{"code":200}');
 	if($status==5){
-		if($DB->exec("DELETE FROM pre_order WHERE trade_no='$trade_no'"))
+		if($DB->exec("DELETE FROM pre_order WHERE trade_no='$trade_no'")){
+			invalidateListReadCache('payment');
 			exit('{"code":200}');
+		}
 		else
 			exit('{"code":400,"msg":"删除订单失败！['.$DB->error().']"}');
 	}else{
-		if($DB->exec("update pre_order set status='$status' where trade_no='$trade_no'")!==false)
+		if($DB->exec("update pre_order set status='$status' where trade_no='$trade_no'")!==false){
+			invalidateListReadCache('payment');
 			exit('{"code":200}');
+		}
 		else
 			exit('{"code":400,"msg":"修改订单失败！['.$DB->error().']"}');
 	}
@@ -155,6 +81,7 @@ case 'operation': //批量操作订单
 			\lib\Order::freeze($trade_no);
 		}
 		else $DB->exec("update pre_order set status='$status' where trade_no='$trade_no' limit 1");
+		invalidateListReadCache('payment');
 		$i++;
 	}
 	exit('{"code":0,"msg":"成功改变'.$i.'条订单状态"}');
@@ -212,8 +139,10 @@ case 'notify': //获取回调地址
 	if(!$row)
 		exit('{"code":-1,"msg":"当前订单不存在！"}');
 	$url=creat_callback($row);
-	if($row['notify']>0)
+	if($row['notify']>0){
 		$DB->exec("update pre_order set notify=0,notifytime=NULL where trade_no='$trade_no'");
+		invalidateListReadCache('payment', $row['uid']);
+	}
 	exit('{"code":0,"url":"'.($_POST['isreturn']==1?$url['return']:$url['notify']).'"}');
 break;
 case 'fillorder': //手动补单
@@ -223,6 +152,7 @@ case 'fillorder': //手动补单
 		exit('{"code":-1,"msg":"当前订单不存在！"}');
 	if($row['status']>0)exit('{"code":-1,"msg":"当前订单不是未完成状态！"}');
 	if($DB->exec("update `pre_order` set `status` ='1' where `trade_no`='$trade_no'")){
+		invalidateListReadCache('payment', $row['uid']);
 		$DB->exec("update `pre_order` set `endtime` =NOW(),`date` =NOW() where `trade_no`='$trade_no'");
 		$channel=\lib\Channel::get($row['channel']);
 		processOrder($row);
@@ -294,6 +224,7 @@ case 'alipayUnfreeze': //支付宝授权资金解冻
 	try{
 		\lib\Payment::alipayUnfreeze($trade_no);
 		$DB->exec("update `pre_order` set `status`=0 where `trade_no`='$trade_no'");
+		invalidateListReadCache('payment', $order['uid']);
 		exit('{"code":0,"msg":"授权资金解冻成功！"}');
 	}catch(Exception $e){
 		$errmsg = $e->getMessage();

@@ -677,7 +677,10 @@ break;
 
 case 'delRecord':
 	$id=intval($_GET['id']);
-	if($DB->exec("DELETE FROM pre_record WHERE id='$id'")!==false)exit('{"code":0,"msg":"succ"}');
+	if($DB->exec("DELETE FROM pre_record WHERE id='$id'")!==false){
+		invalidateListReadCache('ledger');
+		exit('{"code":0,"msg":"succ"}');
+	}
 	else exit('{"code":-1,"msg":"删除失败['.$DB->error().']"}');
 break;
 

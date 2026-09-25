@@ -1,4 +1,5 @@
 /scripts/shop-shadow-reconcile.php text eol=lf
 /scripts/shop-feature-local-acceptance.sh text eol=lf
+/scripts/list-query-local-acceptance.sh text eol=lf
 /tools/systemd/*.service text eol=lf
 /tools/systemd/*.timer text eol=lf

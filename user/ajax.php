@@ -25,6 +25,7 @@ case 'testpay':
 	$return_url=$siteurl.'user/test.php?ok=1&trade_no='.$trade_no;
 	$domain=getdomain($return_url);
 	if(!$DB->exec("INSERT INTO `pre_order` (`trade_no`,`out_trade_no`,`uid`,`tid`,`addtime`,`name`,`money`,`notify_url`,`return_url`,`domain`,`ip`,`status`) VALUES (:trade_no, :out_trade_no, :uid, 3, NOW(), :name, :money, :notify_url, :return_url, :domain, :clientip, 0)", [':trade_no'=>$trade_no, ':out_trade_no'=>$trade_no, ':uid'=>$conf['test_pay_uid'], ':name'=>$name, ':money'=>$money, ':notify_url'=>$return_url, ':return_url'=>$return_url, ':domain'=>$domain, ':clientip'=>$clientip]))exit('{"code":-1,"msg":"创建订单失败，请返回重试！"}');
+	invalidateListReadCache('payment', $conf['test_pay_uid']);
 	$result = ['code'=>0, 'msg'=>'succ', 'url'=>'../submit2.php?typeid='.$typeid.'&trade_no='.$trade_no];
 	exit(json_encode($result));
 break;
@@ -264,6 +265,7 @@ case 'reg':
 		if(!$DB->exec("INSERT INTO `pre_order` (`trade_no`,`out_trade_no`,`uid`,`tid`,`addtime`,`name`,`money`,`notify_url`,`return_url`,`domain`,`ip`,`status`) VALUES (:trade_no, :out_trade_no, :uid, 1, NOW(), :name, :money, :notify_url, :return_url, :domain, :clientip, 0)", [':trade_no'=>$trade_no, ':out_trade_no'=>$trade_no, ':uid'=>$conf['reg_pay_uid'], ':name'=>'商户申请', ':money'=>$conf['reg_pay_price'], ':notify_url'=>$return_url, ':return_url'=>$return_url, ':domain'=>$domain, ':clientip'=>$clientip]))
 			exit('{"code":-1,"msg":"创建订单失败，请返回重试！"}');
 
+		invalidateListReadCache('payment', $conf['reg_pay_uid']);
 		$cacheData = ['verifytype'=>$conf['verifytype'], 'email'=>$email, 'phone'=>$phone, 'pwd'=>$pwd, 'upid'=>$upid];
 		if($inviterow) $cacheData['invitecodeid'] = $inviterow['id'];
 		$sds = $CACHE->save('reg_'.$trade_no ,$cacheData, 3600);

@@ -34,7 +34,7 @@ if(!empty($admin_sso_session)){
   <link rel="stylesheet" href="./assets/css/font.css" type="text/css" />
   <link rel="stylesheet" href="./assets/css/app.css" type="text/css" />
   <link rel="stylesheet" href="../assets/css/bootstrap-table.css?v=1"/>
-  <link rel="stylesheet" href="../assets/css/dashboard-responsive.css?v=1"/>
+  <link rel="stylesheet" href="../assets/css/dashboard-responsive.css?v=2"/>
   <style>.admin-sso-indicator{display:flex!important;align-items:center;gap:10px;padding:7px 12px;color:#111827;background:#f7c948}.admin-sso-indicator form{margin:0}.admin-sso-indicator__exit{border:1px solid #111827;border-radius:4px;background:transparent;color:#111827;font-weight:600;padding:4px 9px}.admin-sso-indicator__exit:focus-visible{outline:3px solid #fff;outline-offset:2px}@media(max-width:767px){.admin-sso-indicator{flex-wrap:wrap;font-size:12px}}</style>
 </head>
 <body class="dashboard-responsive">

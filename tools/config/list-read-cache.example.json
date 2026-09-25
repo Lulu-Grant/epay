@@ -1,0 +1,18 @@
+{
+  "directory": "/srv/epay/shared/cache/list-read",
+  "schema_epoch": "1",
+  "counts_enabled": false,
+  "summaries_enabled": false,
+  "dictionaries_enabled": false,
+  "metadata_enabled": false,
+  "admin_enabled": false,
+  "merchants_enabled": false,
+  "merchant_allowlist": [],
+  "counts_ttl": 10,
+  "summaries_ttl": 15,
+  "dictionaries_ttl": 300,
+  "metadata_ttl": 3600,
+  "max_entries": 10000,
+  "max_bytes": 67108864,
+  "metrics_sample_permille": 10
+}

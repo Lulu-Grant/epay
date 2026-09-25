@@ -1,0 +1,19 @@
+[Unit]
+Description=Epay bounded display cache cleanup
+ConditionPathIsDirectory=/srv/epay/shared/cache/list-read
+
+[Service]
+Type=oneshot
+User=www-data
+Group=www-data
+WorkingDirectory=/srv/epay/current
+ExecStart=/usr/bin/php8.4 /srv/epay/current/scripts/list-read-cache-clean.php --limit=1000
+TimeoutStartSec=20
+UMask=0077
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/srv/epay/shared/cache/list-read
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=epay-list-read-cache-clean
