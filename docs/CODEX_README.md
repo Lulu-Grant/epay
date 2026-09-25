@@ -45,7 +45,7 @@
 
 ## 文档索引
 
-- [列表查询与短缓存实施报告](P5_LIST_QUERY_CACHE_OPTIMIZATION_IMPLEMENTATION_REPORT.md)（PHP 8.4，本地开发；生产状态单独记录）
+- [列表查询与短缓存实施报告](P5_LIST_QUERY_CACHE_OPTIMIZATION_IMPLEMENTATION_REPORT.md)（PHP 8.4，GitHub CI 与 P5 分阶段发布记录）
 - [列表查询与短缓存开发文档](P5_LIST_QUERY_CACHE_OPTIMIZATION_PLAN.md)
 - `../README.md`、`../AGENTS.md`
 - `grokbot-handover.md`（2026-08-31，偏 P3→P4；P5 以本交接与 ENVIRONMENTS 为准）
