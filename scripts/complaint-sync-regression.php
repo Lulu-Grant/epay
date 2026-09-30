@@ -6,6 +6,7 @@ require $root.'/includes/lib/Complain/IComplain.php';
 require $root.'/includes/lib/Complain/CommUtil.php';
 require $root.'/includes/lib/Complain/AdminFetch.php';
 require $root.'/includes/lib/Complain/SyncActionException.php';
+require $root.'/includes/lib/Complain/SyncReport.php';
 require $root.'/includes/lib/Complain/AlipayRisk.php';
 require $root.'/includes/lib/Complain/Wxpay.php';
 

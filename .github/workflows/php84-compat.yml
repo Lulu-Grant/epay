@@ -89,6 +89,7 @@ jobs:
       - name: P5 repair regressions
         run: |
           php scripts/complaint-sync-regression.php
+          php scripts/complaint-risk-sync-regression.php
           php scripts/merchant-complaint-readonly-regression.php
           php scripts/roll-config-regression.php
           php scripts/email-integrity-regression.php

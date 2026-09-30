@@ -392,7 +392,7 @@ function refreshNewList(){
 			layer.close(ii);
 			if(data.code == 0){
 				layer.alert(data.msg,{
-					icon: 1,
+					icon: data.warning ? 0 : 1,
 					closeBtn: false
 				}, function(){
 					layer.closeAll();
@@ -400,7 +400,8 @@ function refreshNewList(){
 					searchSubmit();
 				});
 			}else{
-				layer.alert(data.msg, {icon: 2})
+				layer.alert(data.msg, {icon: 2});
+				if(data.partial) searchSubmit();
 			}
 		},
 			error:function(data){

@@ -161,6 +161,8 @@ case 'refreshNewList':
 		if(!is_array($result) || !isset($result['code']))
 			complainAdminFailure('响应校验', $channelid, $plugin, $source, 'INVALID_RESULT');
 		if(intval($result['code']) !== 0){
+			// RiskGO already carries a safe per-run diagnostic reference and partial counts.
+			if($model instanceof \lib\Complain\AlipayRisk && isset($result['sync_complete'])) complainAdminJson($result);
 			$error = isset($result['error']) ? $result['error'] : 'QUERY_FAILED';
 			complainAdminFailure('同步执行', $channelid, $plugin, $source, $error, isset($result['counts']) ? $result['counts'] : null);
 		}
