@@ -6,7 +6,8 @@ use lib\AdminSsoException;
 
 header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
 header('Pragma: no-cache');
-header('Referrer-Policy: no-referrer');
+// Form POST handoffs require a non-null Origin; disclose no path or query.
+header('Referrer-Policy: strict-origin');
 header('X-Content-Type-Options: nosniff');
 header('X-Frame-Options: DENY');
 
