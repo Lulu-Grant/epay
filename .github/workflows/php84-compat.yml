@@ -152,6 +152,14 @@ jobs:
           EPAY_DB_PASSWORD: epay_test
         run: php tools/php84/db-fixture-check.php
 
+      - name: Payment route native MySQL races and migration rehearsal
+        env:
+          EPAY_DB_HOST: 127.0.0.1
+          EPAY_DB_PORT: 3306
+          EPAY_DB_USER: root
+          EPAY_DB_PASSWORD: epay_test
+        run: php scripts/payment-route-process-regression.php --mysql-fixture
+
       - name: Rollback rehearsal check
         env:
           EPAY_DB_HOST: 127.0.0.1

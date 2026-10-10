@@ -40,11 +40,28 @@ namespace {
         }
     }
     function fixturePdo($directory){
+        if(is_file($directory.'/mysql-database')){
+            assertMysqlFixture();
+            $database=trim(file_get_contents($directory.'/mysql-database'));
+            if(!preg_match('/^epay_route_fixture_[a-f0-9]{16}$/D', $database))throw new \RuntimeException('Unsafe fixture database');
+            $pdo=new \PDO('mysql:host=127.0.0.1;port=3306;dbname='.$database.';charset=utf8mb3', 'root', 'epay_test');
+            $pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_SILENT);
+            $pdo->exec('SET SESSION innodb_lock_wait_timeout=5');
+            return $pdo;
+        }
         $pdo=new \PDO('sqlite:'.$directory.'/orders.sqlite');
         $pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_SILENT);
         $pdo->exec('PRAGMA busy_timeout=5000');
         $pdo->sqliteCreateFunction('NOW', function(){return date('Y-m-d H:i:s');});
         return $pdo;
+    }
+    function assertMysqlFixture(){
+        // This mode can only address the disposable GitHub Actions service.
+        if(getenv('GITHUB_ACTIONS') !== 'true' || getenv('CI') !== 'true'
+            || getenv('EPAY_DB_HOST') !== '127.0.0.1' || getenv('EPAY_DB_PORT') !== '3306'
+            || getenv('EPAY_DB_USER') !== 'root' || getenv('EPAY_DB_PASSWORD') !== 'epay_test'){
+            throw new \RuntimeException('MySQL mode is restricted to the isolated CI fixture');
+        }
     }
     if(($argv[1] ?? '') === '--worker'){
         $directory=$argv[2] ?? '';
@@ -72,16 +89,38 @@ namespace {
         exit;
     }
     $loadExtension=in_array('--load-sqlite-extension', array_slice($argv,1), true);
-    if(count(array_diff(array_slice($argv,1), ['--load-sqlite-extension'])) > 0){fwrite(STDERR, "Unsupported argument\n"); exit(1);}
-    if(!in_array('sqlite', \PDO::getAvailableDrivers(), true)){fwrite(STDERR, "This local fixture requires pdo_sqlite\n"); exit(1);}
+    $mysql=in_array('--mysql-fixture', array_slice($argv,1), true);
+    if(count(array_diff(array_slice($argv,1), ['--load-sqlite-extension','--mysql-fixture'])) > 0 || ($mysql && $loadExtension)){fwrite(STDERR, "Unsupported argument\n"); exit(1);}
+    if(!in_array($mysql ? 'mysql' : 'sqlite', \PDO::getAvailableDrivers(), true)){fwrite(STDERR, "Required fixture PDO driver unavailable\n"); exit(1);}
+    $admin=null; $database=null;
+    if($mysql){
+        assertMysqlFixture();
+        $admin=new \PDO('mysql:host=127.0.0.1;port=3306;charset=utf8mb3', 'root', 'epay_test', [\PDO::ATTR_ERRMODE=>\PDO::ERRMODE_EXCEPTION]);
+        $database='epay_route_fixture_'.bin2hex(random_bytes(8));
+        $admin->exec('CREATE DATABASE `'.$database.'` CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci');
+    }
     $rounds=25;
+    try{
     for($round=0; $round<$rounds; $round++){
         $directory=sys_get_temp_dir().'/epay-route-process-'.bin2hex(random_bytes(8));
         if(!mkdir($directory, 0700))throw new \RuntimeException('Cannot create fixture directory');
         $workers=[];
         try{
+            if($mysql)file_put_contents($directory.'/mysql-database', $database);
             $pdo=fixturePdo($directory);
-            $pdo->exec('CREATE TABLE pay_order (trade_no TEXT PRIMARY KEY, uid INTEGER, out_trade_no TEXT, addtime TEXT, name TEXT, money TEXT, notify_url TEXT, return_url TEXT, param TEXT, domain TEXT, ip TEXT, status INTEGER DEFAULT 0, version INTEGER, type INTEGER DEFAULT 0, channel INTEGER DEFAULT 0, subchannel INTEGER DEFAULT 0, realmoney TEXT, getmoney TEXT, UNIQUE(uid,out_trade_no))');
+            if($mysql){
+                $pdo->exec('DROP TABLE IF EXISTS pay_order');
+                if($pdo->exec('CREATE TABLE pay_order (trade_no VARCHAR(32) PRIMARY KEY, uid INT UNSIGNED NOT NULL, out_trade_no VARCHAR(150) NOT NULL, addtime DATETIME, name TEXT, money DECIMAL(10,2), notify_url TEXT, return_url TEXT, param TEXT, domain TEXT, ip TEXT, status TINYINT DEFAULT 0, version INTEGER, type INTEGER DEFAULT 0, channel INTEGER DEFAULT 0, subchannel INTEGER DEFAULT 0, realmoney DECIMAL(10,2), getmoney DECIMAL(10,2)) ENGINE=InnoDB') === false)throw new \RuntimeException('Fixture table creation failed');
+                // Rehearse the production-length/collation index on synthetic rows only.
+                $pdo->exec("INSERT INTO pay_order (trade_no,uid,out_trade_no) VALUES ('fixture-a',1,'duplicate'),('fixture-b',1,'duplicate')");
+                if($pdo->exec('ALTER TABLE pay_order ADD UNIQUE KEY uniq_uid_outtradeno (uid,out_trade_no), ALGORITHM=INPLACE, LOCK=NONE') !== false || (int)$pdo->errorInfo()[1] !== 1062)throw new \RuntimeException('Duplicate migration must fail with real 1062');
+                $pdo->exec('DELETE FROM pay_order');
+                if($pdo->exec('ALTER TABLE pay_order ADD UNIQUE KEY uniq_uid_outtradeno (uid,out_trade_no), ALGORITHM=INPLACE, LOCK=NONE') === false)throw new \RuntimeException('Clean fixture index creation failed');
+                $matches=$pdo->query("SELECT JSON_UNQUOTE(JSON_EXTRACT(IF(JSON_VALID('{\"appid\":\"2021000000000001\"}'),'{\"appid\":\"2021000000000001\"}','{}'),'$.appid'))")->fetchColumn();
+                if($matches !== '2021000000000001')throw new \RuntimeException('Fixture app JSON extraction failed');
+            }elseif($pdo->exec('CREATE TABLE pay_order (trade_no TEXT PRIMARY KEY, uid INTEGER, out_trade_no TEXT, addtime TEXT, name TEXT, money TEXT, notify_url TEXT, return_url TEXT, param TEXT, domain TEXT, ip TEXT, status INTEGER DEFAULT 0, version INTEGER, type INTEGER DEFAULT 0, channel INTEGER DEFAULT 0, subchannel INTEGER DEFAULT 0, realmoney TEXT, getmoney TEXT, UNIQUE(uid,out_trade_no))') === false){
+                throw new \RuntimeException('SQLite fixture creation failed');
+            }
             foreach([101,102] as $id){
                 $command=[PHP_BINARY];
                 if($loadExtension)array_push($command, '-d', 'extension_dir='.ini_get('extension_dir'), '-d', 'extension=pdo_sqlite');
@@ -123,11 +162,15 @@ namespace {
             }
             $pdo=null;
             // Only known files inside this invocation's own temporary directory.
-            foreach(['orders.sqlite','orders.sqlite-journal','read-101','read-102','insert-start','route-101','route-102','route-start'] as $file){
+            foreach(['orders.sqlite','orders.sqlite-journal','mysql-database','read-101','read-102','insert-start','route-101','route-102','route-start'] as $file){
                 if(is_file($directory.'/'.$file))unlink($directory.'/'.$file);
             }
             rmdir($directory);
         }
     }
-    echo "payment route process regression: ok ($rounds rounds, 2 independent processes; SQLite fixture, not MySQL)\n";
+    }finally{
+        if($admin && $database)$admin->exec('DROP DATABASE `'.$database.'`');
+    }
+    $driver=$mysql ? 'isolated MariaDB CI fixture; native 1062, JSON and online index' : 'SQLite fixture, not MySQL';
+    echo "payment route process regression: ok ($rounds rounds, 2 independent processes; $driver)\n";
 }
