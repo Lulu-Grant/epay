@@ -775,14 +775,21 @@ function generate_trade_no(){
 	return 'LP'.date('YmdHis').rand(11111, 99999);
 }
 
-function logPaymentCallbackEvent($event, $trade_no = null, $channel_id = null, $reason = null){
+function logPaymentCallbackEvent($event, $trade_no = null, $channel_id = null, $reason = null, $context = []){
 	$data = [
 		'event' => preg_replace('/[^a-z0-9_.-]/i', '', (string)$event),
 		'trade_no' => preg_replace('/[^A-Za-z0-9]/', '', (string)$trade_no),
 		'channel' => intval($channel_id),
 		'reason' => str_replace(["\r", "\n"], ' ', (string)$reason),
 	];
-	error_log('[payment-callback] '.json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+	// Explicit allowlist: never serialize a callback payload or channel credentials.
+	foreach(['app_id', 'app_id_matches', 'sign_type', 'charset', 'notify_type', 'trade_status', 'total_amount', 'seller_id', 'stage', 'previous_channel', 'actual_channel'] as $field){
+		if(!array_key_exists($field, $context))continue;
+		$value = $context[$field];
+		if(is_bool($value) || $value === null)$data[$field] = $value;
+		elseif(is_scalar($value))$data[$field] = substr(preg_replace('/[\x00-\x1f\x7f]/', '', (string)$value), 0, 128);
+	}
+	error_log('[payment-callback] '.json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE));
 }
 
 function checkBlockUser($openid, $trade_no){
