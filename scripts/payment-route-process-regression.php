@@ -44,7 +44,7 @@ namespace {
             assertMysqlFixture();
             $database=trim(file_get_contents($directory.'/mysql-database'));
             if(!preg_match('/^epay_route_fixture_[a-f0-9]{16}$/D', $database))throw new \RuntimeException('Unsafe fixture database');
-            $pdo=new \PDO('mysql:host=127.0.0.1;port=3306;dbname='.$database.';charset=utf8mb3', 'root', 'epay_test');
+            $pdo=new \PDO('mysql:host=127.0.0.1;port=3306;dbname='.$database.';charset=utf8', 'root', 'epay_test');
             $pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_SILENT);
             $pdo->exec('SET SESSION innodb_lock_wait_timeout=5');
             return $pdo;
@@ -95,7 +95,7 @@ namespace {
     $admin=null; $database=null;
     if($mysql){
         assertMysqlFixture();
-        $admin=new \PDO('mysql:host=127.0.0.1;port=3306;charset=utf8mb3', 'root', 'epay_test', [\PDO::ATTR_ERRMODE=>\PDO::ERRMODE_EXCEPTION]);
+        $admin=new \PDO('mysql:host=127.0.0.1;port=3306;charset=utf8', 'root', 'epay_test', [\PDO::ATTR_ERRMODE=>\PDO::ERRMODE_EXCEPTION]);
         $database='epay_route_fixture_'.bin2hex(random_bytes(8));
         $admin->exec('CREATE DATABASE `'.$database.'` CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci');
     }
