@@ -15,41 +15,54 @@ if($order['status']>0){
 }
 
 // 获取订单支付方式ID、支付插件、支付通道、支付费率
-if($order['tid']==2 || $order['tid']==4){ //充值余额与购买用户组
-	$userrow = $DB->getRow("SELECT `uid`,`gid`,`money`,`mode`,`channelinfo`,`ordername` FROM `pre_user` WHERE `uid`='{$conf['reg_pay_uid']}' LIMIT 1");
+$payuid = $order['tid']==2 || $order['tid']==4 ? $conf['reg_pay_uid'] : $order['uid'];
+$userrow = $DB->getRow("SELECT `uid`,`gid`,`money`,`mode`,`channelinfo`,`ordername` FROM `pre_user` WHERE `uid`='{$payuid}' LIMIT 1");
+$firstGetChannel = $order['channel'] == 0;
+if($firstGetChannel){
 	$submitData = \lib\Channel::submit2($typeid, $userrow['uid'], $userrow['gid'], $order['money']);
 	if(!$submitData){
 		sysmsg('<center>当前支付方式无法使用</center>', '跳转提示');
 	}
-	$submitData['mode'] = 0;
-}else{
-	$userrow = $DB->getRow("SELECT `uid`,`gid`,`money`,`mode`,`channelinfo`,`ordername` FROM `pre_user` WHERE `uid`='{$order['uid']}' LIMIT 1");
-	$submitData = \lib\Channel::submit2($typeid, $userrow['uid'], $userrow['gid'], $order['money']);
-	if(!$submitData){
-		sysmsg('<center>当前支付方式无法使用</center>', '跳转提示');
-	}
-}
 
-if($userrow['mode']==1 && $order['tid']!=4 || $order['tid']==2){ //订单加费模式（排除购买用户组）或余额充值
-	$realmoney = round($order['money']*(100+100-$submitData['rate'])/100,2);
-	$getmoney = $order['money'];
-	if($conf['payfee_lessthan'] > 0 && $conf['payfee_mincost'] > 0){
-		$feemoney = round($order['money']*(100-$submitData['rate'])/100,2);
-		if($feemoney < round($conf['payfee_lessthan'], 2)){
-			$realmoney = round($order['money'] + $conf['payfee_mincost'], 2);
+	if($userrow['mode']==1 && $order['tid']!=4 || $order['tid']==2){ //订单加费模式（排除购买用户组）或余额充值
+		$realmoney = round($order['money']*(100+100-$submitData['rate'])/100,2);
+		$getmoney = $order['money'];
+		if($conf['payfee_lessthan'] > 0 && $conf['payfee_mincost'] > 0){
+			$feemoney = round($order['money']*(100-$submitData['rate'])/100,2);
+			if($feemoney < round($conf['payfee_lessthan'], 2)){
+				$realmoney = round($order['money'] + $conf['payfee_mincost'], 2);
+			}
+		}
+	}else{
+		$realmoney = $order['money'];
+		$getmoney = round($order['money']*$submitData['rate']/100,2);
+		if($conf['payfee_lessthan'] > 0 && $conf['payfee_mincost'] > 0){
+			$feemoney = round($order['money']*(100-$submitData['rate'])/100,2);
+			if($feemoney < round($conf['payfee_lessthan'], 2)){
+				$getmoney = round($order['money'] - $conf['payfee_mincost'], 2);
+				if($getmoney < 0) $getmoney = 0;
+			}
 		}
 	}
+
+	// 随机增减金额
+	if(!empty($conf['pay_payaddstart'])&&$conf['pay_payaddstart']!=0&&!empty($conf['pay_payaddmin'])&&$conf['pay_payaddmin']!=0&&!empty($conf['pay_payaddmax'])&&$conf['pay_payaddmax']!=0&&$realmoney>=$conf['pay_payaddstart'])$realmoney = round($realmoney + randomFloat(round($conf['pay_payaddmin'],2),round($conf['pay_payaddmax'],2)), 2);
 }else{
-	$realmoney = $order['money'];
-	$getmoney = round($order['money']*$submitData['rate']/100,2);
-	if($conf['payfee_lessthan'] > 0 && $conf['payfee_mincost'] > 0){
-		$feemoney = round($order['money']*(100-$submitData['rate'])/100,2);
-		if($feemoney < round($conf['payfee_lessthan'], 2)){
-			$getmoney = round($order['money'] - $conf['payfee_mincost'], 2);
-			if($getmoney < 0) $getmoney = 0;
-		}
+	$submitData = ['typeid'=>$typeid];
+	try{
+		\lib\PaymentRoute::restore($order, $submitData, $realmoney, $getmoney);
+	}catch(Exception $e){
+		sysmsg($e->getMessage());
 	}
 }
+if($firstGetChannel){
+	try{
+		$firstGetChannel = \lib\PaymentRoute::claim($trade_no, $submitData, $realmoney, $getmoney);
+	}catch(Exception $e){
+		sysmsg($e->getMessage());
+	}
+}
+if($order['tid']==2 || $order['tid']==4)$submitData['mode'] = 0;
 
 // 判断通道单笔支付限额
 if(!empty($submitData['paymin']) && $submitData['paymin']>0 && $order['money']<$submitData['paymin']){
@@ -63,15 +76,13 @@ if($submitData['mode']==1 && $realmoney-$getmoney>$userrow['money']){
 	sysmsg('当前商户余额不足，无法完成支付，请商户登录用户中心充值余额');
 }
 
-// 随机增减金额
-if(!empty($conf['pay_payaddstart'])&&$conf['pay_payaddstart']!=0&&!empty($conf['pay_payaddmin'])&&$conf['pay_payaddmin']!=0&&!empty($conf['pay_payaddmax'])&&$conf['pay_payaddmax']!=0&&$realmoney>=$conf['pay_payaddstart'])$realmoney = round($realmoney + randomFloat(round($conf['pay_payaddmin'],2),round($conf['pay_payaddmax'],2)), 2);
-
-$DB->update('order', ['type'=>$submitData['typeid'], 'channel'=>$submitData['channel'], 'subchannel'=>$submitData['subchannel'], 'realmoney'=>$realmoney, 'getmoney'=>$getmoney], ['trade_no'=>$trade_no]);
-invalidateListReadCache('payment', $order['uid']);
-try{
-	\lib\Shop\OrderService::syncPaymentRoute($trade_no);
-}catch(Exception $e){
-	error_log('shop_shadow_route_sync_failed trade_no='.$trade_no.' '.$e->getMessage());
+if($firstGetChannel){
+	invalidateListReadCache('payment', $order['uid']);
+	try{
+		\lib\Shop\OrderService::syncPaymentRoute($trade_no);
+	}catch(Exception $e){
+		error_log('shop_shadow_route_sync_failed trade_no='.$trade_no.' '.$e->getMessage());
+	}
 }
 
 

@@ -27,7 +27,7 @@ $callSites = [
     'user/ajax2.php' => 2,
     'paypage/ajax.php' => 1,
     'includes/lib/Shop/OrderService.php' => 1,
-    'includes/lib/api/Pay.php' => 2,
+    'includes/lib/api/Pay.php' => 1, // submit/mapi share loadOrCreateOrder().
 ];
 
 foreach ($callSites as $relativePath => $minimumCalls) {

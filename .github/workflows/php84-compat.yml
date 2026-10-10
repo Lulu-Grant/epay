@@ -68,7 +68,7 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.4'
-          extensions: pdo_mysql, curl, openssl, json, mbstring, gd, fileinfo, session, gmp, bcmath, intl, zip, xml
+          extensions: pdo_mysql, pdo_sqlite, curl, openssl, json, mbstring, gd, fileinfo, session, gmp, bcmath, intl, zip, xml
           coverage: none
 
       - name: Check PHP environment
@@ -96,6 +96,8 @@ jobs:
           php scripts/registration-completion-regression.php
           php scripts/admin-sso-regression.php
           php scripts/payment-callback-regression.php
+          php scripts/payment-channel-race-regression.php
+          php scripts/payment-route-process-regression.php
           php scripts/order-number-regression.php
           php scripts/ui-contract-regression.php
           php scripts/list-read-cache-regression.php
@@ -149,6 +151,14 @@ jobs:
           EPAY_DB_USER: root
           EPAY_DB_PASSWORD: epay_test
         run: php tools/php84/db-fixture-check.php
+
+      - name: Payment route native MySQL races and migration rehearsal
+        env:
+          EPAY_DB_HOST: 127.0.0.1
+          EPAY_DB_PORT: 3306
+          EPAY_DB_USER: root
+          EPAY_DB_PASSWORD: epay_test
+        run: php scripts/payment-route-process-regression.php --mysql-fixture
 
       - name: Rollback rehearsal check
         env:

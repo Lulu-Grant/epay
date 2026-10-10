@@ -77,10 +77,72 @@ class alipay_plugin
 		return str_replace($script, $fallback.$script, $html);
 	}
 
-	private static function notifyFailure($reason){
+	private static function notifyContext($stage){
 		global $channel;
-		logPaymentCallbackEvent('alipay_notify_rejected', defined('TRADE_NO') ? TRADE_NO : null, isset($channel['id']) ? $channel['id'] : null, $reason);
+		$context = ['stage'=>$stage, 'app_id_matches'=>isset($_POST['app_id'], $channel['appid']) && is_string($_POST['app_id']) && (string)$_POST['app_id'] === (string)$channel['appid']];
+		foreach(['app_id', 'sign_type', 'charset', 'notify_type', 'trade_status', 'total_amount', 'seller_id'] as $field){
+			$context[$field] = isset($_POST[$field]) && is_scalar($_POST[$field]) ? $_POST[$field] : null;
+		}
+		return $context;
+	}
+
+	private static function notifyFailure($reason, $stage='verify'){
+		global $channel;
+		logPaymentCallbackEvent('alipay_notify_rejected', defined('TRADE_NO') ? TRADE_NO : null, isset($channel['id']) ? $channel['id'] : null, $reason, self::notifyContext($stage));
 		return ['type'=>'html','data'=>'fail'];
+	}
+
+	protected static function notifyServices($selected){
+		global $channel, $order;
+		$original = $channel;
+		try{
+			$channel = $selected;
+			$alipay_config = require(PAY_ROOT.'inc/config.php');
+			// TradeService::check combines verification and querying; keep the stages separate.
+			return [new \Alipay\AlipayService($alipay_config), new \Alipay\AlipayTradeService($alipay_config)];
+		}finally{
+			$channel = $original;
+		}
+	}
+
+	private static function findNotifyChannel($appid){
+		global $DB, $order;
+		if(!is_string($appid) || !preg_match('/^[0-9]{16,32}$/', $appid))return null;
+		$rows = $DB->getAll("SELECT id FROM pre_channel WHERE plugin='alipay' AND status=1 AND type=:type AND JSON_UNQUOTE(JSON_EXTRACT(IF(JSON_VALID(config), config, '{}'), '$.appid'))=:appid LIMIT 2", [':type'=>$order['type'], ':appid'=>$appid]);
+		// An app shared by multiple channels is ambiguous: do not guess fees or ownership.
+		if(!$rows || count($rows) !== 1)return null;
+		$selected = \lib\Channel::get($rows[0]['id']);
+		if(!$selected || $selected['plugin'] !== 'alipay' || (string)$selected['appid'] !== $appid)return null;
+		if(isset($selected['apptype']) && is_string($selected['apptype']))$selected['apptype'] = explode(',', $selected['apptype']);
+		return $selected;
+	}
+
+	private static function repairNotifyChannel($selected){
+		global $DB, $order, $channel;
+		$previous = $order['channel'];
+		$stmt = $DB->query('UPDATE pre_order SET channel=:actual, subchannel=0 WHERE trade_no=:trade_no AND channel=:previous AND subchannel=:subchannel AND realmoney=:realmoney AND status IN (0,4)', [
+			':actual'=>$selected['id'], ':trade_no'=>$order['trade_no'], ':previous'=>$previous,
+			':subchannel'=>$order['subchannel'], ':realmoney'=>$order['realmoney'],
+		]);
+		if($stmt === false)return false;
+		if($stmt->rowCount() !== 1){
+			$stored = $DB->getRow('SELECT * FROM pre_order WHERE trade_no=:trade_no LIMIT 1', [':trade_no'=>$order['trade_no']]);
+			if(!$stored || $stored['channel'] != $selected['id'] || $stored['subchannel'] != 0
+				|| !in_array((int)$stored['status'], [0,1,4], true)
+				|| paymentAmountToCents($stored['realmoney']) !== paymentAmountToCents($order['realmoney'])
+				|| (!empty($stored['api_trade_no']) && $stored['api_trade_no'] !== $_POST['trade_no']))return false;
+			$order = array_merge($order, $stored);
+		}else{
+			$context = self::notifyContext('query');
+			$context['previous_channel'] = $previous;
+			$context['actual_channel'] = $selected['id'];
+			logPaymentCallbackEvent('alipay_notify_channel_repaired', TRADE_NO, $selected['id'], 'verified receiving channel', $context);
+			$order['channel'] = $selected['id'];
+			$order['subchannel'] = 0;
+			invalidateListReadCache('payment', $order['uid']);
+		}
+		$channel = $selected;
+		return true;
 	}
 
 	private static function createWapResult($alipay_config, $bizContent){
@@ -599,24 +661,31 @@ class alipay_plugin
 	static public function notify(){
 		global $channel, $order;
 
-		foreach(['out_trade_no', 'trade_no', 'total_amount', 'trade_status', 'sign'] as $field){
-			if(!isset($_POST[$field]) || $_POST[$field] === ''){
+		foreach(['app_id', 'out_trade_no', 'trade_no', 'total_amount', 'trade_status', 'sign'] as $field){
+			if(!isset($_POST[$field]) || !is_string($_POST[$field]) || $_POST[$field] === ''){
 				return self::notifyFailure('missing field '.$field);
 			}
 		}
 
+		$stage = 'verify';
 		try{
-			$alipay_config = require(PAY_ROOT.'inc/config.php');
-			$aop = new \Alipay\AlipayTradeService($alipay_config);
-			if(!$aop->check($_POST)){
-				return self::notifyFailure('signature verification failed');
+			$selected = $channel;
+			$verified = false;
+			try{
+				[$verifier, $aop] = static::notifyServices($selected);
+				$verified = $verifier->check($_POST);
+			}catch(\Throwable $e){
+				// A broken original route may still have a valid receiving channel.
+			}
+			$fallback = !$verified || (string)$_POST['app_id'] !== (string)$selected['appid'];
+			if($fallback){
+				$selected = self::findNotifyChannel($_POST['app_id']);
+				if(!$selected)return self::notifyFailure('signature verification failed: receiving channel not uniquely matched');
+				[$verifier, $aop] = static::notifyServices($selected);
+				if(!$verifier->check($_POST))return self::notifyFailure('signature verification failed');
 			}
 
-			if($_POST['trade_status'] !== 'TRADE_SUCCESS'){
-				return ['type'=>'html','data'=>'success'];
-			}
-
-			if((string)$_POST['out_trade_no'] !== (string)TRADE_NO){
+			if($_POST['out_trade_no'] !== (string)TRADE_NO || $_POST['out_trade_no'] !== (string)$order['trade_no']){
 				return self::notifyFailure('out_trade_no mismatch');
 			}
 			$paid_cents = paymentAmountToCents($_POST['total_amount']);
@@ -624,13 +693,27 @@ class alipay_plugin
 			if($paid_cents === false || $order_cents === false || $paid_cents !== $order_cents){
 				return self::notifyFailure('total_amount mismatch');
 			}
+			$stage = 'query';
+			$queried = $aop->query($_POST['trade_no'], $_POST['out_trade_no']);
+			if(!is_array($queried) || ($queried['out_trade_no'] ?? null) !== $_POST['out_trade_no']
+				|| ($queried['trade_no'] ?? null) !== $_POST['trade_no']
+				|| paymentAmountToCents($queried['total_amount'] ?? null) !== $order_cents){
+				return self::notifyFailure('trade query failed: order or amount mismatch', $stage);
+			}
+			$paid_states = ['TRADE_SUCCESS', 'TRADE_FINISHED'];
+			if(!in_array($_POST['trade_status'], $paid_states, true) || !in_array($queried['trade_status'] ?? null, $paid_states, true)){
+				if(!$fallback && $_POST['trade_status'] === 'TRADE_CLOSED' && ($queried['trade_status'] ?? null) === 'TRADE_CLOSED')return ['type'=>'html','data'=>'success'];
+				return self::notifyFailure('trade query failed: non-success trade status', $stage);
+			}
+			if($fallback && !self::repairNotifyChannel($selected))return self::notifyFailure('trade query failed: order route changed', $stage);
 
+			$stage = 'process';
 			$buyer_id = isset($_POST['buyer_id']) ? $_POST['buyer_id'] : null;
 			if(empty($buyer_id) && isset($_POST['buyer_open_id'])) $buyer_id = $_POST['buyer_open_id'];
 			processNotify($order, $_POST['trade_no'], $buyer_id);
 			return ['type'=>'html','data'=>'success'];
 		}catch(\Throwable $e){
-			return self::notifyFailure('processing exception: '.$e->getMessage());
+			return self::notifyFailure($stage.' exception: '.get_class($e), $stage);
 		}
 	}
 
