@@ -98,6 +98,8 @@ jobs:
           php scripts/payment-callback-regression.php
           php scripts/payment-channel-race-regression.php
           php scripts/payment-route-process-regression.php
+          php scripts/weilaile-plugin-regression.php
+          php scripts/weilaile-http-regression.php
           php scripts/order-number-regression.php
           php scripts/ui-contract-regression.php
           php scripts/list-read-cache-regression.php
