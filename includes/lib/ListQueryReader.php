@@ -46,6 +46,9 @@ final class ListQueryReader
             $row['typename'] = $type['name'] ?? null;
             $row['typeshowname'] = $type['showname'] ?? null;
         }
+        $result['meta']['date_scope'] = $filter->dateScope;
+        $result['meta']['date_start'] = $filter->dateStart;
+        $result['meta']['date_end'] = $filter->dateEnd;
         return $result;
     }
 
@@ -76,7 +79,11 @@ final class ListQueryReader
                 $row['success_rate'] = $total > 0 ? round((int)$row['paid_count'] / $total * 100, 2) : 0;
                 return $row;
             }, ListQueryFilter::fresh($input));
-        return ['code'=>0, 'data'=>$result['value'], 'meta'=>$result['meta']];
+        $meta = $result['meta'];
+        $meta['date_scope'] = $filter->dateScope;
+        $meta['date_start'] = $filter->dateStart;
+        $meta['date_end'] = $filter->dateEnd;
+        return ['code'=>0, 'data'=>$result['value'], 'meta'=>$meta];
     }
 
     public static function ledgerList($db, array $input, int $uid): array

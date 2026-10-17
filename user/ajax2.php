@@ -710,6 +710,8 @@ break;
 case 'orderList':
 case 'orderSummary':
 case 'recordList':
+    $listRequestId = \lib\ListQueryFilter::requestId($_GET['rid'] ?? null);
+    if ($listRequestId !== '') header('X-Request-Id: '.$listRequestId);
     try {
         if (session_status() === PHP_SESSION_ACTIVE) session_write_close();
         $result = match ($act) {

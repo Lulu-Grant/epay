@@ -10,6 +10,8 @@ if(!checkRefererHost())exit('{"code":403}');
 switch($act){
 case 'orderList':
 case 'orderSummary':
+    $listRequestId = \lib\ListQueryFilter::requestId($_GET['rid'] ?? null);
+    if ($listRequestId !== '') header('X-Request-Id: '.$listRequestId);
     try {
         if (session_status() === PHP_SESSION_ACTIVE) session_write_close();
         $result = $act === 'orderList'

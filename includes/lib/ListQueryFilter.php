@@ -8,6 +8,12 @@ final class ListQueryFilter
     public array $bind = [];
     public string $searchField = '';
     public bool $needsPayment = false;
+    public string $dateScope = '';
+    public string $dateStart = '';
+    public string $dateEnd = '';
+
+    private const ADMIN_RECENT_DAYS = 7;
+    private const ADMIN_EXACT_COLUMNS = ['trade_no', 'out_trade_no', 'api_trade_no'];
 
     private function __construct(string $where) { $this->where = $where; }
 
@@ -57,6 +63,24 @@ final class ListQueryFilter
         return isset($input['fresh']) && self::text($input['fresh'], 1) === '1';
     }
 
+    /** Client request id echoed by the list endpoints. Rejects header-injection characters. */
+    public static function requestId(mixed $value): string
+    {
+        if (!is_string($value) || !preg_match('/^[A-Za-z0-9]{8,40}$/', $value)) return '';
+        return $value;
+    }
+
+    /** Inclusive calendar window ending on $now's local date. */
+    public static function recentWindow(?int $now = null): array
+    {
+        $tz = new \DateTimeZone(date_default_timezone_get() ?: 'Asia/Shanghai');
+        $end = $now === null
+            ? new \DateTimeImmutable('now', $tz)
+            : (new \DateTimeImmutable('@'.$now))->setTimezone($tz);
+        $start = $end->modify('-'.(self::ADMIN_RECENT_DAYS - 1).' days');
+        return ['start'=>$start->format('Y-m-d'), 'end'=>$end->format('Y-m-d')];
+    }
+
     private static function date(mixed $value): string
     {
         $text = self::text($value, 10);
@@ -82,12 +106,8 @@ final class ListQueryFilter
             $status = self::integer($input['dstatus'], -1, 4);
             if ($status >= 0) $filter->equal('A.status', $status);
         }
-        $start = !empty($input['starttime']) ? self::date($input['starttime']) : null;
-        $end = !empty($input['endtime']) ? self::date($input['endtime']) : null;
-        if ($start !== null && $end !== null && $start > $end) throw new \InvalidArgumentException('开始日期不能晚于结束日期');
-        if ($start !== null) { $filter->where .= ' AND A.addtime>=:starttime'; $filter->bind[':starttime'] = $start.' 00:00:00'; }
-        if ($end !== null) { $filter->where .= ' AND A.addtime<=:endtime'; $filter->bind[':endtime'] = $end.' 23:59:59'; }
         $value = self::text($input[$merchantUid === null ? 'value' : 'kw'] ?? '');
+        $column = '';
         if ($value !== '') {
             if ($merchantUid === null) {
                 $column = self::text($input['column'] ?? '', 32);
@@ -97,6 +117,18 @@ final class ListQueryFilter
                 $columns = [1=>'trade_no', 2=>'out_trade_no', 3=>'name', 4=>'money', 5=>'realmoney', 6=>'domain', 7=>'ip', 8=>'buyer'];
                 $column = $columns[self::integer($input['type'] ?? 1, 1, 8)];
             }
+        }
+        if ($merchantUid === null) {
+            // Range on addtime so idx_health_addtime(addtime, channel, status) can use its leading column.
+            // Merchant lists keep the previous "empty dates mean all time" behavior.
+            $filter->applyAdminAddtimeWindow($input, $value !== '' && in_array($column, self::ADMIN_EXACT_COLUMNS, true));
+        } else {
+            $start = !empty($input['starttime']) ? self::date($input['starttime']) : null;
+            $end = !empty($input['endtime']) ? self::date($input['endtime']) : null;
+            if ($start !== null && $end !== null && $start > $end) throw new \InvalidArgumentException('开始日期不能晚于结束日期');
+            $filter->bindAddtime($start, $end);
+        }
+        if ($value !== '') {
             $maximum = ['trade_no'=>32, 'out_trade_no'=>150, 'api_trade_no'=>150, 'name'=>64, 'domain'=>64, 'buyer'=>30, 'ip'=>45][$column] ?? 255;
             self::text($value, $maximum);
             if (in_array($column, ['money', 'realmoney', 'getmoney'], true)
@@ -105,6 +137,54 @@ final class ListQueryFilter
             else $filter->equal('A.'.$column, $value);
         }
         return $filter;
+    }
+
+    /**
+     * Empty admin dates default to the last 7 days. date_scope=all is the explicit full scan.
+     * An exact order number is not limited by that default; a custom range still applies.
+     */
+    private function applyAdminAddtimeWindow(array $input, bool $exactOrder): void
+    {
+        $scope = self::text($input['date_scope'] ?? '', 16);
+        if (!in_array($scope, ['recent', 'all', 'custom'], true)) $scope = '';
+        if ($scope === 'all') {
+            $this->dateScope = 'all';
+            return;
+        }
+        $startProvided = isset($input['starttime']) && $input['starttime'] !== '' && $input['starttime'] !== null;
+        $endProvided = isset($input['endtime']) && $input['endtime'] !== '' && $input['endtime'] !== null;
+        $honorExplicit = ($startProvided || $endProvided) && $scope !== 'recent';
+        if ($exactOrder && !$honorExplicit) {
+            $this->dateScope = 'exact';
+            return;
+        }
+        if (!$honorExplicit) {
+            $window = self::recentWindow();
+            $this->dateScope = 'recent';
+            $this->dateStart = $window['start'];
+            $this->dateEnd = $window['end'];
+            $this->bindAddtime($window['start'], $window['end']);
+            return;
+        }
+        $start = $startProvided ? self::date($input['starttime']) : null;
+        $end = $endProvided ? self::date($input['endtime']) : null;
+        if ($start !== null && $end !== null && $start > $end) throw new \InvalidArgumentException('开始日期不能晚于结束日期');
+        $this->dateScope = 'custom';
+        $this->dateStart = $start ?? '';
+        $this->dateEnd = $end ?? '';
+        $this->bindAddtime($start, $end);
+    }
+
+    private function bindAddtime(?string $start, ?string $end): void
+    {
+        if ($start !== null && $start !== '') {
+            $this->where .= ' AND A.addtime>=:starttime';
+            $this->bind[':starttime'] = $start.' 00:00:00';
+        }
+        if ($end !== null && $end !== '') {
+            $this->where .= ' AND A.addtime<=:endtime';
+            $this->bind[':endtime'] = $end.' 23:59:59';
+        }
     }
 
     public static function shop(array $input): self
