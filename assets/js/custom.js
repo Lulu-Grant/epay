@@ -130,3 +130,41 @@ var isMobile = function(){
 	}
 	return false;
 }
+
+var LIST_READ_TIMEOUT_MS = 15000;
+
+function listReadPad(n, w){
+	var s = String(n);
+	while(s.length < w) s = '0' + s;
+	return s;
+}
+
+function listReadRequestMeta(date){
+	var d = date || new Date();
+	var stamp = listReadPad(d.getFullYear(), 4) + listReadPad(d.getMonth() + 1, 2) + listReadPad(d.getDate(), 2)
+		+ listReadPad(d.getHours(), 2) + listReadPad(d.getMinutes(), 2) + listReadPad(d.getSeconds(), 2)
+		+ listReadPad(d.getMilliseconds(), 3);
+	var rand = Math.floor(Math.random() * 0x10000).toString(16);
+	while(rand.length < 4) rand = '0' + rand;
+	return {
+		id: stamp + rand,
+		timeText: listReadPad(d.getFullYear(), 4) + '-' + listReadPad(d.getMonth() + 1, 2) + '-' + listReadPad(d.getDate(), 2)
+			+ ' ' + listReadPad(d.getHours(), 2) + ':' + listReadPad(d.getMinutes(), 2) + ':' + listReadPad(d.getSeconds(), 2),
+		started: d
+	};
+}
+
+function listReadFailureMessage(status, statusText, elapsedMs, requestId, timeText){
+	var elapsed = elapsedMs > 0 ? elapsedMs : 0;
+	var seconds = (elapsed / 1000).toFixed(1);
+	var tail = '耗时 ' + seconds + ' 秒，请求号 ' + (requestId || '-') + '，时间 ' + (timeText || '-');
+	var code = parseInt(status, 10) || 0;
+	var timedOut = statusText === 'timeout' || (code === 0 && elapsed >= LIST_READ_TIMEOUT_MS);
+	if(timedOut){
+		return '列表查询超时，请重试。' + tail;
+	}
+	if(code){
+		return '列表查询失败（HTTP ' + code + '），请重试。' + tail;
+	}
+	return '列表查询失败，请重试。' + tail;
+}

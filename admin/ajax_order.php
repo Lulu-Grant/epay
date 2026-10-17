@@ -9,6 +9,11 @@ if(!checkRefererHost())exit('{"code":403}');
 
 switch($act){
 case 'orderList':
+	$rid = \lib\AdminOrderListFilter::sanitizeRequestId(isset($_GET['rid']) ? $_GET['rid'] : '');
+	if($rid !== ''){
+		header('X-Request-Id: '.$rid);
+	}
+
 	$paytype = [];
 	$paytypes = [];
 	$rs = $DB->getAll("SELECT * FROM pre_type");
@@ -37,21 +42,17 @@ case 'orderList':
 		$dstatus = intval($_POST['dstatus']);
 		$sql.=" AND A.status={$dstatus}";
 	}
-	if(!empty($_POST['starttime']) || !empty($_POST['endtime'])){
-		if(!empty($_POST['starttime'])){
-			$starttime = daddslashes($_POST['starttime']);
-			$sql.=" AND A.addtime>='{$starttime} 00:00:00'";
-		}
-		if(!empty($_POST['endtime'])){
-			$endtime = daddslashes($_POST['endtime']);
-			$sql.=" AND A.addtime<='{$endtime} 23:59:59'";
-		}
-	}
-	if(isset($_POST['value']) && !empty($_POST['value'])) {
-		if($_POST['column']=='name'){
-			$sql.=" AND A.`{$_POST['column']}` like '%{$_POST['value']}%'";
-		}else{
-			$sql.=" AND A.`{$_POST['column']}`='{$_POST['value']}'";
+	$timeFilter = \lib\AdminOrderListFilter::timeFilter($_POST);
+	$sql .= $timeFilter['sql'];
+	if(isset($_POST['value']) && is_string($_POST['value']) && trim($_POST['value']) !== '') {
+		$column = isset($_POST['column']) && is_string($_POST['column']) ? $_POST['column'] : '';
+		if(in_array($column, \lib\AdminOrderListFilter::SEARCH_COLUMNS, true)){
+			$value = daddslashes(trim($_POST['value']));
+			if($column=='name'){
+				$sql.=" AND A.`{$column}` like '%{$value}%'";
+			}else{
+				$sql.=" AND A.`{$column}`='{$value}'";
+			}
 		}
 	}
 	$offset = intval($_POST['offset']);
@@ -65,7 +66,13 @@ case 'orderList':
 		$list2[] = $row;
 	}
 
-	exit(json_encode(['total'=>$total, 'rows'=>$list2]));
+	exit(json_encode([
+		'total'=>$total,
+		'rows'=>$list2,
+		'date_scope'=>$timeFilter['scope'],
+		'date_start'=>$timeFilter['start'],
+		'date_end'=>$timeFilter['end'],
+	]));
 break;
 
 case 'riskList':
