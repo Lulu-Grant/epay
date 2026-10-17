@@ -18,7 +18,7 @@ if(!defined('IN_CRONLITE'))exit();
 <body>
   <nav id="navbar-main" class="navbar navbar-horizontal navbar-transparent navbar-main navbar-expand-lg navbar-light">
     <div class="container">
-      <a class="navbar-brand" href="./"><?php echo $conf['sitename']?></a>
+      <a class="navbar-brand" href="./"><img src="/assets/img/lp-brand/lpao-logo-sm.webp" srcset="/assets/img/lp-brand/lpao-logo-sm.webp 1x, /assets/img/lp-brand/lpao-logo.webp 2x" alt="Lpao" class="lp-brand-logo lp-brand-logo--nav" width="110" height="49"></a>
       <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbar-collapse" aria-controls="navbar-collapse" aria-expanded="false" aria-label="Toggle navigation">
         <span class="navbar-toggler-icon"></span>
       </button>

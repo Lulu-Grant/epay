@@ -1,0 +1,164 @@
+/**
+ * lp-dark / paypage.css
+ * 覆盖: paypage/css/default.css + style.css
+ * 禁止: 改 paypage/js/pay.js、数字键盘逻辑、ajax 下单
+ * theme: pay
+ */
+
+html.lp-dark[data-lp-theme="pay"] body,
+html.lp-dark body {
+  background: #0B0F14;
+  background: var(--lp-bg-0);
+  color: #E8EEF5;
+  color: var(--lp-text);
+}
+
+html.lp-dark .m-title dl dd {
+  color: #E8EEF5;
+  color: var(--lp-text);
+}
+html.lp-dark .selTitle {
+  color: #B4C0CE;
+  color: var(--lp-text-2);
+}
+html.lp-dark .copyRight {
+  color: #7E8C9C;
+  color: var(--lp-text-3);
+}
+
+html.lp-dark .set_amount {
+  background: #171E27;
+  background: var(--lp-bg-2);
+  box-shadow: none;
+  color: #E8EEF5;
+  color: var(--lp-text);
+}
+html.lp-dark .set_amount .amount_hd {
+  color: #B4C0CE;
+  color: var(--lp-text-2);
+}
+html.lp-dark .set_amount .amount_bd .input_simu,
+html.lp-dark .i_money {
+  color: #FFB020;
+  color: var(--lp-money);
+}
+html.lp-dark .set_amount .amount_bd .line_simu {
+  background: #5B8CFF;
+  background: var(--lp-brand);
+}
+html.lp-dark .amount_bd .clearBtn {
+  background: #171E27;
+  background: var(--lp-bg-2);
+}
+html.lp-dark .remark {
+  color: #5B8CFF;
+  color: var(--lp-brand);
+}
+
+html.lp-dark .keyboard {
+  background: #11161D;
+  background: var(--lp-bg-1);
+}
+html.lp-dark .key_table td {
+  color: #E8EEF5;
+  color: var(--lp-text);
+}
+html.lp-dark .keyboard .key:active {
+  background-color: #263140;
+  background-color: var(--lp-bg-4);
+}
+html.lp-dark .keyboard .pay_btn {
+  background-color: #5B8CFF;
+  background-color: var(--lp-brand);
+  color: #fff;
+}
+html.lp-dark .pay_btn:active {
+  background-color: #3D6FE6;
+  background-color: var(--lp-brand-press);
+}
+html.lp-dark .btn_blue {
+  background: #5B8CFF;
+  background: var(--lp-brand);
+  color: #fff;
+}
+html.lp-dark .btn_blue:active {
+  background: #3D6FE6;
+  background: var(--lp-brand-press);
+}
+html.lp-dark .btn_white {
+  background: transparent;
+  color: #E8EEF5;
+  color: var(--lp-text);
+  border-color: #3A4A5E;
+  border-color: var(--lp-line-2);
+}
+
+html.lp-dark .pop_cont {
+  background-color: #171E27;
+  background-color: var(--lp-bg-2);
+}
+html.lp-dark .pop_tip {
+  color: #E8EEF5;
+  color: var(--lp-text);
+  border-bottom-color: #2C3848;
+  border-bottom-color: var(--lp-line);
+}
+html.lp-dark .pop_wbtn {
+  color: #5B8CFF;
+  color: var(--lp-brand);
+}
+html.lp-dark .pop_remark {
+  background: #171E27;
+  background: var(--lp-bg-2);
+  color: #E8EEF5;
+  color: var(--lp-text);
+}
+html.lp-dark .pop_remark .input_wrap input {
+  background: #1E2733;
+  background: var(--lp-bg-3);
+  color: #E8EEF5;
+  color: var(--lp-text);
+}
+html.lp-dark .pop_remark .btn_wrap span {
+  color: #5B8CFF;
+  color: var(--lp-brand);
+}
+html.lp-dark .b_top {
+  color: #5B8CFF;
+  color: var(--lp-brand);
+}
+
+html.lp-dark .fontGray,
+html.lp-dark .payMoney {
+  color: #7E8C9C;
+  color: var(--lp-text-3);
+}
+html.lp-dark .amount_title {
+  color: #E8EEF5;
+  color: var(--lp-text);
+}
+
+html.lp-dark .sico_pay {
+  /* sellerLogo.png，不要滤镜 */
+}
+
+html.lp-dark .b_btm:after,
+html.lp-dark .b_rgt:after,
+html.lp-dark .b_rgt_btm:after {
+  border-color: #2C3848;
+  border-color: var(--lp-line);
+}
+
+html.lp-dark .pay_suc1 { color: #5B8CFF; color: var(--lp-brand); }
+html.lp-dark .pay_suc2 { color: #E8EEF5; color: var(--lp-text); }
+html.lp-dark .pay_suc3 { color: #7E8C9C; color: var(--lp-text-3); }
+html.lp-dark .bg_wt {
+  background-color: #171E27;
+  background-color: var(--lp-bg-2);
+}
+html.lp-dark .btn_wt {
+  color: #5B8CFF;
+  color: var(--lp-brand);
+  background-color: #171E27;
+  background-color: var(--lp-bg-2);
+}

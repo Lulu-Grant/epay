@@ -173,7 +173,7 @@ function release_manifest($projectRoot)
         elseif(strpos($destination, '/etc/systemd/system/') === 0) $records['systemd'][] = $record;
         else release_fail('unsupported release destination '.$destination);
     }
-    if(count($records['release']) !== 33 || count($records['systemd']) !== 6) release_fail('unexpected release map shape');
+    if(count($records['release']) !== 27 || count($records['systemd']) !== 4) release_fail('unexpected release map shape');
     return $records;
 }
 

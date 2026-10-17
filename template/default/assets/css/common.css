@@ -7,7 +7,7 @@ body {
 	display:inline-block;
 	width:160px;
 	height:40px;
-	background:url(logo.png) no-repeat;
+	background:none;
 	background-size:95%;
 	background-position:0 0;
 	position:relative;
@@ -1117,3 +1117,4 @@ header .logo-head .ant-menu .ant-menu-submenu-horizontal .ant-menu .ant-menu-ite
 #scroll_Top.show {
 	opacity:1
 }
+.brand-text-logo{background:none!important;width:auto!important;height:auto!important;}

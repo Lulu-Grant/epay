@@ -1,0 +1,102 @@
+/**
+ * lp-dark / admin.css
+ * 覆盖: admin/head.php 内联 dialog、admin/index.php 彩色 panel
+ * 禁止: 改 navbar 高度、给 .navbar 加 padding、改 IA、加侧栏
+ * theme: admin, login（管理登录也吃这份，因共用 head）
+ */
+
+html.lp-dark .admin-accessible-dialog {
+  background: #171E27 !important;
+  background: var(--lp-bg-2) !important;
+  color: #E8EEF5 !important;
+  color: var(--lp-text) !important;
+  border-color: #2C3848 !important;
+  border-color: var(--lp-line) !important;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+  box-shadow: var(--lp-shadow);
+}
+html.lp-dark .admin-accessible-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.62);
+  background: var(--lp-mask);
+}
+html.lp-dark .admin-accessible-dialog__header {
+  border-bottom-color: #2C3848;
+  border-bottom-color: var(--lp-line);
+  color: #E8EEF5;
+  color: var(--lp-text);
+}
+html.lp-dark .admin-accessible-dialog__body {
+  color: #E8EEF5;
+  color: var(--lp-text);
+}
+html.lp-dark .admin-accessible-dialog__footer {
+  background: #1E2733 !important;
+  background: var(--lp-bg-3) !important;
+  border-top-color: #2C3848;
+  border-top-color: var(--lp-line);
+}
+html.lp-dark .admin-accessible-dialog :focus-visible {
+  outline: 3px solid #5B8CFF;
+  outline: 3px solid var(--lp-brand);
+  outline-offset: 2px;
+}
+
+/* 管理首页利润褐条 */
+html.lp-dark .panel-heading[style*="background-color"] {
+  background-color: #1E2733 !important;
+  background-color: var(--lp-bg-3) !important;
+  color: #E8EEF5 !important;
+  color: var(--lp-text) !important;
+  border-left: 4px solid #F5C84C;
+  border-left: 4px solid var(--lp-warn);
+}
+
+html.lp-dark .img-thumbnail {
+  background-color: #171E27;
+  background-color: var(--lp-bg-2);
+  border-color: #2C3848;
+  border-color: var(--lp-line);
+}
+
+html.lp-dark .order-summary-note {
+  color: #7E8C9C !important;
+  color: var(--lp-text-3) !important;
+}
+
+@media (max-width: 991px) {
+  html.lp-dark[data-lp-theme="admin"] .container,
+  html.lp-dark[data-lp-theme="admin"] .container-fluid {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+  html.lp-dark[data-lp-theme="admin"] .bootstrap-table {
+    font-size: 14px;
+  }
+  html.lp-dark[data-lp-theme="admin"] .fixed-table-body,
+  html.lp-dark[data-lp-theme="admin"] .table-responsive {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  html.lp-dark[data-lp-theme="admin"] td .btn,
+  html.lp-dark[data-lp-theme="admin"] td .btn-group {
+    white-space: nowrap;
+    margin: 2px 0;
+  }
+  html.lp-dark[data-lp-theme="admin"] .bootstrap-table .fixed-table-toolbar,
+  html.lp-dark[data-lp-theme="admin"] .bootstrap-table .fixed-table-container,
+  html.lp-dark[data-lp-theme="admin"] .bootstrap-table .fixed-table-body {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+}
+
+@media (min-width: 992px) {
+  html.lp-dark[data-lp-theme="admin"] .container {
+    width: auto !important;
+    max-width: 100% !important;
+    padding-left: 15px;
+    padding-right: 15px;
+  }
+}

@@ -41,7 +41,7 @@ if(isset($_GET['act']) && $_GET['act']=='login'){
 		$expiretime=time() + 2592000;
 		$token=authcode("{$username}\t{$session}\t{$expiretime}", 'ENCODE', SYS_KEY);
 		$adminCookiePath = rtrim(str_replace('\\', '/', dirname((string)($_SERVER['SCRIPT_NAME'] ?? '/admin/login.php'))), '/').'/';
-		setcookie("admin_token", $token, ['expires'=>$expiretime,'path'=>$adminCookiePath,'secure'=>is_https(),'httponly'=>true,'samesite'=>'Lax']);
+		setcookie("admin_token", $token, ['expires'=>$expiretime,'path'=>$adminCookiePath,'secure'=>is_https(),'httponly'=>true,'samesite'=>(\lib\AdminSso::enabled($conf) && is_https())?'None':'Lax']);
     unset($_SESSION['vc_code']);
     exit(json_encode(['code'=>0]));
   }else{
@@ -64,7 +64,7 @@ if(isset($_GET['act']) && $_GET['act']=='login'){
 	if(!checkRefererHost())exit();
 	try{ \lib\AdminSso::revokeIssuer($DB, (string)($_COOKIE['admin_token'] ?? '')); }catch(\Throwable $e){ error_log('Administrator merchant sessions could not be revoked during logout'); }
 	$adminCookiePath = rtrim(str_replace('\\', '/', dirname((string)($_SERVER['SCRIPT_NAME'] ?? '/admin/login.php'))), '/').'/';
-	setcookie("admin_token", "", ['expires'=>time()-2592000,'path'=>$adminCookiePath,'secure'=>is_https(),'httponly'=>true,'samesite'=>'Lax']);
+	setcookie("admin_token", "", ['expires'=>time()-2592000,'path'=>$adminCookiePath,'secure'=>is_https(),'httponly'=>true,'samesite'=>(\lib\AdminSso::enabled($conf) && is_https())?'None':'Lax']);
 	exit("<script language='javascript'>window.location.href='./login.php';</script>");
 }elseif($islogin==1){
 	exit("<script language='javascript'>alert('您已登录！');window.location.href='./';</script>");
@@ -81,7 +81,7 @@ include './head.php';
           <span class="icon-bar"></span>
           <span class="icon-bar"></span>
         </button>
-        <a class="navbar-brand" href="./">乐跑管理后台</a>
+        <a class="navbar-brand" href="./"><img src="/assets/img/lp-brand/lpao-logo-sm.webp" srcset="/assets/img/lp-brand/lpao-logo-sm.webp 1x, /assets/img/lp-brand/lpao-logo.webp 2x" alt="乐跑管理后台" class="lp-brand-logo lp-brand-logo--nav" width="110" height="49"></a>
       </div><!-- /.navbar-header -->
       <div id="navbar" class="collapse navbar-collapse">
         <ul class="nav navbar-nav navbar-right">

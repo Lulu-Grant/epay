@@ -1,0 +1,181 @@
+/**
+ * lp-dark / cashier.css
+ * 覆盖: reset.css + main12.css
+ * 禁止: 改 1010/1080 宽度、加厚边框、改通道 ico、给 .immediate_pay 加动画、改 typeid/trade_no
+ * theme: pay
+ */
+
+html.lp-dark[data-lp-theme="pay"] body {
+  background: #0B0F14 !important;
+  background: var(--lp-bg-0) !important;
+  color: #E8EEF5;
+  color: var(--lp-text);
+}
+html.lp-dark[data-lp-theme="pay"] h2,
+html.lp-dark[data-lp-theme="pay"] h3,
+html.lp-dark[data-lp-theme="pay"] p,
+html.lp-dark[data-lp-theme="pay"] span {
+  color: inherit;
+}
+html.lp-dark[data-lp-theme="pay"] .PayMethod12 h2 {
+  color: #E8EEF5;
+  color: var(--lp-text);
+}
+html.lp-dark[data-lp-theme="pay"] a {
+  color: #5B8CFF;
+  color: var(--lp-brand);
+}
+
+html.lp-dark .navBD12 {
+  border-bottom-color: #2C3848;
+  border-bottom-color: var(--lp-line);
+  background-color: #11161D;
+  background-color: var(--lp-bg-1);
+}
+html.lp-dark .nav12-right {
+  color: #B4C0CE;
+  color: var(--lp-text-2);
+}
+html.lp-dark .brand-text-logo {
+  color: #E8EEF5 !important;
+  color: var(--lp-text) !important;
+}
+
+html.lp-dark .order-amount12,
+html.lp-dark .PayMethod12,
+html.lp-dark .immediate-pay12,
+html.lp-dark .card12,
+html.lp-dark .footer12,
+html.lp-dark .paystument12,
+html.lp-dark .paystument13 {
+  background: #171E27;
+  background: var(--lp-bg-2);
+  color: #E8EEF5;
+  color: var(--lp-text);
+}
+html.lp-dark .order-amount12 span {
+  color: #B4C0CE;
+  color: var(--lp-text-2);
+}
+html.lp-dark .order-amount12-right strong {
+  color: #FFB020;
+  color: var(--lp-money);
+}
+html.lp-dark .PayMethod12 ul li {
+  border-color: #3A4A5E;
+  border-color: var(--lp-line-2);
+  background-color: #1E2733;
+  background-color: var(--lp-bg-3);
+}
+html.lp-dark .PayMethod12 ul li.active {
+  border-color: #5B8CFF;
+  border-color: var(--lp-brand);
+}
+html.lp-dark .PayMethod12 ul li span {
+  color: #E8EEF5;
+  color: var(--lp-text);
+}
+html.lp-dark .immediate_pay,
+html.lp-dark .immediate_button {
+  background: #5B8CFF;
+  background: var(--lp-brand);
+  color: #fff;
+}
+html.lp-dark .immediate_pay:hover,
+html.lp-dark .immediate_button:hover {
+  background: #3D6FE6;
+  background: var(--lp-brand-press);
+  color: #fff;
+}
+html.lp-dark .immediate-pay12-left a {
+  color: #5B8CFF;
+  color: var(--lp-brand);
+}
+html.lp-dark .immediate-pay12-right span strong {
+  color: #FFB020;
+  color: var(--lp-money);
+}
+html.lp-dark .card12-type,
+html.lp-dark .card12-money {
+  border-bottom-color: #2C3848;
+  border-bottom-color: var(--lp-line);
+}
+html.lp-dark .card12-type li,
+html.lp-dark .card12-money li,
+html.lp-dark .card12-input li input {
+  border-color: #3A4A5E;
+  border-color: var(--lp-line-2);
+  background-color: #1E2733;
+  background-color: var(--lp-bg-3);
+  color: #E8EEF5;
+  color: var(--lp-text);
+}
+html.lp-dark .card12-type li.active,
+html.lp-dark .card12-money li.active02 {
+  border-color: #5B8CFF;
+  border-color: var(--lp-brand);
+}
+html.lp-dark .footer12 {
+  color: #7E8C9C;
+  color: var(--lp-text-3);
+  background: transparent;
+}
+
+html.lp-dark .mt_agree {
+  background: rgba(0, 0, 0, 0.62);
+  background: var(--lp-mask);
+}
+html.lp-dark .mt_agree .mt_agree_main {
+  background: #171E27;
+  background: var(--lp-bg-2);
+  color: #E8EEF5;
+  color: var(--lp-text);
+}
+html.lp-dark .mt_agree h2 {
+  border-bottom-color: #2C3848;
+  border-bottom-color: var(--lp-line);
+  color: #E8EEF5;
+  color: var(--lp-text);
+}
+html.lp-dark .mt_agree a.close_btn {
+  background: #5B8CFF;
+  background: var(--lp-brand);
+  color: #fff;
+}
+
+html.lp-dark .pay_sure12 {
+  background: rgba(0, 0, 0, 0.62);
+  background: var(--lp-mask);
+}
+html.lp-dark .pay_sure12 .pay_sure12-main {
+  background: #171E27;
+  background: var(--lp-bg-2);
+  color: #E8EEF5;
+  color: var(--lp-text);
+}
+html.lp-dark .pay_sure12-main h2 {
+  background: #1E2733;
+  background: var(--lp-bg-3);
+  color: #E8EEF5;
+  color: var(--lp-text);
+}
+html.lp-dark .pay_sure12-main h3,
+html.lp-dark .pay_sure12-main p {
+  color: #7E8C9C;
+  color: var(--lp-text-3);
+}
+html.lp-dark .pay_sure12-main .h3-01 {
+  color: #E8EEF5;
+  color: var(--lp-text);
+}
+html.lp-dark .pay_sure12-btngroup a.immediate_payChange {
+  background-color: #1E2733;
+  background-color: var(--lp-bg-3);
+  color: #E8EEF5;
+  color: var(--lp-text);
+}
+
+html.lp-dark .wechart-pay12 dl p {
+  color: #7E8C9C;
+  color: var(--lp-text-3);
+}

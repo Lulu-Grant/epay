@@ -51,7 +51,7 @@ if(!is_array($workerStatus))$workerStatus = [];
 $lastUpdateId = (new \lib\Telegram\BotService($DB, $conf))->getLastUpdateId();
 ?>
 <div class="container" style="padding-top:70px;">
-	<div class="col-md-12 center-block" style="float:none;">
+	<div class="col-xs-12">
 		<div class="panel panel-primary">
 			<div class="panel-heading"><h3 class="panel-title">Telegram 基础配置</h3></div>
 			<div class="panel-body">

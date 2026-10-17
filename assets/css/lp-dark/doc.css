@@ -1,0 +1,65 @@
+/**
+ * lp-dark / doc.css
+ * 覆盖: layui / zTree / shCore / 文档站 white!important 顶栏
+ * 禁止: 抽公共 head、改 Markdown 正文语义
+ * theme: public
+ */
+
+html.lp-dark #navbar .bg-blur {
+  background: #11161D !important;
+  background: var(--lp-bg-1) !important;
+}
+html.lp-dark #navbar {
+  background: #11161D;
+  background: var(--lp-bg-1);
+}
+html.lp-dark .layui-nav,
+html.lp-dark .layui-nav .layui-nav-item > a {
+  background: transparent;
+  color: #E8EEF5;
+  color: var(--lp-text);
+}
+html.lp-dark .ztree,
+html.lp-dark .ztree li a {
+  color: #E8EEF5;
+  color: var(--lp-text);
+  background: transparent;
+}
+html.lp-dark .syntaxhighlighter,
+html.lp-dark .shCore {
+  background: #1E2733 !important;
+  background: var(--lp-bg-3) !important;
+  color: #E8EEF5 !important;
+  color: var(--lp-text) !important;
+}
+html.lp-dark #leftbar,
+html.lp-dark .api_block {
+  background: #11161D;
+  background: var(--lp-bg-1);
+  color: #E8EEF5;
+  color: var(--lp-text);
+  border-color: #2C3848;
+  border-color: var(--lp-line);
+}
+html.lp-dark table {
+  color: #E8EEF5;
+  color: var(--lp-text);
+  border-color: #2C3848;
+  border-color: var(--lp-line);
+}
+html.lp-dark table th {
+  background: #1E2733;
+  background: var(--lp-bg-3);
+  color: #B4C0CE;
+  color: var(--lp-text-2);
+}
+html.lp-dark body {
+  background: #0B0F14;
+  background: var(--lp-bg-0);
+  color: #E8EEF5;
+  color: var(--lp-text);
+}
+html.lp-dark .brand-text-logo {
+  color: #E8EEF5 !important;
+  color: var(--lp-text) !important;
+}

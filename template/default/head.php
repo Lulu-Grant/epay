@@ -2,10 +2,11 @@
 if(!defined('IN_CRONLITE'))exit();
 ?>
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" class="lp-dark" data-lp-theme="public">
 <head>
 <meta charset="utf-8"/>
 <title><?php echo $conf['title']?></title>
+<style id="lp-dark-boot">html.lp-dark,html.lp-dark body{background:#0B0F14!important;color:#E8EEF5}</style>
 <meta name="keywords" content="<?php echo $conf['keywords']?>">
 <meta name="description" content="<?php echo $conf['description']?>" />
 <meta name="viewport"content="user-scalable=no, width=device-width">
@@ -20,6 +21,8 @@ if(!defined('IN_CRONLITE'))exit();
 <script src="<?php echo $cdnpublic?>twitter-bootstrap/3.4.1/js/bootstrap.min.js"></script>
 <script src="<?php echo $cdnpublic?>jquery-ujs/1.2.2/rails.min.js"async="true"></script>
 <link rel="stylesheet"type="text/css"href="<?php echo STATIC_ROOT?>css/index.css"/>
+<link rel="stylesheet" href="/assets/css/lp-dark/tokens.css?v=lp18">
+<link rel="stylesheet" href="/assets/css/lp-dark/public.css?v=lp18">
 </head>
 <body>
 <!--[if (gt IE 6)&amp;(lt IE 9)]>
@@ -41,7 +44,7 @@ if(!defined('IN_CRONLITE'))exit();
 <span class="icon-bar"></span>
 <span class="icon-bar"></span>
 </button>
-<a href="/"><span class="logo" style="background:url(assets/img/logo.png) no-repeat;background-size: auto 45px"></span></a>
+<a href="/" class="logo"><img src="/assets/img/lp-brand/lpao-logo-sm.webp" srcset="/assets/img/lp-brand/lpao-logo-sm.webp 1x, /assets/img/lp-brand/lpao-logo.webp 2x" alt="Lpao" class="lp-brand-logo lp-brand-logo--doc" width="100" height="45"></a>
 </div>
 <div class="navbar-collapse navbar-top-collapse collapse"style="height: 1px;">
 <ul class="nav navbar-nav navbar-right c_navbar">

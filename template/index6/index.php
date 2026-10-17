@@ -40,12 +40,7 @@ if(!defined('IN_CRONLITE'))exit();
                         <span class="icon-bar"></span>
                         <span class="icon-bar"></span>
                     </button>
-                    <a href="index.html" class="navbar-brand">
-                        <span class="brand-logo"></span>
-                        <span class="brand-text">
-                            <span class="text-theme"><?php echo $conf['sitename']?></span>
-                        </span>
-                    </a>
+                    <a href="index.html" class="navbar-brand"><img src="/assets/img/lp-brand/lpao-logo-sm.webp" srcset="/assets/img/lp-brand/lpao-logo-sm.webp 1x, /assets/img/lp-brand/lpao-logo.webp 2x" alt="Lpao" class="lp-brand-logo lp-brand-logo--nav" width="110" height="49"></a>
                 </div>
                 <!-- end navbar-header -->
                 <!-- begin navbar-collapse -->

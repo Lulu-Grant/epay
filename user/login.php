@@ -19,10 +19,11 @@ $login_display_name = '乐跑商户登录';
 $login_mode = isset($_GET['m']) && $_GET['m'] === 'key' ? 'key' : 'password';
 ?>
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" class="lp-dark" data-lp-theme="login">
 <head>
 <meta charset="utf-8" />
 <title>登录 | <?php echo $login_display_name?></title>
+<style id="lp-dark-boot">html.lp-dark,html.lp-dark body{background:#0B0F14!important;color:#E8EEF5}</style>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="stylesheet" href="<?php echo $cdnpublic?>twitter-bootstrap/3.4.1/css/bootstrap.min.css" type="text/css" />
 <link rel="stylesheet" href="<?php echo $cdnpublic?>animate.css/3.5.2/animate.min.css" type="text/css" />
@@ -32,11 +33,16 @@ $login_mode = isset($_GET['m']) && $_GET['m'] === 'key' ? 'key' : 'password';
 <link rel="stylesheet" href="./assets/css/app.css" type="text/css" />
 <link rel="stylesheet" href="./assets/css/captcha.css" type="text/css" />
 <style>input:-webkit-autofill{-webkit-box-shadow:0 0 0px 1000px white inset;-webkit-text-fill-color:#333;}</style>
+<link rel="stylesheet" href="/assets/css/lp-dark/tokens.css?v=lp18">
+<link rel="stylesheet" href="/assets/css/lp-dark/bootstrap3.css?v=lp18">
+<link rel="stylesheet" href="/assets/css/lp-dark/plugins.css?v=lp18">
+<link rel="stylesheet" href="/assets/css/lp-dark/login.css?v=lp18">
+<link rel="stylesheet" href="/assets/css/lp-dark/merchant.css?v=lp18">
 </head>
 <body class="auth-page">
 <div class="app app-header-fixed  ">
 <div class="container w-xxl w-auto-xs auth-shell" ng-controller="SigninFormController" ng-init="app.settings.container = false;">
-<span class="navbar-brand block m-t"><?php echo $login_display_name?></span>
+<span class="navbar-brand block m-t" aria-label="乐跑商户登录"><img src="/assets/img/lp-brand/lpao-logo-login.webp" srcset="/assets/img/lp-brand/lpao-logo-login.webp 1x, /assets/img/lp-brand/lpao-logo@2x.webp 2x" alt="乐跑" class="lp-brand-logo lp-brand-logo--login" width="160" height="72"></span>
 <div class="m-b-lg">
 <div class="wrapper text-center">
 <strong>请输入商户登录信息</strong>
@@ -104,13 +110,13 @@ $login_mode = isset($_GET['m']) && $_GET['m'] === 'key' ? 'key' : 'password';
 <?php if(!isset($_GET['connect'])){?>
 <div class="wrapper text-center">
 <?php if($conf['login_alipay']>0 || $conf['login_alipay']==-1){?>
-	<button type="button" class="btn btn-rounded btn-lg btn-icon btn-default" aria-label="支付宝快捷登录" title="支付宝快捷登录" onclick="connect('alipay')"><img src="../assets/icon/alipay.ico" alt="" style="border-radius:50px;"></button>
+<button type="button" class="btn btn-rounded btn-lg btn-icon btn-default" aria-label="支付宝快捷登录" title="支付宝快捷登录" onclick="connect('alipay')"><img src="../assets/icon/alipay.ico" alt="" style="border-radius:50px;"></button>
 <?php }?>
 <?php if($conf['login_qq']>0){?>
-	<button type="button" class="btn btn-rounded btn-lg btn-icon btn-default" aria-label="QQ快捷登录" title="QQ快捷登录" onclick="connect('qq')"><i class="fa fa-qq fa-lg" aria-hidden="true" style="color: #0BB2FF"></i></button>
+<button type="button" class="btn btn-rounded btn-lg btn-icon btn-default" aria-label="QQ快捷登录" title="QQ快捷登录" onclick="connect('qq')"><i class="fa fa-qq fa-lg" aria-hidden="true" style="color: #0BB2FF"></i></button>
 <?php }?>
 <?php if($conf['login_wx']>0 || $conf['login_wx']==-1){?>
-	<button type="button" class="btn btn-rounded btn-lg btn-icon btn-default" aria-label="微信快捷登录" title="微信快捷登录" onclick="connect('wx')"><i class="fa fa-wechat fa-lg" aria-hidden="true" style="color: green"></i></button>
+<button type="button" class="btn btn-rounded btn-lg btn-icon btn-default" aria-label="微信快捷登录" title="微信快捷登录" onclick="connect('wx')"><i class="fa fa-wechat fa-lg" aria-hidden="true" style="color: green"></i></button>
 </div>
 <?php }?>
 <?php }?>

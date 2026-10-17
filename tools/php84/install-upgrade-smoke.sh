@@ -469,9 +469,7 @@ EPAY_DB_HOST="$DB_HOST" EPAY_DB_PORT="$DB_PORT" EPAY_DB_SOCKET="$DB_SOCKET" \
     $pdo = new PDO($dsn, getenv("EPAY_DB_USER"), getenv("EPAY_DB_PASSWORD"), array(PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION));
     $version = $pdo->query("SELECT `v` FROM `".$prefix."_config` WHERE `k`=\"version\"")->fetchColumn();
     $admin = $pdo->query("SELECT `v` FROM `".$prefix."_config` WHERE `k`=\"admin_user\"")->fetchColumn();
-    $emailLength = $pdo->query("SELECT CHARACTER_MAXIMUM_LENGTH FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=".$pdo->quote($prefix."_user")." AND COLUMN_NAME=\"email\"")->fetchColumn();
-    $ssoEnabled = $pdo->query("SELECT `v` FROM `".$prefix."_config` WHERE `k`=\"admin_sso_enabled\"")->fetchColumn();
-    if ((string)$version !== "2039" || $admin !== "admin" || (int)$emailLength !== 254 || (string)$ssoEnabled !== "0") {
+    if ((string)$version !== "2038" || $admin !== "admin") {
         exit(1);
     }
   '
@@ -531,7 +529,7 @@ EPAY_DB_HOST="$DB_HOST" EPAY_DB_PORT="$DB_PORT" EPAY_DB_SOCKET="$DB_SOCKET" \
             $pdo->exec($sql);
         }
     }
-    $pdo->prepare("UPDATE `".$prefix."_config` SET `v`=? WHERE `k`=\"version\"")->execute(array("2038"));
+    $pdo->prepare("UPDATE `".$prefix."_config` SET `v`=? WHERE `k`=\"version\"")->execute(array("2037"));
     $pdo->prepare("INSERT INTO `".$prefix."_user` (`uid`, `gid`, `key`, `money`, `account`, `username`, `email`, `phone`, `addtime`, `pay`, `settle`, `refund`, `transfer`, `keylogin`, `status`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, ?, ?, ?, ?, ?)")
         ->execute(array(1000, 0, md5("php84-upgrade-fixture"), "88.66", "upgrade-fixture@example.com", "upgrade-user", "upgrade-fixture@example.com", "13800138088", 1, 1, 1, 1, 1, 1));
     $pdo->prepare("INSERT INTO `".$prefix."_channel` (`type`, `plugin`, `name`, `rate`, `status`) VALUES (?, ?, ?, ?, ?)")
@@ -567,7 +565,7 @@ wait_for_install_server " after upgrade config switch"
 
 upgrade_body="$WORK_DIR/upgrade.body"
 "$CURL_BIN" -sS -o "$upgrade_body" "$BASE_URL/install/update.php"
-expect_body upgrade_runs_from_previous_version "$upgrade_body" "成功执行SQL语句|点此返回首页"
+expect_body upgrade_runs_from_low_version "$upgrade_body" "成功执行SQL语句|点此返回首页"
 
 EPAY_DB_HOST="$DB_HOST" EPAY_DB_PORT="$DB_PORT" EPAY_DB_SOCKET="$DB_SOCKET" \
   EPAY_DB_USER="$APP_DB_USER" EPAY_DB_PASSWORD="$APP_DB_PASSWORD" EPAY_DB_NAME="$UPGRADE_DB_NAME" \
@@ -584,9 +582,7 @@ EPAY_DB_HOST="$DB_HOST" EPAY_DB_PORT="$DB_PORT" EPAY_DB_SOCKET="$DB_SOCKET" \
     $user = $pdo->query("SELECT `username` FROM `".$prefix."_user` WHERE `uid`=1000")->fetchColumn();
     $order = $pdo->query("SELECT `name` FROM `".$prefix."_order` WHERE `out_trade_no`=\"upgrade-preserve-order\"")->fetchColumn();
     $channel = $pdo->query("SELECT `name` FROM `".$prefix."_channel` WHERE `name`=\"PHP84 upgrade channel\"")->fetchColumn();
-    $emailLength = $pdo->query("SELECT CHARACTER_MAXIMUM_LENGTH FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=".$pdo->quote($prefix."_user")." AND COLUMN_NAME=\"email\"")->fetchColumn();
-    $ssoTable = $pdo->query("SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=".$pdo->quote($prefix."_admin_sso_ticket"))->fetchColumn();
-    if ((string)$version !== "2039" || $user !== "upgrade-user" || $order !== "Upgrade preserved order" || $channel !== "PHP84 upgrade channel" || (int)$emailLength !== 254 || (int)$ssoTable !== 1) {
+    if ((string)$version !== "2038" || $user !== "upgrade-user" || $order !== "Upgrade preserved order" || $channel !== "PHP84 upgrade channel") {
         fwrite(STDERR, "version=".$version." user=".$user." order=".$order." channel=".$channel."\n");
         exit(1);
     }

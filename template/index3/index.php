@@ -41,7 +41,7 @@ if(!defined('IN_CRONLITE'))exit();
   <div class="container">
     <h1 class="pull-left">
       <a class="header-logo" href="/">
-        <img class="header-logo-img" src="assets/img/logo.png" alt="<?php echo $conf['sitename']?>" />
+        <img src="/assets/img/lp-brand/lpao-logo-sm.webp" srcset="/assets/img/lp-brand/lpao-logo-sm.webp 1x, /assets/img/lp-brand/lpao-logo.webp 2x" alt="Lpao" class="lp-brand-logo lp-brand-logo--nav" width="110" height="49">
       </a>
     </h1>
     <nav class="nav pull-right">
@@ -421,7 +421,7 @@ if(!defined('IN_CRONLITE'))exit();
     <div class="container">
         <div class="row footxxdiv">
           <div class="col-lg-8 col-xs-12">
-            <img src="assets/img/logo.png" class="flap" data-ani="fadeInLeft" data-delay="0.2s"/>
+            <img src="/assets/img/lp-brand/lpao-logo-sm.webp" srcset="/assets/img/lp-brand/lpao-logo-sm.webp 1x, /assets/img/lp-brand/lpao-logo.webp 2x" alt="Lpao" class="lp-brand-logo lp-brand-logo--nav" width="110" height="49">
             <dd class="ksdhdd flap" data-ani="fadeInUp" data-delay="0.3s">
               <b>快速导航：</b>
               <a href="/">首页</a>

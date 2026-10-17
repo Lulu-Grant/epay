@@ -1,0 +1,436 @@
+/**
+ * lp-dark / merchant.css
+ * 覆盖: user/assets/css/app.css 壳与内容、user_style 反向映射、统计卡、tabs
+ * 禁止: 改侧栏宽（200/60）、给 .app-aside 加 border、改 user_style 存储
+ * theme: merchant, login（独立登录页表单 class 依赖 app.css）
+ */
+
+/* ---- 壳 ---- */
+html.lp-dark .app,
+html.lp-dark .app-header-fixed {
+  background-color: #0B0F14;
+  background-color: var(--lp-bg-0);
+  color: #E8EEF5;
+  color: var(--lp-text);
+}
+html.lp-dark .app-header,
+html.lp-dark .app-header .navbar-header,
+html.lp-dark .app-header .navbar-brand {
+  background-color: #11161D;
+  background-color: var(--lp-bg-1);
+  color: #E8EEF5;
+  color: var(--lp-text);
+}
+html.lp-dark .app-header .navbar-collapse {
+  background-color: #11161D;
+  background-color: var(--lp-bg-1);
+}
+html.lp-dark .app-header .navbar-brand,
+html.lp-dark .app-header .navbar-brand:hover,
+html.lp-dark .navbar-brand.text-lt {
+  color: #E8EEF5;
+  color: var(--lp-text);
+}
+html.lp-dark .app-aside {
+  background-color: #11161D;
+  background-color: var(--lp-bg-1);
+  color: #B4C0CE;
+  color: var(--lp-text-2);
+}
+html.lp-dark .app-aside:before {
+  background-color: inherit;
+}
+html.lp-dark .aside-wrap,
+html.lp-dark .navi-wrap,
+html.lp-dark nav.navi {
+  background-color: #11161D;
+  background-color: var(--lp-bg-1);
+}
+html.lp-dark .navi ul.nav > li > a {
+  color: #B4C0CE;
+  color: var(--lp-text-2);
+}
+html.lp-dark .navi ul.nav > li > a:hover,
+html.lp-dark .navi ul.nav > li > a:focus {
+  background-color: #1E2733;
+  background-color: var(--lp-bg-3);
+  color: #E8EEF5;
+  color: var(--lp-text);
+}
+html.lp-dark .navi ul.nav > li.active > a {
+  background-color: rgba(91, 140, 255, 0.16);
+  background-color: var(--lp-brand-soft);
+  color: #5B8CFF;
+  color: var(--lp-brand);
+}
+html.lp-dark .navi .hidden-folded.text-muted,
+html.lp-dark .navi .hidden-folded.padder.text-muted {
+  color: #7E8C9C !important;
+  color: var(--lp-text-3) !important;
+}
+html.lp-dark .navi i.icon,
+html.lp-dark .navi .text-primary-dker,
+html.lp-dark .navi .text-success-lter {
+  color: #7E8C9C;
+  color: var(--lp-text-3);
+}
+html.lp-dark .navi ul.nav > li.active > a i.icon,
+html.lp-dark .navi ul.nav > li.active > a .text-primary-dker,
+html.lp-dark .navi ul.nav > li.active > a .text-success-lter {
+  color: #5B8CFF;
+  color: var(--lp-brand);
+}
+html.lp-dark .app-content,
+html.lp-dark .app-content-body {
+  background-color: #0B0F14 !important;
+  background-color: var(--lp-bg-0) !important;
+  color: #E8EEF5;
+  color: var(--lp-text);
+}
+html.lp-dark .app-footer,
+html.lp-dark .app-footer .wrapper.b-t.bg-light {
+  background-color: #11161D !important;
+  background-color: var(--lp-bg-1) !important;
+  color: #7E8C9C;
+  color: var(--lp-text-3);
+  border-color: #2C3848 !important;
+  border-color: var(--lp-line) !important;
+}
+html.lp-dark .bg-light.lter.b-b.wrapper-md {
+  background-color: #11161D !important;
+  background-color: var(--lp-bg-1) !important;
+  border-bottom: 1px solid #2C3848;
+  border-bottom: 1px solid var(--lp-line);
+  color: #E8EEF5;
+  color: var(--lp-text);
+}
+
+/* ---- user_style 反向映射 ---- */
+html.lp-dark .bg-white,
+html.lp-dark .bg-white-only,
+html.lp-dark .bg-light,
+html.lp-dark .bg-light.lt,
+html.lp-dark .bg-light.lter,
+html.lp-dark .bg-light.dk,
+html.lp-dark .bg-light.dker {
+  background-color: #11161D !important;
+  background-color: var(--lp-bg-1) !important;
+  color: #E8EEF5 !important;
+  color: var(--lp-text) !important;
+}
+html.lp-dark .bg-black,
+html.lp-dark .bg-black.dk,
+html.lp-dark .bg-dark,
+html.lp-dark .bg-info,
+html.lp-dark .bg-primary {
+  background-color: #11161D !important;
+  background-color: var(--lp-bg-1) !important;
+  color: #B4C0CE !important;
+  color: var(--lp-text-2) !important;
+}
+html.lp-dark .panel,
+html.lp-dark .wrapper-md.control {
+  background-color: #171E27;
+  background-color: var(--lp-bg-2);
+  color: #E8EEF5;
+  color: var(--lp-text);
+}
+html.lp-dark .wrapper-md h1,
+html.lp-dark .wrapper-md h3 {
+  color: #E8EEF5;
+  color: var(--lp-text);
+}
+
+/* 把 active 从被打穿的 bg-* 里救回来 */
+html.lp-dark .bg-black .nav > li.active > a,
+html.lp-dark .bg-dark .nav > li.active > a,
+html.lp-dark .bg-white .nav > li.active > a,
+html.lp-dark .bg-light .nav > li.active > a,
+html.lp-dark .bg-info .nav > li.active > a,
+html.lp-dark .bg-primary .nav > li.active > a,
+html.lp-dark .navi ul.nav > li.active > a {
+  background-color: rgba(91, 140, 255, 0.16) !important;
+  background-color: var(--lp-brand-soft) !important;
+  color: #5B8CFF !important;
+  color: var(--lp-brand) !important;
+}
+html.lp-dark .bg-black .nav > li > a,
+html.lp-dark .bg-dark .nav > li > a,
+html.lp-dark .bg-white .nav > li > a,
+html.lp-dark .bg-light .nav > li > a,
+html.lp-dark .bg-info .nav > li > a,
+html.lp-dark .bg-primary .nav > li > a {
+  color: #B4C0CE;
+  color: var(--lp-text-2);
+}
+html.lp-dark .bg-black a,
+html.lp-dark .bg-dark a,
+html.lp-dark .bg-info a,
+html.lp-dark .bg-primary a,
+html.lp-dark .bg-white a,
+html.lp-dark .bg-light a {
+  color: #B4C0CE;
+  color: var(--lp-text-2);
+}
+html.lp-dark .bg-black .text-muted,
+html.lp-dark .bg-dark .text-muted,
+html.lp-dark .bg-info .text-muted,
+html.lp-dark .bg-primary .text-muted,
+html.lp-dark .bg-white .text-muted,
+html.lp-dark .bg-light .text-muted {
+  color: #7E8C9C !important;
+  color: var(--lp-text-3) !important;
+}
+
+/* 隐藏装饰；投诉数保留，写在 hide 之后 */
+html.lp-dark .app-aside b.label.bg-info { display: none; }
+html.lp-dark .app-aside .wrapper.m-t { display: none; }
+html.lp-dark .app-aside b.label.bg-danger { display: inline-block; }
+
+html.lp-dark .on.md.b-white {
+  background-color: #3DDC97;
+  background-color: var(--lp-ok);
+  border-color: #11161D;
+  border-color: var(--lp-bg-1);
+}
+html.lp-dark .b-white {
+  border-color: #2C3848;
+  border-color: var(--lp-line);
+}
+
+/* 用户中心统计卡（body 内 .round） */
+html.lp-dark .round {
+  color: #5B8CFF !important;
+  color: var(--lp-brand) !important;
+  border-color: rgba(91, 140, 255, 0.16) !important;
+  border-color: var(--lp-brand-soft) !important;
+  background: rgba(91, 140, 255, 0.16) !important;
+  background: var(--lp-brand-soft) !important;
+}
+html.lp-dark .fa-caret-down.text-warning { display: none; }
+html.lp-dark .font-bold.text-danger,
+html.lp-dark .text-danger.font-bold,
+html.lp-dark h3.text-danger,
+html.lp-dark .merchant-stat-value {
+  color: #E8EEF5 !important;
+  color: var(--lp-text) !important;
+  font-variant-numeric: tabular-nums;
+}
+
+/* AppKit 细节 */
+html.lp-dark .panel-default .panel-heading {
+  background-color: #1E2733;
+  background-color: var(--lp-bg-3);
+  color: #E8EEF5;
+  color: var(--lp-text);
+  border-color: #2C3848;
+  border-color: var(--lp-line);
+}
+html.lp-dark .nav-tabs > li.active > a {
+  border-bottom-color: #0B0F14 !important;
+  border-bottom-color: var(--lp-bg-0) !important;
+}
+html.lp-dark .btn-default {
+  color: #E8EEF5 !important;
+  color: var(--lp-text) !important;
+  background-color: transparent;
+  border-color: #3A4A5E;
+  border-color: var(--lp-line-2);
+}
+html.lp-dark .tab-container .tab-content {
+  background-color: #171E27;
+  background-color: var(--lp-bg-2);
+  border-color: #2C3848;
+  border-color: var(--lp-line);
+  color: #E8EEF5;
+  color: var(--lp-text);
+}
+html.lp-dark .btn-primary {
+  background-color: #3D6FE6;
+  background-color: var(--lp-brand-press);
+  border-color: #3D6FE6;
+  border-color: var(--lp-brand-press);
+  color: #fff !important;
+}
+html.lp-dark .btn-primary:hover,
+html.lp-dark .btn-primary:focus,
+html.lp-dark .btn-primary:active {
+  background-color: #3D6FE6;
+  background-color: var(--lp-brand-press);
+  border-color: #3D6FE6;
+  border-color: var(--lp-brand-press);
+  color: #fff !important;
+}
+html.lp-dark .i-checks > i {
+  border-color: #3A4A5E;
+  border-color: var(--lp-line-2);
+  background: #1E2733;
+  background: var(--lp-bg-3);
+}
+html.lp-dark .line,
+html.lp-dark .line-dashed {
+  border-color: #2C3848;
+  border-color: var(--lp-line);
+}
+html.lp-dark .dropdown-menu.w {
+  background-color: #171E27;
+  background-color: var(--lp-bg-2);
+  border-color: #2C3848;
+  border-color: var(--lp-line);
+}
+
+/* 认证页（P0 能吃到壳即可） */
+html.lp-dark .verified .mt-step-col-cont {
+  background: #2E3B4D;
+  background: var(--lp-bg-5);
+  color: #E8EEF5;
+  color: var(--lp-text);
+}
+html.lp-dark .verified .complete-active .mt-step-col-cont {
+  background: #5B8CFF;
+  background: var(--lp-brand);
+  color: #fff;
+}
+html.lp-dark .type-item {
+  border-color: #2C3848;
+  border-color: var(--lp-line);
+  background-color: #171E27;
+  background-color: var(--lp-bg-2);
+}
+html.lp-dark .type-title {
+  color: #E8EEF5;
+  color: var(--lp-text);
+}
+html.lp-dark .type-desc,
+html.lp-dark .type-info {
+  color: #B4C0CE;
+  color: var(--lp-text-2);
+}
+
+html.lp-dark .order-summary-note {
+  color: #7E8C9C !important;
+  color: var(--lp-text-3) !important;
+}
+
+/* 邀请/余额金额（不要把全部 .text-danger 改成 money，状态徽章仍走 wait） */
+html.lp-dark font[color="#f05050"] {
+  color: #FFB020;
+  color: var(--lp-money);
+}
+
+html.lp-dark .hbox,
+html.lp-dark .col,
+html.lp-dark .wrapper-md {
+  color: #E8EEF5;
+  color: var(--lp-text);
+}
+html.lp-dark .b-t,
+html.lp-dark .b-b,
+html.lp-dark .b-l,
+html.lp-dark .b-r {
+  border-color: #2C3848;
+  border-color: var(--lp-line);
+}
+
+/* HOTFIX v13 — 斑马纹白条：app.css 写在 td 上 (#fafbfc)，必须打格子 */
+html.lp-dark .table > tbody > tr > td,
+html.lp-dark .table > tfoot > tr > td,
+html.lp-dark .table > thead > tr > th,
+html.lp-dark .table > tbody > tr > th,
+html.lp-dark .bootstrap-table .table > tbody > tr > td,
+html.lp-dark .bootstrap-table .table > thead > tr > th,
+html.lp-dark .fixed-table-container,
+html.lp-dark .fixed-table-body,
+html.lp-dark .fixed-table-header {
+  background-color: #171E27 !important;
+  background-color: var(--lp-bg-2) !important;
+  color: #E8EEF5 !important;
+  color: var(--lp-text) !important;
+  border-color: #2C3848 !important;
+  border-color: var(--lp-line) !important;
+}
+html.lp-dark .table-striped > tbody > tr:nth-child(odd) > td,
+html.lp-dark .table-striped > tbody > tr:nth-child(odd) > th,
+html.lp-dark .table-striped > tbody > tr:nth-of-type(odd) > td,
+html.lp-dark .table-striped > tbody > tr:nth-of-type(odd) > th,
+html.lp-dark .table-striped > thead > th {
+  background-color: #1A222C !important;
+  color: #E8EEF5 !important;
+}
+html.lp-dark .table-striped > tbody > tr:nth-child(even) > td,
+html.lp-dark .table-striped > tbody > tr:nth-child(even) > th,
+html.lp-dark .table-striped > tbody > tr:nth-of-type(even) > td,
+html.lp-dark .table-striped > tbody > tr:nth-of-type(even) > th {
+  background-color: #141B24 !important;
+  color: #E8EEF5 !important;
+}
+html.lp-dark .table-hover > tbody > tr:hover > td,
+html.lp-dark .table-hover > tbody > tr:hover > th {
+  background-color: #263140 !important;
+  background-color: var(--lp-bg-4) !important;
+  color: #E8EEF5 !important;
+}
+html.lp-dark .well,
+html.lp-dark pre,
+html.lp-dark .form-control,
+html.lp-dark select.form-control,
+html.lp-dark input.form-control,
+html.lp-dark textarea.form-control {
+  background-color: #1E2733 !important;
+  background-color: var(--lp-bg-3) !important;
+  color: #E8EEF5 !important;
+  color: var(--lp-text) !important;
+  border-color: #2C3848 !important;
+}
+
+/* HOTFIX v14 — 投诉统计卡等页面内联白底 */
+html.lp-dark .complaint-summary-item,
+html.lp-dark .ibox-content,
+html.lp-dark .thumbnail,
+html.lp-dark .jumbotron,
+html.lp-dark .widget,
+html.lp-dark .stat-card,
+html.lp-dark .card,
+html.lp-dark .panel.padder-v.item {
+  background-color: #171E27 !important;
+  background-color: var(--lp-bg-2) !important;
+  border-color: #2C3848 !important;
+  border-color: var(--lp-line) !important;
+  color: #E8EEF5 !important;
+  color: var(--lp-text) !important;
+}
+html.lp-dark .complaint-summary-label {
+  color: #7E8C9C !important;
+  color: var(--lp-text-3) !important;
+}
+html.lp-dark .complaint-summary-value {
+  color: #E8EEF5 !important;
+  color: var(--lp-text) !important;
+}
+html.lp-dark .complaint-summary-value.text-danger { color: #FF5C7A !important; color: var(--lp-wait) !important; }
+html.lp-dark .complaint-summary-value.text-warning { color: #F5C84C !important; color: var(--lp-warn) !important; }
+html.lp-dark .complaint-summary-value.text-success { color: #3DDC97 !important; color: var(--lp-ok) !important; }
+html.lp-dark .merchant-stat-card {
+  display: flex;
+  align-items: center;
+}
+html.lp-dark .merchant-stat-card .hbox {
+  width: 100%;
+}
+html.lp-dark .filter-label,
+html.lp-dark .field-help {
+  color: #B4C0CE;
+  color: var(--lp-text-2);
+}
+html.lp-dark .admin-sso-indicator {
+  background: #F5C84C !important;
+  background: var(--lp-warn) !important;
+  color: #0B0F14 !important;
+  color: var(--lp-text-inv) !important;
+}
+html.lp-dark .alert-info {
+  background-color: rgba(91,140,255,0.16) !important;
+  background-color: var(--lp-brand-soft) !important;
+  border-color: #2C3848 !important;
+  color: #E8EEF5 !important;
+}

@@ -1,0 +1,17 @@
+/**
+ * lp-dark / print.css
+ * 覆盖: 订单/结算打印预览
+ * 禁止: 改屏幕布局、改支付页打印以外的交互
+ * theme: admin, merchant
+ */
+
+@media print {
+  html.lp-dark, html.lp-dark body,
+  html.lp-dark .panel, html.lp-dark .table,
+  html.lp-dark .app-content {
+    background: #fff !important;
+    color: #000 !important;
+    box-shadow: none !important;
+  }
+  html.lp-dark .app-aside, html.lp-dark .app-header, html.lp-dark .navbar { display: none !important; }
+}

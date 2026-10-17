@@ -30,7 +30,7 @@ if(!defined('IN_CRONLITE'))exit();
         <div class="container">
             <div class="row">
                 <div class="col-md-2">
-                    <div class="logo"><a href=""><img src="assets/img/logo.png" alt=""></a></div>
+                    <div class="logo"><a href=""><img src="/assets/img/lp-brand/lpao-logo-sm.webp" srcset="/assets/img/lp-brand/lpao-logo-sm.webp 1x, /assets/img/lp-brand/lpao-logo.webp 2x" alt="Lpao" class="lp-brand-logo lp-brand-logo--nav" width="110" height="49"></a></div>
                 </div>
                 <div class="col-md-7">
                     <ul class="menu">
@@ -48,12 +48,12 @@ if(!defined('IN_CRONLITE'))exit();
             </div>
         </div>
         <div class="mobile-block">
-            <div class="logo-mobile"><a href=""><img src="assets/img/logo.png" alt=""></a></div>
+            <div class="logo-mobile"><a href=""><img src="/assets/img/lp-brand/lpao-logo-sm.webp" srcset="/assets/img/lp-brand/lpao-logo-sm.webp 1x, /assets/img/lp-brand/lpao-logo.webp 2x" alt="Lpao" class="lp-brand-logo lp-brand-logo--nav" width="110" height="49"></a></div>
             <a href="#" class="mobile-menu-btn"><span></span></a>
             <div class="mobile-menu">
                 <div class="inside">
                     <div class="logo">
-                        <a href=""><img src="assets/img/logo.png" alt="""></a>
+                        <a href=""><img src="/assets/img/lp-brand/lpao-logo-sm.webp" srcset="/assets/img/lp-brand/lpao-logo-sm.webp 1x, /assets/img/lp-brand/lpao-logo.webp 2x" alt="Lpao" class="lp-brand-logo lp-brand-logo--nav" width="110" height="49"></a>
                     </div>
                     <ul class="menu panel-group" id="accordion" aria-multiselectable="true">
                         <li><a href="/">网站首页</a></li>

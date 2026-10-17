@@ -1,0 +1,30 @@
+/* lp-brand: logo only, no dark theme */
+.lp-brand-logo {
+  display: inline-block;
+  vertical-align: middle;
+  height: auto;
+  max-width: 100%;
+  object-fit: contain;
+}
+.navbar-brand .lp-brand-logo--nav,
+.lp-brand-logo--nav {
+  width: 110px;
+  max-height: 36px;
+}
+.lp-brand-logo--login {
+  width: 160px;
+  max-height: 72px;
+}
+.navbar-brand {
+  height: auto;
+  line-height: 1;
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+@media (max-width: 767px) {
+  .navbar-brand .lp-brand-logo--nav,
+  .lp-brand-logo--nav {
+    width: 96px;
+    max-height: 32px;
+  }
+}

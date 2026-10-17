@@ -1,0 +1,70 @@
+/**
+ * lp-dark / weui.css
+ * 覆盖: weui.min.css、paypage success|error、payok 内联 weui_*、payerr
+ * 禁止: 用微信绿当地品牌按钮、改支付结果业务逻辑
+ * theme: pay
+ */
+
+html.lp-dark .weui-msg,
+html.lp-dark .weui_msg,
+html.lp-dark .page,
+html.lp-dark .container.js_container {
+  background: #0B0F14;
+  background: var(--lp-bg-0);
+  color: #E8EEF5;
+  color: var(--lp-text);
+}
+html.lp-dark .weui-msg__title,
+html.lp-dark .weui_msg_title {
+  color: #E8EEF5;
+  color: var(--lp-text);
+}
+html.lp-dark .weui-msg__desc,
+html.lp-dark .weui_msg_desc {
+  color: #B4C0CE;
+  color: var(--lp-text-2);
+}
+html.lp-dark .weui-cells,
+html.lp-dark .weui_cells {
+  background-color: #171E27;
+  background-color: var(--lp-bg-2);
+}
+html.lp-dark .weui-cell,
+html.lp-dark .weui_cell {
+  color: #E8EEF5;
+  color: var(--lp-text);
+}
+html.lp-dark .weui-cell__ft,
+html.lp-dark .weui_cell_ft {
+  color: #B4C0CE;
+  color: var(--lp-text-2);
+}
+html.lp-dark .weui-btn_default,
+html.lp-dark .weui_btn_default {
+  background-color: transparent;
+  color: #E8EEF5;
+  color: var(--lp-text);
+  border: 1px solid #3A4A5E;
+  border-color: var(--lp-line-2);
+}
+html.lp-dark .weui-btn_primary,
+html.lp-dark .weui_btn_primary {
+  background-color: #5B8CFF;
+  background-color: var(--lp-brand);
+  color: #fff;
+}
+html.lp-dark .weui-footer,
+html.lp-dark .weui_extra_area {
+  color: #7E8C9C;
+  color: var(--lp-text-3);
+}
+html.lp-dark span[style*="color:#f40"],
+html.lp-dark span[style*="color: #f40"] {
+  color: #FFB020 !important;
+  color: var(--lp-money) !important;
+}
+/* 成功绿 / 失败红图标保留 */
+html.lp-dark .weui-icon-success,
+html.lp-dark .weui_icon_success { }
+html.lp-dark .weui-icon-warn,
+html.lp-dark .weui_icon_warn { }

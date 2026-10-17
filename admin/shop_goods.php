@@ -19,7 +19,7 @@ $csrf_token = $_SESSION['shop_csrf_token'];
 .shop-toolbar .form-control{max-width:180px}
 </style>
 <div class="container-fluid" style="padding-top:70px;">
-  <div class="col-md-12 center-block" style="float:none;">
+  <div class="col-xs-12">
     <div id="toolbar" class="shop-toolbar">
       <form class="form-inline" onsubmit="return searchGoods()">
         <div class="form-group">

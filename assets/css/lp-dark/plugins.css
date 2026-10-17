@@ -1,0 +1,272 @@
+/**
+ * lp-dark / plugins.css
+ * 覆盖: bootstrap-table、datepicker、layer 3.1.1、极验等待条、font[color]、.brand-text-logo
+ * 禁止: 改 captcha.css / datepicker.css / bootstrap-table.css 源文件、filter 反色二维码、layer.config 拉外网皮肤
+ * theme: admin, login, merchant
+ */
+
+/* font[color] */
+html.lp-dark font[color="red"], html.lp-dark font[color="RED"] { color: #FF5C7A !important; color: var(--lp-wait) !important; }
+html.lp-dark font[color="green"] { color: #3DDC97 !important; color: var(--lp-ok) !important; }
+html.lp-dark font[color="blue"] { color: #5B8CFF !important; color: var(--lp-brand) !important; }
+html.lp-dark font[color="orange"] { color: #F5C84C !important; color: var(--lp-warn) !important; }
+html.lp-dark font[color="#000000"], html.lp-dark font[color="#777"], html.lp-dark font[color="#29389f"], html.lp-dark font[color="#993939"] {
+  color: #B4C0CE !important;
+  color: var(--lp-text-2) !important;
+}
+
+html.lp-dark .brand-text-logo { color: #E8EEF5 !important; color: var(--lp-text) !important; }
+
+/* bootstrap-table */
+html.lp-dark .bootstrap-table,
+html.lp-dark .bootstrap-table .fixed-table-container {
+  background-color: #171E27;
+  background-color: var(--lp-bg-2);
+  color: #E8EEF5;
+  color: var(--lp-text);
+  border-color: #2C3848;
+  border-color: var(--lp-line);
+}
+html.lp-dark .bootstrap-table .fixed-table-toolbar,
+html.lp-dark .bootstrap-table .fixed-table-pagination {
+  background-color: #1E2733;
+  background-color: var(--lp-bg-3);
+  color: #B4C0CE;
+  color: var(--lp-text-2);
+}
+html.lp-dark .bootstrap-table .fixed-table-loading,
+html.lp-dark .bootstrap-table .fixed-table-container .fixed-table-body .fixed-table-loading {
+  background: #171E27 !important;
+  background: var(--lp-bg-2) !important;
+  color: #B4C0CE;
+  color: var(--lp-text-2);
+}
+html.lp-dark .bootstrap-table .fixed-table-loading .animation-dot {
+  background-color: #7E8C9C;
+  background-color: var(--lp-text-3);
+}
+html.lp-dark .bootstrap-table.fullscreen {
+  background: #0B0F14 !important;
+  background: var(--lp-bg-0) !important;
+}
+html.lp-dark .bootstrap-table .no-records-found {
+  background-color: #171E27;
+  background-color: var(--lp-bg-2);
+  color: #7E8C9C;
+  color: var(--lp-text-3);
+}
+html.lp-dark .bootstrap-table ul.pagination > .active > a,
+html.lp-dark .bootstrap-table ul.pagination > .active > span {
+  background-color: #5B8CFF;
+  background-color: var(--lp-brand);
+  border-color: #5B8CFF;
+  border-color: var(--lp-brand);
+  color: #fff;
+}
+html.lp-dark .fixed-table-toolbar .btn-default {
+  background-color: transparent;
+  border-color: #3A4A5E;
+  border-color: var(--lp-line-2);
+  color: #E8EEF5;
+  color: var(--lp-text);
+}
+html.lp-dark .bootstrap-table .fixed-table-container thead th .th-inner,
+html.lp-dark .bootstrap-table .fixed-table-container tbody td .th-inner {
+  color: #B4C0CE;
+  color: var(--lp-text-2);
+}
+html.lp-dark .bootstrap-table .table,
+html.lp-dark .bootstrap-table .table > thead > tr > th {
+  background-color: #1E2733;
+  background-color: var(--lp-bg-3);
+  border-color: #2C3848;
+  border-color: var(--lp-line);
+}
+
+/* datepicker（body 内后挂，特异度必须打赢） */
+html.lp-dark .datepicker,
+html.lp-dark .datepicker-dropdown,
+html.lp-dark .datepicker.dropdown-menu {
+  background-color: #171E27 !important;
+  background-color: var(--lp-bg-2) !important;
+  color: #E8EEF5 !important;
+  color: var(--lp-text) !important;
+  border-color: #2C3848 !important;
+  border-color: var(--lp-line) !important;
+}
+html.lp-dark .datepicker-dropdown:before,
+html.lp-dark .datepicker-dropdown:after {
+  border-bottom-color: #171E27 !important;
+  border-bottom-color: var(--lp-bg-2) !important;
+}
+html.lp-dark .datepicker-dropdown.datepicker-orient-top:before,
+html.lp-dark .datepicker-dropdown.datepicker-orient-top:after {
+  border-top-color: #171E27 !important;
+  border-top-color: var(--lp-bg-2) !important;
+  border-bottom-color: transparent !important;
+}
+html.lp-dark .datepicker table tr td,
+html.lp-dark .datepicker table tr th {
+  color: #E8EEF5;
+  color: var(--lp-text);
+}
+html.lp-dark .datepicker table tr td.day:hover {
+  background: #263140 !important;
+  background: var(--lp-bg-4) !important;
+  color: #E8EEF5 !important;
+  color: var(--lp-text) !important;
+}
+html.lp-dark .datepicker table tr td.active,
+html.lp-dark .datepicker table tr td.active:hover,
+html.lp-dark .datepicker table tr td.active.disabled,
+html.lp-dark .datepicker table tr td.active.disabled:hover,
+html.lp-dark .datepicker table tr td span.active {
+  background-color: #5B8CFF !important;
+  background-color: var(--lp-brand) !important;
+  color: #fff !important;
+  background-image: none !important;
+}
+html.lp-dark .datepicker table tr td.today,
+html.lp-dark .datepicker table tr td.today:hover {
+  background-color: rgba(91, 140, 255, 0.16) !important;
+  background-color: var(--lp-brand-soft) !important;
+  color: #5B8CFF !important;
+  color: var(--lp-brand) !important;
+}
+html.lp-dark .datepicker table tr td.old,
+html.lp-dark .datepicker table tr td.new {
+  color: #7E8C9C !important;
+  color: var(--lp-text-3) !important;
+}
+html.lp-dark .datepicker .datepicker-switch,
+html.lp-dark .datepicker .prev,
+html.lp-dark .datepicker .next {
+  color: #E8EEF5;
+  color: var(--lp-text);
+}
+html.lp-dark .datepicker .datepicker-switch:hover,
+html.lp-dark .datepicker .prev:hover,
+html.lp-dark .datepicker .next:hover {
+  background: #263140;
+  background: var(--lp-bg-4);
+}
+
+/* layer 3.1.1 */
+html.lp-dark .layui-layer {
+  background-color: #171E27;
+  background-color: var(--lp-bg-2);
+  color: #E8EEF5;
+  color: var(--lp-text);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+  box-shadow: var(--lp-shadow);
+}
+html.lp-dark .layui-layer-title {
+  background-color: #1E2733;
+  background-color: var(--lp-bg-3);
+  color: #E8EEF5;
+  color: var(--lp-text);
+  border-bottom-color: #2C3848;
+  border-bottom-color: var(--lp-line);
+}
+html.lp-dark .layui-layer-content {
+  background-color: #171E27;
+  background-color: var(--lp-bg-2);
+  color: #E8EEF5;
+  color: var(--lp-text);
+}
+html.lp-dark .layui-layer-setwin a {
+  color: #B4C0CE;
+  color: var(--lp-text-2);
+}
+html.lp-dark .layui-layer-setwin a:focus-visible,
+html.lp-dark .layui-layer-close:focus-visible {
+  outline: 3px solid #5B8CFF !important;
+  outline: 3px solid var(--lp-brand) !important;
+  outline-offset: 3px;
+}
+html.lp-dark .layui-layer-btn {
+  background-color: #1E2733;
+  background-color: var(--lp-bg-3);
+  border-top-color: #2C3848;
+  border-top-color: var(--lp-line);
+}
+html.lp-dark .layui-layer-btn a {
+  background-color: transparent;
+  border-color: #3A4A5E;
+  border-color: var(--lp-line-2);
+  color: #E8EEF5;
+  color: var(--lp-text);
+}
+html.lp-dark .layui-layer-btn .layui-layer-btn0 {
+  background-color: #5B8CFF;
+  background-color: var(--lp-brand);
+  border-color: #5B8CFF;
+  border-color: var(--lp-brand);
+  color: #fff;
+}
+html.lp-dark .layui-layer-btn .layui-layer-btn1 {
+  background-color: transparent;
+  border-color: #3A4A5E;
+  border-color: var(--lp-line-2);
+  color: #E8EEF5;
+  color: var(--lp-text);
+}
+html.lp-dark .layui-layer-dialog,
+html.lp-dark .layui-layer-page {
+  background-color: #171E27;
+  background-color: var(--lp-bg-2);
+}
+html.lp-dark .layui-layer-msg,
+html.lp-dark .layui-layer-hui {
+  background-color: rgba(0, 0, 0, 0.62);
+  background-color: var(--lp-mask);
+  color: #E8EEF5;
+  color: var(--lp-text);
+  border: none;
+}
+html.lp-dark .layui-layer-loading {
+  background: transparent;
+  box-shadow: none;
+}
+html.lp-dark .layui-layer-prompt .layui-layer-input {
+  background-color: #1E2733;
+  background-color: var(--lp-bg-3);
+  border-color: #2C3848;
+  border-color: var(--lp-line);
+  color: #E8EEF5;
+  color: var(--lp-text);
+}
+
+/* 极验等待条（只改我们的 DOM） */
+html.lp-dark #captcha_text,
+html.lp-dark #captcha_wait {
+  background-color: #1E2733;
+  background-color: var(--lp-bg-3);
+  color: #7E8C9C;
+  color: var(--lp-text-3);
+}
+html.lp-dark .loading-dot {
+  background: #7E8C9C;
+  background: var(--lp-text-3);
+}
+
+/* 二维码白垫（登录扫码 P0） */
+html.lp-dark #qrcode,
+html.lp-dark #qrimg,
+html.lp-dark .qr-image,
+html.lp-dark #endImg {
+  background: #FFFFFF;
+  background: var(--lp-qr-pad);
+  padding: 12px;
+  border-radius: 8px;
+  display: inline-block;
+}
+html.lp-dark .bootstrap-table .search input,
+html.lp-dark .bootstrap-table .fixed-table-toolbar .search input {
+  background-color: #1E2733;
+  background-color: var(--lp-bg-3);
+  color: #E8EEF5;
+  color: var(--lp-text);
+  border-color: #2C3848;
+  border-color: var(--lp-line);
+}

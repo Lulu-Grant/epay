@@ -1,0 +1,196 @@
+/**
+ * lp-dark / tokens.css
+ * 覆盖: 全局色板。唯一允许定义 --lp-* hex 的文件
+ * 禁止: 第二套 token、业务选择器散落 hex、color-mix / :has / oklch
+ * theme: login, admin, merchant, pay, public
+ */
+
+:root {
+  color-scheme: dark;
+
+  /* 表面 */
+  --lp-bg-0: #0B0F14;      /* 页面底 */
+  --lp-bg-1: #11161D;      /* 顶栏 / 侧栏 */
+  --lp-bg-2: #171E27;      /* 卡片 / panel / 表容器 */
+  --lp-bg-3: #1E2733;      /* 表头 / 工具条 / 输入底 */
+  --lp-bg-4: #263140;      /* hover / 选中行 */
+  --lp-bg-5: #2E3B4D;      /* 更亮的 chip */
+
+  /* 描边 */
+  --lp-line: #2C3848;
+  --lp-line-2: #3A4A5E;
+  --lp-line-focus: #5B8CFF;
+
+  /* 文字 */
+  --lp-text: #E8EEF5;
+  --lp-text-2: #B4C0CE;
+  --lp-text-3: #7E8C9C;
+  --lp-text-inv: #0B0F14;
+
+  /* 品牌（已登录产品壳） */
+  --lp-brand: #5B8CFF;
+  --lp-brand-press: #3D6FE6;
+  --lp-brand-soft: rgba(91, 140, 255, 0.16);
+
+  /* 语义（四条线共用） */
+  --lp-ok: #3DDC97;
+  --lp-ok-soft: rgba(61, 220, 151, 0.16);
+  --lp-wait: #FF5C7A;
+  --lp-wait-soft: rgba(255, 92, 122, 0.16);
+  --lp-warn: #F5C84C;
+  --lp-warn-soft: rgba(245, 200, 76, 0.16);
+  --lp-info: #4CC3FF;
+  --lp-info-soft: rgba(76, 195, 255, 0.16);
+  --lp-money: #FFB020;
+
+  /* 通道（仅通道识别，不当地全局主色） */
+  --lp-wx: #07C160;
+  --lp-ali: #1677FF;
+  --lp-qq: #12B7F5;
+
+  /* 二维码安全垫 */
+  --lp-qr-pad: #FFFFFF;
+  --lp-qr-ink: #111111;
+
+  /* 阴影与遮罩 */
+  --lp-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+  --lp-mask: rgba(0, 0, 0, 0.62);
+
+  --lp-r-sm: 4px;
+  --lp-r: 8px;
+  --lp-r-lg: 12px;
+
+  --lp-fs: 14px;
+  --lp-fs-sm: 12px;
+  --lp-fs-lg: 16px;
+  --lp-fs-money: 28px;
+}
+
+html.lp-dark,
+html.lp-dark body {
+  background: #0B0F14;
+  background: var(--lp-bg-0);
+  color: #E8EEF5;
+  color: var(--lp-text);
+}
+
+html.lp-dark {
+  scrollbar-color: #3A4A5E #0B0F14;
+}
+
+html.lp-dark ::selection {
+  background: rgba(91, 140, 255, 0.16);
+  background: var(--lp-brand-soft);
+  color: #E8EEF5;
+  color: var(--lp-text);
+}
+
+html.lp-dark :focus-visible {
+  outline: 2px solid #5B8CFF;
+  outline: 2px solid var(--lp-brand);
+  outline-offset: 2px;
+}
+
+html.lp-dark .btn-primary:focus-visible,
+html.lp-dark .btn-lg.btn-primary:focus-visible,
+html.lp-dark .form-control:focus-visible,
+html.lp-dark .immediate_pay:focus-visible,
+html.lp-dark .pay_btn:focus-visible {
+  outline: 2px solid #5B8CFF !important;
+  outline: 2px solid var(--lp-brand) !important;
+  outline-offset: 2px;
+}
+
+html.lp-dark ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+html.lp-dark ::-webkit-scrollbar-track {
+  background: #0B0F14;
+  background: var(--lp-bg-0);
+}
+html.lp-dark ::-webkit-scrollbar-thumb {
+  background: #3A4A5E;
+  background: var(--lp-line-2);
+  border-radius: 8px;
+}
+
+/* login：极弱径向，不要网格/粒子 */
+html[data-lp-theme="login"] body {
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(91,140,255,0.06), transparent 55%),
+    #0B0F14;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(91,140,255,0.06), transparent 55%),
+    var(--lp-bg-0);
+}
+
+/* admin：密度不变，字号 14px */
+html[data-lp-theme="admin"] {
+  font-size: 14px;
+}
+
+/* merchant：内容底与侧栏分层 */
+html[data-lp-theme="merchant"] .app-content {
+  background: #0B0F14;
+  background: var(--lp-bg-0);
+}
+
+/* pay：壳暗、交易卡略亮。金额走 money 不是 brand */
+html[data-lp-theme="pay"] { }
+
+/* public 气质贴近 login */
+html[data-lp-theme="public"] body {
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(91,140,255,0.05), transparent 55%),
+    #0B0F14;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(91,140,255,0.05), transparent 55%),
+    var(--lp-bg-0);
+}
+
+/* 布局与断点由登录、管理、商户等组件样式负责；token 层不改 Bootstrap 栅格。 */
+
+/* lp-brand logo */
+html.lp-dark .lp-brand-logo {
+  display: inline-block;
+  vertical-align: middle;
+  height: auto;
+  max-width: 100%;
+}
+html.lp-dark .navbar-brand .lp-brand-logo--nav,
+html.lp-dark .lp-brand-logo--nav {
+  width: 110px;
+  height: auto;
+  max-height: 36px;
+  object-fit: contain;
+}
+html.lp-dark .navbar-brand {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  height: auto;
+  line-height: 1;
+}
+html.lp-dark .lp-brand-logo--login {
+  width: 160px;
+  max-height: 72px;
+  height: auto;
+  object-fit: contain;
+}
+html.lp-dark .lp-brand-logo--doc {
+  width: 100px;
+  max-height: 40px;
+  height: auto;
+  object-fit: contain;
+}
+@media (max-width: 767px) {
+  html.lp-dark .navbar-brand .lp-brand-logo--nav,
+  html.lp-dark .lp-brand-logo--nav {
+    width: 96px;
+    max-height: 32px;
+  }
+  html.lp-dark .lp-brand-logo--login {
+    width: 140px;
+    max-height: 63px;
+  }
+}

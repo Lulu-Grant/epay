@@ -1,0 +1,66 @@
+/**
+ * lp-dark / public.css
+ * 覆盖: template/default 顶栏页脚、协议、brand-text-logo
+ * 禁止: filter:invert 英雄图、改协议正文、重绘 Banner
+ * theme: public
+ */
+
+html.lp-dark #main-nav.navbar-default,
+html.lp-dark header,
+html.lp-dark header .navbar-default {
+  background-color: #11161D;
+  background-color: var(--lp-bg-1);
+  border-color: #2C3848;
+  border-color: var(--lp-line);
+}
+html.lp-dark .brand-text-logo {
+  color: #E8EEF5 !important;
+  color: var(--lp-text) !important;
+}
+html.lp-dark .navbar-nav > li > a {
+  color: #B4C0CE;
+  color: var(--lp-text-2);
+}
+html.lp-dark .navbar-nav > li > a:hover {
+  color: #E8EEF5;
+  color: var(--lp-text);
+}
+html.lp-dark footer,
+html.lp-dark .address,
+html.lp-dark .xinxi {
+  background-color: #11161D;
+  background-color: var(--lp-bg-1);
+  color: #B4C0CE;
+  color: var(--lp-text-2);
+}
+html.lp-dark .post-content {
+  background: #0B0F14;
+  background: var(--lp-bg-0);
+  color: #E8EEF5;
+  color: var(--lp-text);
+}
+/* 协议头蓝渐变可留 */
+html.lp-dark .bann { }
+
+html.lp-dark body {
+  background: #0B0F14;
+  background: var(--lp-bg-0);
+  color: #E8EEF5;
+  color: var(--lp-text);
+}
+
+/* wx.php 教程卡 */
+html.lp-dark[data-lp-theme="pay"] body {
+  background: #171E27 !important;
+  background: var(--lp-bg-2) !important;
+  color: #E8EEF5 !important;
+  color: var(--lp-text) !important;
+  box-shadow: none;
+}
+html.lp-dark h1,
+html.lp-dark h3 {
+  color: #E8EEF5;
+  color: var(--lp-text);
+  border-bottom-color: #2C3848;
+  border-bottom-color: var(--lp-line);
+}

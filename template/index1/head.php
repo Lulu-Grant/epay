@@ -24,7 +24,7 @@ if(!defined('IN_CRONLITE'))exit();
 		<section id="page-wrapper">
 			<!-- Header -->
 			<header id="header">
-				<h1><a href="#"><img src="assets/img/logo.png" style="max-height:60px;" ></a></h1>
+				<h1><a href="#"><img src="/assets/img/lp-brand/lpao-logo-sm.webp" srcset="/assets/img/lp-brand/lpao-logo-sm.webp 1x, /assets/img/lp-brand/lpao-logo.webp 2x" alt="Lpao" class="lp-brand-logo lp-brand-logo--nav" width="110" height="49"></a></h1>
 				<nav id="nav">
 					<ul>
 						<li>

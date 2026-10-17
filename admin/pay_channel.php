@@ -119,7 +119,7 @@ unset($rs);
 
   <div class="container" style="padding-top:70px;">
   <div class="row">
-    <div class="col-md-12 center-block" style="float: none;">
+    <div class="col-xs-12">
 <form onsubmit="return searchSubmit()" method="GET" class="form-inline" id="searchToolbar">
 <input type="hidden" class="form-control" name="id">
 <input type="hidden" class="form-control" name="batch">

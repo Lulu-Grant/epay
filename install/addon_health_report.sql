@@ -40,7 +40,7 @@ CREATE TABLE IF NOT EXISTS `pre_health_report` (
   `ai_source_rows` int(11) NOT NULL DEFAULT '0',
   `ai_sample_rows` int(11) NOT NULL DEFAULT '0',
   `ai_drilldown_rows` int(11) NOT NULL DEFAULT '0',
-  `ai_payload_mode` varchar(16) NOT NULL DEFAULT 'compact',
+  `ai_payload_mode` varchar(16) NOT NULL DEFAULT 'raw',
   `ai_request_bytes` bigint(20) unsigned NOT NULL DEFAULT '0',
   `ai_response_bytes` bigint(20) unsigned NOT NULL DEFAULT '0',
   `ai_input_tokens` bigint(20) unsigned NOT NULL DEFAULT '0',

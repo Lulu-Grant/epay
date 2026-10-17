@@ -27,7 +27,7 @@ if(!defined('IN_CRONLITE'))exit();
 	<!--头-开始-->
     <div class="head backFFF">
     	<div class="headK">
-        	<div class="Logo fl"><img src="assets/img/logo.png" style="max-height:60px;" /></div>
+        	<div class="Logo fl"><img src="/assets/img/lp-brand/lpao-logo-sm.webp" srcset="/assets/img/lp-brand/lpao-logo-sm.webp 1x, /assets/img/lp-brand/lpao-logo.webp 2x" alt="Lpao" class="lp-brand-logo lp-brand-logo--nav" width="110" height="49"></div>
             <div class="MenuPC fr">
       			                <a href="/user/reg.php" class="hdReg fr" style="float: right">注册</a>
                 <a href="/user/" class="hdLog fr" style="float: right">登录</a>

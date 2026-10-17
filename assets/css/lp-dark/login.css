@@ -1,0 +1,233 @@
+/**
+ * lp-dark / login.css
+ * 覆盖: 管理登录 + 商户登录/注册/找回/OAuth/微信/QQ 扫码 + user/test.php
+ * 禁止: 改伪装文案、加乐跑绿跑带、粒子/网格、改登录校验
+ * theme: login
+ */
+
+html.lp-dark .app.app-header-fixed {
+  background: transparent;
+}
+html.lp-dark .container.w-xxl {
+  color: #E8EEF5;
+  color: var(--lp-text);
+}
+html.lp-dark .auth-shell {
+  box-sizing: border-box;
+  width: calc(100% - 24px) !important;
+  max-width: 400px !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  padding-left: 12px;
+  padding-right: 12px;
+}
+html.lp-dark .auth-form {
+  width: 100%;
+}
+html.lp-dark .login-methods {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  border-bottom: 0;
+  margin-bottom: 10px;
+}
+html.lp-dark .login-methods > li {
+  float: none;
+  width: auto;
+  margin: 0;
+  text-align: center;
+}
+html.lp-dark .login-methods > li > a {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  border: 1px solid #2C3848;
+  border-color: var(--lp-line);
+  border-radius: 6px;
+  color: #B4C0CE;
+  color: var(--lp-text-2);
+}
+html.lp-dark .login-methods > li.active > a,
+html.lp-dark .login-methods > li.active > a:hover,
+html.lp-dark .login-methods > li.active > a:focus {
+  background: rgba(91, 140, 255, 0.16);
+  background: var(--lp-brand-soft);
+  border-color: #5B8CFF !important;
+  border-color: var(--lp-brand) !important;
+  color: #E8EEF5 !important;
+  color: var(--lp-text) !important;
+}
+html.lp-dark .auth-field-label {
+  display: block;
+  margin: 0 0 5px;
+  color: #B4C0CE;
+  color: var(--lp-text-2);
+  font-size: 13px;
+  font-weight: 600;
+}
+html.lp-dark .auth-code-button {
+  min-width: 104px;
+  border: 0;
+  border-left: 1px solid #2C3848;
+  border-left-color: var(--lp-line);
+  background: #263140;
+  background: var(--lp-bg-4);
+  color: #E8EEF5;
+  color: var(--lp-text);
+  cursor: pointer;
+}
+html.lp-dark .auth-code-button:disabled {
+  color: #7E8C9C;
+  color: var(--lp-text-3);
+  cursor: wait;
+}
+html.lp-dark .navbar-brand.block.m-t {
+  color: #E8EEF5;
+  color: var(--lp-text);
+  font-weight: 600;
+}
+html.lp-dark .wrapper.text-center {
+  color: #B4C0CE;
+  color: var(--lp-text-2);
+}
+html.lp-dark .list-group,
+html.lp-dark .list-group-sm {
+  background: transparent;
+}
+html.lp-dark .list-group-item {
+  background-color: #1E2733;
+  background-color: var(--lp-bg-3);
+  border-color: #2C3848;
+  border-color: var(--lp-line);
+  color: #E8EEF5;
+  color: var(--lp-text);
+}
+html.lp-dark .list-group-item.active {
+  background-color: rgba(91, 140, 255, 0.16) !important;
+  background-color: var(--lp-brand-soft) !important;
+  border-color: #5B8CFF !important;
+  border-color: var(--lp-brand) !important;
+  color: #5B8CFF !important;
+  color: var(--lp-brand) !important;
+}
+html.lp-dark .list-group-item.focus,
+html.lp-dark .list-group-item.select {
+  background-color: #1E2733 !important;
+  background-color: var(--lp-bg-3) !important;
+}
+html.lp-dark .form-control.no-border {
+  background-color: #1E2733;
+  background-color: var(--lp-bg-3);
+  color: #E8EEF5;
+  color: var(--lp-text);
+  border-color: transparent;
+}
+html.lp-dark .m-b-lg .nav-tabs {
+  border-bottom-color: #2C3848;
+  border-bottom-color: var(--lp-line);
+}
+html.lp-dark .m-b-lg .nav-tabs > li.active > a,
+html.lp-dark .m-b-lg .nav-tabs > li.active > a:hover,
+html.lp-dark .m-b-lg .nav-tabs > li.active > a:focus {
+  background-color: transparent;
+  border-bottom-color: #5B8CFF !important;
+  border-bottom-color: var(--lp-brand) !important;
+  color: #5B8CFF;
+  color: var(--lp-brand);
+}
+html.lp-dark .btn-lg.btn-primary.btn-block {
+  height: 44px;
+  min-height: 44px;
+  line-height: 22px;
+  background-color: #3D6FE6;
+  background-color: var(--lp-brand-press);
+  border-color: #3D6FE6;
+  border-color: var(--lp-brand-press);
+  color: #fff;
+}
+html.lp-dark .btn-lg.btn-primary.btn-block:hover,
+html.lp-dark .btn-lg.btn-primary.btn-block:focus {
+  background-color: #315dcc;
+  border-color: #315dcc;
+}
+html.lp-dark .btn-rounded {
+  border-radius: 20px;
+}
+html.lp-dark .btn-info.btn-rounded,
+html.lp-dark .btn-danger.btn-rounded,
+html.lp-dark .btn-default.btn-icon {
+  background-color: transparent;
+  border-color: #3A4A5E;
+  border-color: var(--lp-line-2);
+  color: #E8EEF5;
+  color: var(--lp-text);
+}
+html.lp-dark .btn-info.btn-rounded:hover,
+html.lp-dark .btn-danger.btn-rounded:hover,
+html.lp-dark .btn-default.btn-icon:hover {
+  background-color: #263140;
+  background-color: var(--lp-bg-4);
+  color: #E8EEF5;
+  color: var(--lp-text);
+}
+
+html.lp-dark #login,
+html.lp-dark #loginmsg {
+  color: #B4C0CE;
+  color: var(--lp-text-2);
+}
+html.lp-dark #loginload {
+  color: #7E8C9C !important;
+  color: var(--lp-text-3) !important;
+}
+html.lp-dark #captcha {
+  background-color: #1E2733;
+  background-color: var(--lp-bg-3);
+}
+
+/* Autofill 必须盖过页内 white inset */
+html.lp-dark input:-webkit-autofill,
+html.lp-dark input:-webkit-autofill:hover,
+html.lp-dark input:-webkit-autofill:focus,
+html.lp-dark input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px #1E2733 inset !important;
+  -webkit-box-shadow: 0 0 0 1000px var(--lp-bg-3) inset !important;
+  -webkit-text-fill-color: #E8EEF5 !important;
+  -webkit-text-fill-color: var(--lp-text) !important;
+  caret-color: #E8EEF5;
+  caret-color: var(--lp-text);
+  transition: background-color 99999s ease-out;
+}
+
+html.lp-dark .modal-content {
+  background-color: #171E27;
+  background-color: var(--lp-bg-2);
+  color: #E8EEF5;
+  color: var(--lp-text);
+}
+
+/* 管理员登录卡：去蓝条 */
+html.lp-dark .panel-primary > .panel-heading {
+  background-color: #1E2733;
+  background-color: var(--lp-bg-3);
+  color: #E8EEF5;
+  color: var(--lp-text);
+  border-color: #2C3848;
+  border-color: var(--lp-line);
+}
+
+/* 快捷登录图标：深底圆，通道 ico 原色保留 */
+html.lp-dark a.btn.btn-icon,
+html.lp-dark .btn-icon {
+  background-color: #1E2733;
+  background-color: var(--lp-bg-3);
+  border-radius: 50%;
+}
+
+html.lp-dark .page-header h4,
+html.lp-dark .page-header a {
+  color: #E8EEF5;
+  color: var(--lp-text);
+}

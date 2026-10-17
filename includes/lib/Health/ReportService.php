@@ -20,7 +20,8 @@ class ReportService
         if(!$this->db->getColumn('SELECT GET_LOCK(:name,0)', [':name'=>$lockName])) throw new \RuntimeException('Another health report is being generated');
         try {
             $existing = $this->db->find('health_report', '*', ['report_date'=>$date, 'report_type'=>'daily'], null, 1);
-            if($existing && isset($existing['ai_payload_mode']) && in_array($existing['ai_payload_mode'], ['raw','compact'], true)){
+            if($existing && intval(isset($existing['ai_status']) ? $existing['ai_status'] : 0) === 4
+                && isset($existing['ai_payload_mode']) && in_array($existing['ai_payload_mode'], ['raw','compact'], true)){
                 $payloadMode = $existing['ai_payload_mode'];
             }
             $pipelineVersion = $this->pipelineVersion($payloadMode);
@@ -471,7 +472,7 @@ class ReportService
             'ai_source_rows'=>intval(isset($row['ai_source_rows'])?$row['ai_source_rows']:0),
             'ai_sample_rows'=>intval(isset($row['ai_sample_rows'])?$row['ai_sample_rows']:0),
             'ai_drilldown_rows'=>intval(isset($row['ai_drilldown_rows'])?$row['ai_drilldown_rows']:0),
-            'ai_payload_mode'=>isset($row['ai_payload_mode'])?$row['ai_payload_mode']:'compact',
+            'ai_payload_mode'=>isset($row['ai_payload_mode'])?$row['ai_payload_mode']:'raw',
             'ai_request_bytes'=>intval(isset($row['ai_request_bytes'])?$row['ai_request_bytes']:0),
             'ai_response_bytes'=>intval(isset($row['ai_response_bytes'])?$row['ai_response_bytes']:0),
             'ai_input_tokens'=>intval(isset($row['ai_input_tokens'])?$row['ai_input_tokens']:0),
@@ -490,7 +491,7 @@ class ReportService
 
     private function payloadMode()
     {
-        return isset($this->config['health_ai_payload_mode']) && $this->config['health_ai_payload_mode'] === 'raw' ? 'raw' : 'compact';
+        return isset($this->config['health_ai_payload_mode']) && $this->config['health_ai_payload_mode'] === 'compact' ? 'compact' : 'raw';
     }
 
     private function pipelineVersion($mode = null)

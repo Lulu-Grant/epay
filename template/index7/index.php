@@ -20,7 +20,7 @@ if(!defined('IN_CRONLITE'))exit();
 <body>
   <nav class="navbar navbar-expand-lg fixed-top custom_nav_menu sticky">
     <div class="container">
-      <a class="navbar-brand logo" href=""><img class="header-logo-img" src="assets/img/logo.png" alt="<?php echo $conf['sitename']?>" /></a>
+      <a class="navbar-brand logo" href=""><img src="/assets/img/lp-brand/lpao-logo-sm.webp" srcset="/assets/img/lp-brand/lpao-logo-sm.webp 1x, /assets/img/lp-brand/lpao-logo.webp 2x" alt="Lpao" class="lp-brand-logo lp-brand-logo--nav" width="110" height="49"></a>
       <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbar-as"
       aria-controls="navbar-as" aria-expanded="false" aria-label="Toggle navigation">
         <i class="mdi mdi-menu"></i>

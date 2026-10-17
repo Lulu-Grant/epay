@@ -74,7 +74,7 @@ if(!defined('IN_CRONLITE'))exit();
     <nav class="navbar menu">
         <div class="container">
             <div class="navbar-header" id="header">
-                <a class="navbar-brand" href="index.php"><img width="180" src="assets/img/logo.png" alt="Logo white" /></a>
+                <a class="navbar-brand" href="index.php"><img src="/assets/img/lp-brand/lpao-logo-sm.webp" srcset="/assets/img/lp-brand/lpao-logo-sm.webp 1x, /assets/img/lp-brand/lpao-logo.webp 2x" alt="Lpao" class="lp-brand-logo lp-brand-logo--nav" width="110" height="49"></a>
             </div>
             <div class="menu hidden-xs" style="margin-top:42px;margin-left:140px;">
                 <a href="#" class="register" target="_blank">首页</a>

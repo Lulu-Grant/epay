@@ -4,12 +4,13 @@
 $cdnpublic = '/assets/cdn/';
 ?>
 <!DOCTYPE html>
-<html lang="zh-cn">
+<html lang="zh-cn" class="lp-dark" data-lp-theme="<?php echo (isset($islogin) && $islogin==1) ? 'admin' : 'login'; ?>">
 <head>
   <meta charset="utf-8"/>
   <meta name="renderer" content="webkit">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><?php echo $title ?></title>
+  <style id="lp-dark-boot">html.lp-dark,html.lp-dark body{background:#0B0F14!important;color:#E8EEF5}</style>
   <link href="<?php echo $cdnpublic?>twitter-bootstrap/3.4.1/css/bootstrap.min.css" rel="stylesheet"/>
   <link href="../assets/css/bootstrap.min.css" rel="stylesheet"/>
   <link href="../assets/css/bootstrap-table.css?v=1" rel="stylesheet"/>
@@ -92,6 +93,12 @@ $cdnpublic = '/assets/cdn/';
     <script src="<?php echo $cdnpublic?>html5shiv/3.7.3/html5shiv.min.js"></script>
     <script src="<?php echo $cdnpublic?>respond.js/1.4.2/respond.min.js"></script>
   <![endif]-->
+  <link rel="stylesheet" href="/assets/css/lp-dark/tokens.css?v=lp18">
+  <link rel="stylesheet" href="/assets/css/lp-dark/bootstrap3.css?v=lp18">
+  <link rel="stylesheet" href="/assets/css/lp-dark/plugins.css?v=lp18">
+  <link rel="stylesheet" href="/assets/css/lp-dark/admin.css?v=lp18">
+  <?php if(!(isset($islogin) && $islogin==1)){ ?><link rel="stylesheet" href="/assets/css/lp-dark/login.css?v=lp18"><?php } ?>
+  <link rel="stylesheet" href="/assets/css/lp-dark/print.css?v=lp18">
 </head>
 <body class="dashboard-responsive">
 <?php if($islogin==1){?>
@@ -104,7 +111,7 @@ $cdnpublic = '/assets/cdn/';
           <span class="icon-bar"></span>
           <span class="icon-bar"></span>
         </button>
-        <a class="navbar-brand" href="./">支付管理中心</a>
+        <a class="navbar-brand" href="./"><img src="/assets/img/lp-brand/lpao-logo-sm.webp" srcset="/assets/img/lp-brand/lpao-logo-sm.webp 1x, /assets/img/lp-brand/lpao-logo.webp 2x" alt="Lpao" class="lp-brand-logo lp-brand-logo--nav" width="110" height="49"></a>
       </div><!-- /.navbar-header -->
       <div id="navbar" class="collapse navbar-collapse">
         <ul class="nav navbar-nav navbar-right">

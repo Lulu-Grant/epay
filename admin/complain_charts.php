@@ -37,7 +37,7 @@ $date1 = date("Y-m-d", strtotime("-1 day"));
 </style>
 
 <div class="container" style="padding-top:70px;">
-    <div class="col-md-12 center-block" style="float: none;">
+    <div class="col-xs-12">
         <div class="panel panel-default">
             <div class="panel-heading"><h3 class="panel-title"><i class="fa fa-bars"></i>&nbsp;&nbsp;<b>投诉数据统计&排行榜</b></h2></div>
             <div class="form-group">

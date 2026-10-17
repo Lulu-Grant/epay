@@ -32,7 +32,7 @@ unset($rs);
 </style>
 <link href="../assets/css/datepicker.css" rel="stylesheet">
   <div class="container-fluid" style="padding-top:70px;">
-    <div class="col-md-12 center-block" style="float: none;">
+    <div class="col-xs-12">
 
 <form onsubmit="return searchSubmit()" method="GET" class="form-inline" id="searchToolbar">
   <input type="hidden" name="subchannel" value="">

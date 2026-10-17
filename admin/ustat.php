@@ -15,7 +15,7 @@ if($islogin==1){}else exit("<script language='javascript'>window.location.href='
 </style>
 <link href="../assets/css/datepicker.css" rel="stylesheet">
   <div class="container" style="padding-top:70px;">
-    <div class="col-md-12 center-block" style="float: none;">
+    <div class="col-xs-12">
 <form method="GET" class="form-inline" id="searchToolbar">
   <div class="input-group">
 	<label>查询日期:</label>

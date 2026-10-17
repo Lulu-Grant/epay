@@ -1,0 +1,63 @@
+/**
+ * lp-dark / pay-qr.css
+ * 覆盖: wechat_pay.css / alipay_pay.css / qq_pay.css / bank_pay.css / jd_pay.css / mqq_pay.css
+ * 禁止: invert 整卡、改通道绿/蓝、改 jquery.qrcode 前景背景
+ * theme: pay
+ */
+
+html.lp-dark body,
+html.lp-dark .body {
+  background: #0B0F14;
+  background: var(--lp-bg-0);
+  color: #E8EEF5;
+  color: var(--lp-text);
+}
+html.lp-dark .mod-title {
+  background: #11161D;
+  background: var(--lp-bg-1);
+  border-bottom-color: #2C3848;
+  border-bottom-color: var(--lp-line);
+}
+html.lp-dark .mod-title .text {
+  color: #E8EEF5;
+  color: var(--lp-text);
+}
+/* 深外浅卡：内卡保持浅底，二维码再垫白 */
+html.lp-dark .mod-ct {
+  background-color: #ffffff;
+  color: #111111;
+  border-color: #e5e5e5;
+}
+html.lp-dark .mod-ct .amount {
+  color: #FFB020;
+  color: var(--lp-money);
+}
+html.lp-dark .mod-ct .qr-image {
+  padding: 16px;
+  background: #FFFFFF;
+  background: var(--lp-qr-pad);
+  display: inline-block;
+  border-radius: 8px;
+}
+html.lp-dark .foot {
+  color: #7E8C9C;
+  color: var(--lp-text-3);
+}
+html.lp-dark a.btn-copy-link,
+html.lp-dark a.btn-open-app {
+  /* 通道按钮色由各通道文件决定，这里只保证暗壳可读 */
+}
+html.lp-dark .mobile-tip {
+  color: #FF5C7A;
+  color: var(--lp-wait);
+}
+
+/* 通道绿/蓝保留 */
+html.lp-dark .mobile-btn .mobile-tip {
+  border-color: #07C160;
+  border-color: var(--lp-wx);
+}
+html.lp-dark a.btn-copy-link {
+  color: #07C160;
+  color: var(--lp-wx);
+}

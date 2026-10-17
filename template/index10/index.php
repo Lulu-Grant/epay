@@ -29,7 +29,7 @@ if(!defined('IN_CRONLITE'))exit();
 			<!--顶部-->
 			<div class="navBox">
 				<div class="logo left">
-					<img src="assets/img/logo.png" alt="<?php echo $conf['sitename']?>" draggable="false">
+					<img src="/assets/img/lp-brand/lpao-logo-sm.webp" srcset="/assets/img/lp-brand/lpao-logo-sm.webp 1x, /assets/img/lp-brand/lpao-logo.webp 2x" alt="Lpao" class="lp-brand-logo lp-brand-logo--nav" width="110" height="49">" draggable="false">
 				</div>
 				<div class="navBox_right right">
 					<ul class="nav left">

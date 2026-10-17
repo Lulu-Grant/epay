@@ -123,7 +123,7 @@ $(document).ready(function(){
 	});
 });
 </script>
-    <div class="col-md-12 center-block" style="float: none;">
+    <div class="col-xs-12">
 <div class="panel panel-default">
 	<div class="panel-heading" style="text-align:center">
 		<div class="panel-title"><h3 class="panel-title"><?php echo $typename?>批量转账（使用<?php echo $method?>）</h3>

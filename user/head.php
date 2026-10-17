@@ -21,10 +21,11 @@ if(!empty($admin_sso_session)){
 }
 ?>
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" class="lp-dark" data-lp-theme="merchant">
 <head>
   <meta charset="utf-8" />
   <title><?php echo $title?> | <?php echo $conf['sitename']?></title>
+  <style id="lp-dark-boot">html.lp-dark,html.lp-dark body{background:#0B0F14!important;color:#E8EEF5}</style>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
   <link rel="stylesheet" href="<?php echo $cdnpublic?>twitter-bootstrap/3.3.7/css/bootstrap.min.css" type="text/css" />
@@ -35,7 +36,13 @@ if(!empty($admin_sso_session)){
   <link rel="stylesheet" href="./assets/css/app.css" type="text/css" />
   <link rel="stylesheet" href="../assets/css/bootstrap-table.css?v=1"/>
   <link rel="stylesheet" href="../assets/css/dashboard-responsive.css?v=2"/>
-  <style>.admin-sso-indicator{display:flex!important;align-items:center;gap:10px;padding:7px 12px;color:#111827;background:#f7c948}.admin-sso-indicator form{margin:0}.admin-sso-indicator__exit{border:1px solid #111827;border-radius:4px;background:transparent;color:#111827;font-weight:600;padding:4px 9px}.admin-sso-indicator__exit:focus-visible{outline:3px solid #fff;outline-offset:2px}@media(max-width:767px){.admin-sso-indicator{flex-wrap:wrap;font-size:12px}}</style>
+
+  <link rel="stylesheet" href="/assets/css/lp-dark/tokens.css?v=lp18">
+  <link rel="stylesheet" href="/assets/css/lp-dark/bootstrap3.css?v=lp18">
+  <link rel="stylesheet" href="/assets/css/lp-dark/plugins.css?v=lp18">
+  <link rel="stylesheet" href="/assets/css/lp-dark/merchant.css?v=lp18">
+  <link rel="stylesheet" href="/assets/css/lp-dark/print.css?v=lp18">
+  <style>.admin-sso-indicator{display:flex!important;align-items:center;gap:10px;padding:7px 12px}.admin-sso-indicator form{margin:0}.admin-sso-indicator__exit{border:1px solid currentColor;border-radius:4px;background:transparent;color:inherit;font-weight:600;padding:4px 9px}.admin-sso-indicator__exit:focus-visible{outline:3px solid #fff;outline-offset:2px}@media(max-width:767px){.admin-sso-indicator{flex-wrap:wrap;font-size:12px}}</style>
 </head>
 <body class="dashboard-responsive">
 <div class="app app-header-fixed  ">
@@ -50,10 +57,7 @@ if(!empty($admin_sso_session)){
           <i class="glyphicon glyphicon-align-justify" aria-hidden="true"></i>
         </button>
         <!-- brand -->
-        <a href="./" class="navbar-brand text-lt">
-          <i class="fa fa-btc"></i>
-          <span class="hidden-folded m-l-xs"><?php echo $conf['sitename']?></span>
-        </a>
+        <a href="./" class="navbar-brand text-lt"><img src="/assets/img/lp-brand/lpao-logo-sm.webp" srcset="/assets/img/lp-brand/lpao-logo-sm.webp 1x, /assets/img/lp-brand/lpao-logo.webp 2x" alt="乐跑" class="lp-brand-logo lp-brand-logo--nav" width="110" height="49"></a>
         <!-- / brand -->
       </div>
       <!-- / navbar header -->

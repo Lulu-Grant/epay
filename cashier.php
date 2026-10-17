@@ -26,18 +26,21 @@ if(strpos($_SERVER['HTTP_USER_AGENT'], 'MicroMessenger')!==false){
 }
 ?>
 <!DOCTYPE html>
-<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<html class="lp-dark" data-lp-theme="pay"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 <meta content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=0" name="viewport">
+<style id="lp-dark-boot">html.lp-dark,html.lp-dark body{background:#0B0F14!important;color:#E8EEF5}</style>
 <title>收银台 | <?php echo $sitename?$sitename:$conf['sitename']?> </title>
 <link href="/assets/css/reset.css" rel="stylesheet" type="text/css">
 <link href="/assets/css/main12.css?v=2" rel="stylesheet" type="text/css">
+<link rel="stylesheet" href="/assets/css/lp-dark/tokens.css?v=lp18">
+<link rel="stylesheet" href="/assets/css/lp-dark/cashier.css?v=lp18">
 </head>
 <body style="background-color:#f9f9f9">
 <!--导航-->
 <div class="w100 navBD12">
     <div class="w1080 nav12">
         <div class="nav12-left">
-            <img src="/assets/img/logo.png">
+            <img src="/assets/img/lp-brand/lpao-logo-sm.webp" srcset="/assets/img/lp-brand/lpao-logo-sm.webp 1x, /assets/img/lp-brand/lpao-logo.webp 2x" alt="Lpao" class="lp-brand-logo lp-brand-logo--nav" width="110" height="49">
         </div>
 		<div class="nav12-right">
             收银台

@@ -1,11 +1,12 @@
 <?php
 if(!defined('IN_CRONLITE'))exit();
 ?><!doctype html>
-<html>
+<html class="lp-dark" data-lp-theme="public">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <style id="lp-dark-boot">html.lp-dark,html.lp-dark body{background:#0B0F14!important;color:#E8EEF5}</style>
         <title>开发文档 - <?php echo $conf['sitename']?></title>
     <!-- jQuery-->
     <script src="/assets/cdn/jquery/1.12.4/jquery.min.js"></script>
@@ -22,6 +23,9 @@ if(!defined('IN_CRONLITE'))exit();
     <link rel="stylesheet" href="/assets/doc/css/style.css" />
     <script src="/assets/doc/js/home.js"></script>
     <link rel="stylesheet" href="/assets/doc/css/docView.css" />
+    <link rel="stylesheet" href="/assets/css/lp-dark/tokens.css?v=lp18">
+    <link rel="stylesheet" href="/assets/css/lp-dark/public.css?v=lp18">
+    <link rel="stylesheet" href="/assets/css/lp-dark/doc.css?v=lp18">
     <script src="/assets/doc/js/docView.js"></script>
 </head>
 <body>
@@ -37,7 +41,7 @@ if(!defined('IN_CRONLITE'))exit();
                 </div>
             </ul>
             <div class="nav-menu">
-                <a href="" class="logo"><img src="/assets/img/logo.png"/></a>
+                <a href="/" class="logo"><img src="/assets/img/lp-brand/lpao-logo-sm.webp" srcset="/assets/img/lp-brand/lpao-logo-sm.webp 1x, /assets/img/lp-brand/lpao-logo.webp 2x" alt="Lpao" class="lp-brand-logo lp-brand-logo--doc" width="100" height="45"></a>
                 <a href="javascript:;" id="navMenuLeft"><i class="layui-icon layui-icon-spread-left"></i></a>
                 <a href="javascript:;" id="navMenuRight"><i class="layui-icon">&#xe61a;</i></a>
             </div>
@@ -164,7 +168,7 @@ if(!defined('IN_CRONLITE'))exit();
                     var catalogList = [{"id":1,"parent_id":0,"title":"接口说明","mdFileName":"index.md","url":"index.html","level":0},{"id":2,"parent_id":0,"title":"签名规则","mdFileName":"sign_note.md","url":"sign_note.html","level":0},{"id":3,"parent_id":0,"title":"支付方式列表","mdFileName":"paytype.md","url":"paytype.html","level":0},{"id":4,"parent_id":0,"title":"支付相关接口","level":0},{"id":5,"parent_id":4,"title":"页面跳转支付","mdFileName":"pay_submit.md","url":"pay_submit.html","level":1},{"id":6,"parent_id":4,"title":"统一下单接口","mdFileName":"pay_create.md","url":"pay_create.html","level":1},{"id":7,"parent_id":4,"title":"订单查询","mdFileName":"pay_query.md","url":"pay_query.html","level":1},{"id":8,"parent_id":4,"title":"订单退款","mdFileName":"pay_refund.md","url":"pay_refund.html","level":1},{"id":9,"parent_id":4,"title":"订单退款查询","mdFileName":"pay_refundquery.md","url":"pay_refundquery.html","level":1},{"id":10,"parent_id":4,"title":"支付结果通知","mdFileName":"pay_notify.md","url":"pay_notify.html","level":1},{"id":20,"parent_id":0,"title":"商户相关接口","level":0},{"id":21,"parent_id":20,"title":"查询商户信息","mdFileName":"merchant_info.md","url":"merchant_info.html","level":1},{"id":22,"parent_id":20,"title":"查询订单列表","mdFileName":"merchant_orders.md","url":"merchant_orders.html","level":1},{"id":30,"parent_id":0,"title":"代付相关接口","level":0},{"id":31,"parent_id":30,"title":"转账发起","mdFileName":"transfer_submit.md","url":"transfer_submit.html","level":1},{"id":32,"parent_id":30,"title":"转账查询","mdFileName":"transfer_query.md","url":"transfer_query.html","level":1},{"id":33,"parent_id":30,"title":"可用余额查询","mdFileName":"transfer_balance.md","url":"transfer_balance.html","level":1},{"id":50,"parent_id":0,"title":"SDK下载","pageTitle":"接口说明","mdFileName":"sdk.md","url":"sdk.html","level":0}];
                     initTree(catalogList);
                 </script>
-                <h1 id="接口说明及规范"><a href="#接口说明及规范">接口说明及规范</a></h1><h2 id="协议规则"><a href="#协议规则">协议规则</a></h2><p>提交数据格式：<code>application/x-www-form-urlencoded</code></p><p>返回数据格式：<code>JSON</code></p><p>字符编码：<code>UTF-8</code></p><p>签名算法：<code>SHA256WithRSA</code></p><h2 id="V2升级说明"><a href="#V2升级说明">V2升级说明</a></h2><p>1、V2接口全面使用 RSA 签名算法；V1接口使用 MD5 签名算法</p><p>2、V2接口改用全新的接口地址，支持退款、代付等功能；V1接口使用submit.php和mapi.php提交订单</p><p>3、V2接口新增timestamp入参和返回值用于校验时间戳</p><h2 id="获取RSA密钥对"><a href="#获取RSA密钥对">获取RSA密钥对</a></h2><p>在 商户后台-&gt;个人资料-&gt;API信息 页面，点击【生成商户RSA密钥对】，生成后注意保存【商户私钥】。对接接口时只需要用到【平台公钥】与【商户私钥】。</p><h2 id="旧版接口文档"><a href="#旧版接口文档">旧版接口文档</a></h2><p><a href="/doc_old.html">查看V1旧版接口文档</a></p>            <div id="mask" style="display:none" onclick="clickMask()"></div>
+                <h1 id="接口说明及规范"><a href="#接口说明及规范">接口说明及规范</a></h1><h2 id="协议规则"><a href="#协议规则">协议规则</a></h2><p>提交数据格式：<code>application/x-www-form-urlencoded</code></p><p>返回数据格式：<code>JSON</code></p><p>字符编码：<code>UTF-8</code></p><p>签名算法：<code>SHA256WithRSA</code></p><h2 id="接入信息"><a href="#接入信息">接入信息</a></h2><p>API 接口地址（Base URL）：<code>https://api.helingpay.top/</code></p><p>商户后台：<code>https://luckrun.helingpay.top/user/</code></p><p>支付网关域名：<code>api.helingpay.top</code> / <code>pay.helingpay.top</code>（下单与回调请使用 API Base URL）</p><p>平台订单号 <code>trade_no</code>：新订单为 <code>LP</code> 前缀 + 14位时间（YmdHis）+ 5位随机数，例如 <code>LP2026091505523330818</code>；历史订单可能仍为纯数字，对接时请按字符串处理，勿假定纯数字。</p><h2 id="V2升级说明"><a href="#V2升级说明">V2升级说明</a></h2><p>1、V2接口全面使用 RSA 签名算法；V1接口使用 MD5 签名算法</p><p>2、V2接口改用全新的接口地址，支持退款、代付等功能；V1接口使用submit.php和mapi.php提交订单</p><p>3、V2接口新增timestamp入参和返回值用于校验时间戳</p><h2 id="获取RSA密钥对"><a href="#获取RSA密钥对">获取RSA密钥对</a></h2><p>在 商户后台-&gt;个人资料-&gt;API信息 页面，点击【生成商户RSA密钥对】，生成后注意保存【商户私钥】。对接接口时只需要用到【平台公钥】与【商户私钥】。</p><h2 id="旧版接口文档"><a href="#旧版接口文档">旧版接口文档</a></h2><p><a href="/doc_old.html">查看V1旧版接口文档</a></p>            <div id="mask" style="display:none" onclick="clickMask()"></div>
             </div>
         </div>
     </div>

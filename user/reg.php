@@ -22,10 +22,11 @@ $csrf_token = bin2hex(random_bytes(32));
 $_SESSION['csrf_token'] = $csrf_token;
 ?>
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" class="lp-dark" data-lp-theme="login">
 <head>
 <meta charset="utf-8" />
 <title>申请商户 | <?php echo $conf['sitename']?></title>
+<style id="lp-dark-boot">html.lp-dark,html.lp-dark body{background:#0B0F14!important;color:#E8EEF5}</style>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="stylesheet" href="<?php echo $cdnpublic?>twitter-bootstrap/3.4.1/css/bootstrap.min.css" type="text/css" />
 <link rel="stylesheet" href="<?php echo $cdnpublic?>animate.css/3.5.2/animate.min.css" type="text/css" />
@@ -34,6 +35,11 @@ $_SESSION['csrf_token'] = $csrf_token;
 <link rel="stylesheet" href="./assets/css/font.css" type="text/css" />
 <link rel="stylesheet" href="./assets/css/app.css" type="text/css" />
 <style>input:-webkit-autofill{-webkit-box-shadow:0 0 0px 1000px white inset;-webkit-text-fill-color:#333;}img.logo{width:14px;height:14px;margin:0 5px 0 3px;}</style>
+<link rel="stylesheet" href="/assets/css/lp-dark/tokens.css?v=lp18">
+<link rel="stylesheet" href="/assets/css/lp-dark/bootstrap3.css?v=lp18">
+<link rel="stylesheet" href="/assets/css/lp-dark/plugins.css?v=lp18">
+<link rel="stylesheet" href="/assets/css/lp-dark/login.css?v=lp18">
+<link rel="stylesheet" href="/assets/css/lp-dark/merchant.css?v=lp18">
 </head>
 <body class="auth-page">
 
@@ -57,7 +63,7 @@ $_SESSION['csrf_token'] = $csrf_token;
 
 <div class="app app-header-fixed  ">
 <div class="container w-xxl w-auto-xs auth-shell" ng-controller="SigninFormController" ng-init="app.settings.container = false;">
-<span class="navbar-brand block m-t" id="sitename"><?php echo $conf['sitename']?></span>
+<span class="navbar-brand block m-t" aria-label="乐跑"><img src="/assets/img/lp-brand/lpao-logo-login.webp" srcset="/assets/img/lp-brand/lpao-logo-login.webp 1x, /assets/img/lp-brand/lpao-logo@2x.webp 2x" alt="乐跑" class="lp-brand-logo lp-brand-logo--login" width="160" height="72"></span>
 <div class="m-b-lg">
 <div class="wrapper text-center">
 <strong>自助申请商户</strong>

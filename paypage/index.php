@@ -57,17 +57,20 @@ $codename = !empty($userrow['codename'])?$userrow['codename']:$userrow['username
 $csrf_token = md5(mt_rand(0,999).time());
 $_SESSION['paypage_token'] = $csrf_token;
 ?>
-<html lang="zh-cn">
+<html lang="zh-cn" class="lp-dark" data-lp-theme="pay">
 <head>
     <title>向商户付款</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <style id="lp-dark-boot">html.lp-dark,html.lp-dark body{background:#0B0F14!important;color:#E8EEF5}</style>
     <meta name="format-detection" content="telephone=no">
     <meta http-equiv="pragma" content="no-cache">
     <meta http-equiv="cache-control" content="no-cache">
     <meta http-equiv="expires" content="0">
     <link rel="stylesheet" href="css/default.css">
     <link rel="stylesheet" href="css/style.css?version=1001">
+    <link rel="stylesheet" href="/assets/css/lp-dark/tokens.css?v=lp18">
+    <link rel="stylesheet" href="/assets/css/lp-dark/paypage.css?v=lp18">
 </head>
 <body>
 <div class="layout-flex wrap">

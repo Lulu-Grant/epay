@@ -1,11 +1,12 @@
 <?php
 if(!defined('IN_CRONLITE'))exit();
 ?><!doctype html>
-<html>
+<html class="lp-dark" data-lp-theme="public">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <style id="lp-dark-boot">html.lp-dark,html.lp-dark body{background:#0B0F14!important;color:#E8EEF5}</style>
         <title>开发文档 - <?php echo $conf['sitename']?></title>
     <!-- jQuery-->
     <script src="/assets/cdn/jquery/1.12.4/jquery.min.js"></script>
@@ -22,6 +23,9 @@ if(!defined('IN_CRONLITE'))exit();
     <link rel="stylesheet" href="/assets/doc/css/style.css" />
     <script src="/assets/doc/js/home.js"></script>
     <link rel="stylesheet" href="/assets/doc/css/docView.css" />
+    <link rel="stylesheet" href="/assets/css/lp-dark/tokens.css?v=lp18">
+    <link rel="stylesheet" href="/assets/css/lp-dark/public.css?v=lp18">
+    <link rel="stylesheet" href="/assets/css/lp-dark/doc.css?v=lp18">
     <script src="/assets/doc/js/docView.js"></script>
 </head>
 <body>
@@ -37,7 +41,7 @@ if(!defined('IN_CRONLITE'))exit();
                 </div>
             </ul>
             <div class="nav-menu">
-                <a href="" class="logo"><img src="/assets/img/logo.png"/></a>
+                <a href="/" class="logo"><img src="/assets/img/lp-brand/lpao-logo-sm.webp" srcset="/assets/img/lp-brand/lpao-logo-sm.webp 1x, /assets/img/lp-brand/lpao-logo.webp 2x" alt="Lpao" class="lp-brand-logo lp-brand-logo--doc" width="100" height="45"></a>
                 <a href="javascript:;" id="navMenuLeft"><i class="layui-icon layui-icon-spread-left"></i></a>
                 <a href="javascript:;" id="navMenuRight"><i class="layui-icon">&#xe61a;</i></a>
             </div>

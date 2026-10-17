@@ -16,7 +16,7 @@ $paytype = $DB->getAll("SELECT * FROM pre_type WHERE status=1 ORDER BY id ASC");
 				页面跳转支付
 			</h3>
 <p><font color="#777">此接口可用于用户前台直接发起支付，使用form表单跳转或拼接成url跳转。</font></p>
-<p>URL地址：<font color="#29389f"><?php echo $siteurl?>submit.php</font></p>
+<p>URL地址：<font color="#29389f"><?php echo $conf['apiurl']?>submit.php</font></p>
 <p>请求方式：<font color="#29389f">POST 或 GET（推荐POST，不容易被劫持或屏蔽）</font></p>
 <p>请求参数说明：</p>
 <table class="table table-bordered table-hover">
@@ -41,7 +41,7 @@ $paytype = $DB->getAll("SELECT * FROM pre_type WHERE status=1 ORDER BY id ASC");
 				API接口支付
 			</h3>
 <p><font color="#777">此接口可用于服务器后端发起支付请求，会返回支付二维码链接或支付跳转url。</font></p>
-<p>URL地址：<font color="#29389f"><?php echo $siteurl?>mapi.php</font></p>
+<p>URL地址：<font color="#29389f"><?php echo $conf['apiurl']?>mapi.php</font></p>
 <p>请求方式：<font color="#29389f">POST</font></p>
 <p>请求参数说明：</p>
 <table class="table table-bordered table-hover">
@@ -67,8 +67,8 @@ $paytype = $DB->getAll("SELECT * FROM pre_type WHERE status=1 ORDER BY id ASC");
   <tbody>
   <tr><td>返回状态码</td><td>code</td><td>Int</td><td>1</td><td>1为成功，其它值为失败</td></tr>
   <tr><td>返回信息</td><td>msg</td><td>String</td><td></td><td>失败时返回原因</td></tr>
-  <tr><td>订单号</td><td>trade_no</td><td>String</td><td>20160806151343349</td><td>支付订单号</td></tr>
-  <tr><td>支付跳转url</td><td>payurl</td><td>String</td><td><?php echo $siteurl?>pay/wxpay/202010903/</td><td>如果返回该字段，则直接跳转到该url支付</td></tr>
+  <tr><td>平台订单号</td><td>trade_no</td><td>String</td><td>LP2026091505523330818</td><td>平台订单号（LP前缀；历史可能为纯数字）</td></tr>
+  <tr><td>支付跳转url</td><td>payurl</td><td>String</td><td><?php echo $conf['apiurl']?>pay/wxpay/202010903/</td><td>如果返回该字段，则直接跳转到该url支付</td></tr>
   <tr><td>二维码链接</td><td>qrcode</td><td>String</td><td>weixin://wxpay/bizpayurl?pr=04IPMKM</td><td>如果返回该字段，则根据该url生成二维码</td></tr>
   <tr><td>小程序跳转url</td><td>urlscheme</td><td>String</td><td>weixin://dl/business/?ticket=xxx</td><td>如果返回该字段，则使用js跳转该url，可发起微信小程序支付</td></tr>
   </tbody>
@@ -86,7 +86,7 @@ $paytype = $DB->getAll("SELECT * FROM pre_type WHERE status=1 ORDER BY id ASC");
   <thead><tr><th>字段名</th><th>变量名</th><th>必填</th><th>类型</th><th>示例值</th><th>描述</th></tr></thead>
   <tbody>
   <tr><td>商户ID</td><td>pid</td><td>是</td><td>Int</td><td>1001</td><td></td></tr>
-  <tr><td>易支付订单号</td><td>trade_no</td><td>是</td><td>String</td><td>20160806151343349021</td><td><?php echo $conf['sitename']?>订单号</td></tr>
+  <tr><td>平台订单号</td><td>trade_no</td><td>是</td><td>String</td><td>LP2026091505523330818</td><td><?php echo $conf['sitename']?>订单号（LP前缀；历史可能为纯数字）</td></tr>
   <tr><td>商户订单号</td><td>out_trade_no</td><td>是</td><td>String</td><td>20160806151343349</td><td>商户系统内部的订单号</td></tr>
   <tr><td>支付方式</td><td>type</td><td>是</td><td>String</td><td>alipay</td><td><a href="#pay4" style="color:#4585d2">支付方式列表</a></td></tr>
   <tr><td>商品名称</td><td>name</td><td>是</td><td>String</td><td>VIP会员</td><td></td></tr>
@@ -145,7 +145,7 @@ foreach($paytype as $row){
 			<h3>
 				[API]查询商户信息
 			</h3>
-<p>URL地址：<font color="#29389f"><?php echo $siteurl?>api.php?act=query&amp;pid={商户ID}&amp;key={商户密钥}</font></p>
+<p>URL地址：<font color="#29389f"><?php echo $conf['apiurl']?>api.php?act=query&amp;pid={商户ID}&amp;key={商户密钥}</font></p>
 <p>请求参数说明：</p>
 <table class="table table-bordered table-hover">
   <thead><tr><th>字段名</th><th>变量名</th><th>必填</th><th>类型</th><th>示例值</th><th>描述</th></tr></thead>
@@ -177,7 +177,7 @@ foreach($paytype as $row){
 			<h3>
 				[API]查询结算记录
 			</h3>
-<p>URL地址：<font color="#29389f"><?php echo $siteurl?>api.php?act=settle&amp;pid={商户ID}&amp;key={商户密钥}</font></p>
+<p>URL地址：<font color="#29389f"><?php echo $conf['apiurl']?>api.php?act=settle&amp;pid={商户ID}&amp;key={商户密钥}</font></p>
 <p>请求参数说明：</p>
 <table class="table table-bordered table-hover">
   <thead><tr><th>字段名</th><th>变量名</th><th>必填</th><th>类型</th><th>示例值</th><th>描述</th></tr></thead>
@@ -201,7 +201,7 @@ foreach($paytype as $row){
 			<h3>
 				[API]查询单个订单
 			</h3>
-<p>URL地址：<font color="#29389f"><?php echo $siteurl?>api.php?act=order&amp;pid={商户ID}&amp;key={商户密钥}&amp;out_trade_no={商户订单号}</font></p>
+<p>URL地址：<font color="#29389f"><?php echo $conf['apiurl']?>api.php?act=order&amp;pid={商户ID}&amp;key={商户密钥}&amp;out_trade_no={商户订单号}</font></p>
 <p>请求参数说明：</p>
 <table class="table table-bordered table-hover">
   <thead><tr><th>字段名</th><th>变量名</th><th>必填</th><th>类型</th><th>示例值</th><th>描述</th></tr></thead>
@@ -209,7 +209,7 @@ foreach($paytype as $row){
   <tr><td>操作类型</td><td>act</td><td>是</td><td>String</td><td>order</td><td>此API固定值</td></tr>
   <tr><td>商户ID</td><td>pid</td><td>是</td><td>Int</td><td>1001</td><td></td></tr>
   <tr><td>商户密钥</td><td>key</td><td>是</td><td>String</td><td>89unJUB8HZ54Hj7x4nUj56HN4nUzUJ8i</td><td></td></tr>
-  <tr><td>系统订单号</td><td>trade_no</td><td>选择</td><td>String</td><td>20160806151343312</td><td></td></tr>
+  <tr><td>平台订单号</td><td>trade_no</td><td>选择</td><td>String</td><td>LP2026091505523330818</td><td>LP前缀；历史可能为纯数字</td></tr>
   <tr><td>商户订单号</td><td>out_trade_no</td><td>选择</td><td>String</td><td>20160806151343349</td><td></td></tr>
   </tbody>
 </table>
@@ -220,7 +220,7 @@ foreach($paytype as $row){
   <tbody>
   <tr><td>返回状态码</td><td>code</td><td>Int</td><td>1</td><td>1为成功，其它值为失败</td></tr>
   <tr><td>返回信息</td><td>msg</td><td>String</td><td>查询订单号成功！</td><td></td></tr>
-  <tr><td>易支付订单号</td><td>trade_no</td><td>String</td><td>2016080622555342651</td><td><?php echo $conf['sitename']?>订单号</td></tr>
+  <tr><td>平台订单号</td><td>trade_no</td><td>String</td><td>LP2026091505523330818</td><td><?php echo $conf['sitename']?>订单号（LP前缀；历史可能为纯数字）</td></tr>
   <tr><td>商户订单号</td><td>out_trade_no</td><td>String</td><td>20160806151343349</td><td>商户系统内部的订单号</td></tr>
   <tr><td>第三方订单号</td><td>api_trade_no</td><td>String</td><td>20160806151343349</td><td>支付宝微信等接口方订单号</td></tr>
   <tr><td>支付方式</td><td>type</td><td>String</td><td>alipay</td><td><a href="#pay4" style="color:#4585d2">支付方式列表</a></td></tr>
@@ -239,7 +239,7 @@ foreach($paytype as $row){
 			<h3>
 				[API]批量查询订单
 			</h3>
-<p>URL地址：<font color="#29389f"><?php echo $siteurl?>api.php?act=orders&amp;pid={商户ID}&amp;key={商户密钥}</font></p>
+<p>URL地址：<font color="#29389f"><?php echo $conf['apiurl']?>api.php?act=orders&amp;pid={商户ID}&amp;key={商户密钥}</font></p>
 <p>请求参数说明：</p>
 <table class="table table-bordered table-hover">
   <thead><tr><th>字段名</th><th>变量名</th><th>必填</th><th>类型</th><th>示例值</th><th>描述</th></tr></thead>
@@ -266,7 +266,7 @@ foreach($paytype as $row){
 				[API]提交订单退款
 			</h3>
 <p><font color="red">需要先在商户后台开启订单退款API接口开关，才能调用该接口发起订单退款</font></p>
-<p>URL地址：<font color="#29389f"><?php echo $siteurl?>api.php?act=refund</font></p>
+<p>URL地址：<font color="#29389f"><?php echo $conf['apiurl']?>api.php?act=refund</font></p>
 <p>请求方式：<font color="#29389f">POST</font></p>
 <p>请求参数说明：</p>
 <table class="table table-bordered table-hover">
@@ -274,7 +274,7 @@ foreach($paytype as $row){
   <tbody>
   <tr><td>商户ID</td><td>pid</td><td>是</td><td>Int</td><td>1001</td><td></td></tr>
   <tr><td>商户密钥</td><td>key</td><td>是</td><td>String</td><td>89unJUB8HZ54Hj7x4nUj56HN4nUzUJ8i</td><td></td></tr>
-  <tr><td>易支付订单号</td><td>trade_no</td><td>特殊可选</td><td>String</td><td>20160806151343349021</td><td>易支付订单号</td></tr>
+  <tr><td>平台订单号</td><td>trade_no</td><td>特殊可选</td><td>String</td><td>LP2026091505523330818</td><td>平台订单号（LP前缀；历史可能为纯数字）</td></tr>
   <tr><td>商户订单号</td><td>out_trade_no</td><td>特殊可选</td><td>String</td><td>20160806151343349</td><td>订单支付时传入的商户订单号，商家自定义且保证商家系统中唯一</td></tr>
   <tr><td>退款金额</td><td>money</td><td>是</td><td>String</td><td>1.50</td><td>少数通道需要与原订单金额一致</td></tr>
   </tbody>

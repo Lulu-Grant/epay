@@ -252,24 +252,24 @@ $body = help_markdown($content);
 	<title><?php echo htmlspecialchars($current['title'], ENT_QUOTES, 'UTF-8')?> - <?php echo htmlspecialchars($conf['sitename'], ENT_QUOTES, 'UTF-8')?></title>
 	<style>
 		:root {
-			--bg: #f5f7f6;
-			--panel: #ffffff;
-			--ink: #1f2926;
-			--muted: #697773;
-			--line: #dfe6e2;
-			--brand: #0f766e;
-			--brand-dark: #0b4f4a;
-			--accent: #b42318;
-			--code-bg: #f0f4f2;
-			--thead: #edf5f2;
-			--action-bg: #ffffff;
-			--active-line: #83bcb2;
-			--active-bg: #e7f4f0;
-			--quote-bg: #f0f8f5;
-			--code-ink: #7a2e12;
-			--pre-bg: #13201d;
-			--pre-ink: #eef8f5;
-			--stripe: #f8faf9;
+			--bg: #0B0F14;
+			--panel: #171E27;
+			--ink: #E8EEF5;
+			--muted: #7E8C9C;
+			--line: #2C3848;
+			--brand: #5B8CFF;
+			--brand-dark: #3D6FE6;
+			--accent: #FF5C7A;
+			--code-bg: #1E2733;
+			--thead: #1E2733;
+			--action-bg: #1E2733;
+			--active-line: #5B8CFF;
+			--active-bg: #263140;
+			--quote-bg: #1E2733;
+			--code-ink: #F5C84C;
+			--pre-bg: #11161D;
+			--pre-ink: #E8EEF5;
+			--stripe: #141B24;
 		}
 		* { box-sizing: border-box; }
 		body {

@@ -5,6 +5,39 @@ use Exception;
 
 class Pay
 {
+    private static function loadOrCreateOrder($params)
+    {
+        global $DB;
+        $where = [':uid'=>$params[':uid'], ':out_trade_no'=>$params[':out_trade_no']];
+        $stored = $DB->getRow('SELECT * FROM pre_order WHERE uid=:uid AND out_trade_no=:out_trade_no LIMIT 1', $where);
+        if(!$stored){
+            $params[':trade_no'] = generate_trade_no();
+            try{
+                $inserted = $DB->exec('INSERT INTO pre_order (trade_no,out_trade_no,uid,addtime,name,money,notify_url,return_url,param,domain,ip,status,version) VALUES (:trade_no, :out_trade_no, :uid, NOW(), :name, :money, :notify_url, :return_url, :param, :domain, :clientip, 0, :version)', $params);
+                $duplicate = !$inserted && strpos((string)$DB->error(), '[1062]') === 0;
+            }catch(\PDOException $e){
+                $inserted = false;
+                $duplicate = isset($e->errorInfo[1]) && (int)$e->errorInfo[1] === 1062;
+            }
+            if(!$inserted && !$duplicate) throw new Exception('创建订单失败，请返回重试！');
+            // A unique-key loser must use the existing order, including its route.
+            $stored = $DB->getRow('SELECT * FROM pre_order WHERE uid=:uid AND out_trade_no=:out_trade_no LIMIT 1', $where);
+            if(!$stored) throw new Exception('创建订单失败，请返回重试！');
+            if($inserted) invalidateListReadCache('payment', $params[':uid']);
+        }
+        if(time() - strtotime($stored['addtime']) >= 864000){
+            throw new Exception('该订单号已过期，请更换订单号重新发起支付！');
+        }
+        if($stored['status'] > 0){
+            throw new Exception('该订单('.$params[':out_trade_no'].')已完成支付，请勿重复发起支付');
+        }
+        if(round($stored['money'], 2) != round($params[':money'], 2) || $stored['name'] != $params[':name']
+            || $stored['notify_url'] != $params[':notify_url'] || $stored['return_url'] != $params[':return_url'] || $stored['param'] != $params[':param']){
+            throw new Exception('该订单('.$params[':out_trade_no'].')支付参数有变化，请更换订单号重新发起支付');
+        }
+        return $stored;
+    }
+
     public static function submit()
     {
         global $conf, $DB, $clientip, $order, $userrow;
@@ -99,26 +132,13 @@ class Pay
 
         if(strlen($name)>127)$name=mb_strcut($name, 0, 127, 'utf-8');
 
-        $firstGetChannel = true;
-        $oldorder = $DB->getRow("SELECT * FROM `pre_order` WHERE `uid`=:uid AND `out_trade_no`=:out_trade_no", [':uid'=>$pid, ':out_trade_no'=>$out_trade_no]);
-        if($oldorder && time() - strtotime($oldorder['addtime']) < 864000){
-            if($oldorder['status']>0){
-                sysmsg('该订单('.$out_trade_no.')已完成支付，请勿重复发起支付');
-            }
-            if(round($oldorder['money'],2) != round($money,2) || $oldorder['name'] != $name || $oldorder['notify_url'] != $notify_url || $oldorder['return_url'] != $return_url || $oldorder['param'] != $param){
-                sysmsg('该订单('.$out_trade_no.')支付参数有变化，请更换订单号重新发起支付');
-            }
-            $trade_no=$oldorder['trade_no'];
-            $typeid = $DB->getColumn("SELECT id FROM pre_type WHERE name=:name LIMIT 1", [':name'=>$type]);
-            if($oldorder['type'] > 0 && $oldorder['channel'] > 0 && $oldorder['realmoney'] > 0 && $oldorder['getmoney'] > 0 && $typeid == $oldorder['type']){ //订单已经获取过支付通道信息
-                $firstGetChannel = false;
-            }
-        }else{
-            $version = defined('API_INIT') ? 1 : 0;
-            $trade_no=generate_trade_no();
-            if(!$DB->exec("INSERT INTO `pre_order` (`trade_no`,`out_trade_no`,`uid`,`addtime`,`name`,`money`,`notify_url`,`return_url`,`param`,`domain`,`ip`,`status`,`version`) VALUES (:trade_no, :out_trade_no, :uid, NOW(), :name, :money, :notify_url, :return_url, :param, :domain, :clientip, 0, :version)", [':trade_no'=>$trade_no, ':out_trade_no'=>$out_trade_no, ':uid'=>$pid, ':name'=>$name, ':money'=>$money, ':notify_url'=>$notify_url, ':return_url'=>$return_url, ':domain'=>$domain, ':clientip'=>$clientip, ':param'=>$param, ':version'=>$version]))sysmsg('创建订单失败，请返回重试！');
-            invalidateListReadCache('payment', $pid);
+        try{
+            $oldorder = self::loadOrCreateOrder([':out_trade_no'=>$out_trade_no, ':uid'=>$pid, ':name'=>$name, ':money'=>$money, ':notify_url'=>$notify_url, ':return_url'=>$return_url, ':domain'=>$domain, ':clientip'=>$clientip, ':param'=>$param, ':version'=>defined('API_INIT') ? 1 : 0]);
+        }catch(Exception $e){
+            sysmsg($e->getMessage());
         }
+        $trade_no = $oldorder['trade_no'];
+        $firstGetChannel = $oldorder['channel'] == 0;
 
         if(\lib\Shop\ConfigService::shouldRecordMerchant($pid)){
             try{
@@ -168,12 +188,22 @@ class Pay
                     }
                 }
             }
+            // 随机增减金额也随通道一起由一个请求确定。
+            if(!empty($conf['pay_payaddstart'])&&$conf['pay_payaddstart']!=0&&!empty($conf['pay_payaddmin'])&&$conf['pay_payaddmin']!=0&&!empty($conf['pay_payaddmax'])&&$conf['pay_payaddmax']!=0&&$realmoney>=$conf['pay_payaddstart'])$realmoney = round($realmoney + randomFloat(round($conf['pay_payaddmin'],2),round($conf['pay_payaddmax'],2)), 2);
         }else{
-            $submitData = \lib\Channel::info($oldorder['channel']);
-            $submitData['typename'] = $type;
-            $submitData['subchannel'] = $oldorder['subchannel'];
-            $realmoney = $oldorder['realmoney'];
-            $getmoney = $oldorder['getmoney'];
+            $submitData = ['typeid'=>$DB->getColumn('SELECT id FROM pre_type WHERE name=:name LIMIT 1', [':name'=>$type]), 'typename'=>$type];
+            try{
+                \lib\PaymentRoute::restore($oldorder, $submitData, $realmoney, $getmoney);
+            }catch(Exception $e){
+                sysmsg($e->getMessage());
+            }
+        }
+        if($firstGetChannel){
+            try{
+                $firstGetChannel = \lib\PaymentRoute::claim($trade_no, $submitData, $realmoney, $getmoney);
+            }catch(Exception $e){
+                sysmsg($e->getMessage());
+            }
         }
 
         // 判断通道单笔支付限额
@@ -189,10 +219,6 @@ class Pay
         }
 
         if($firstGetChannel){
-            // 随机增减金额
-            if(!empty($conf['pay_payaddstart'])&&$conf['pay_payaddstart']!=0&&!empty($conf['pay_payaddmin'])&&$conf['pay_payaddmin']!=0&&!empty($conf['pay_payaddmax'])&&$conf['pay_payaddmax']!=0&&$realmoney>=$conf['pay_payaddstart'])$realmoney = round($realmoney + randomFloat(round($conf['pay_payaddmin'],2),round($conf['pay_payaddmax'],2)), 2);
-
-            $DB->update('order', ['type'=>$submitData['typeid'], 'channel'=>$submitData['channel'], 'subchannel'=>$submitData['subchannel'], 'realmoney'=>$realmoney, 'getmoney'=>$getmoney], ['trade_no'=>$trade_no]);
             invalidateListReadCache('payment', $pid);
             try{
                 \lib\Shop\OrderService::syncPaymentRoute($trade_no);
@@ -328,26 +354,13 @@ class Pay
 
         if(strlen($name)>127)$name=mb_strcut($name, 0, 127, 'utf-8');
 
-        $firstGetChannel = true;
-        $oldorder = $DB->getRow("SELECT * FROM `pre_order` WHERE `uid`=:uid AND `out_trade_no`=:out_trade_no", [':uid'=>$pid, ':out_trade_no'=>$out_trade_no]);
-        if($oldorder && time() - strtotime($oldorder['addtime']) < 864000){
-            if($oldorder['status']>0){
-                echojsonmsg('该订单('.$out_trade_no.')已完成支付，请勿重复发起支付');
-            }
-            if(round($oldorder['money'],2) != round($money,2) || $oldorder['name'] != $name || $oldorder['notify_url'] != $notify_url || $oldorder['return_url'] != $return_url || $oldorder['param'] != $param){
-                echojsonmsg('该订单('.$out_trade_no.')支付参数有变化，请更换订单号重新发起支付');
-            }
-            $trade_no=$oldorder['trade_no'];
-            $typeid = $DB->getColumn("SELECT id FROM pre_type WHERE name=:name LIMIT 1", [':name'=>$type]);
-            if($oldorder['type'] > 0 && $oldorder['channel'] > 0 && $oldorder['realmoney'] > 0 && $oldorder['getmoney'] > 0 && $typeid == $oldorder['type']){ //订单已经获取过支付通道信息
-                $firstGetChannel = false;
-            }
-        }else{
-            $version = defined('API_INIT') ? 1 : 0;
-            $trade_no=generate_trade_no();
-            if(!$DB->exec("INSERT INTO `pre_order` (`trade_no`,`out_trade_no`,`uid`,`addtime`,`name`,`money`,`notify_url`,`return_url`,`param`,`domain`,`ip`,`status`,`version`) VALUES (:trade_no, :out_trade_no, :uid, NOW(), :name, :money, :notify_url, :return_url, :param, :domain, :clientip, 0, :version)", [':trade_no'=>$trade_no, ':out_trade_no'=>$out_trade_no, ':uid'=>$pid, ':name'=>$name, ':money'=>$money, ':notify_url'=>$notify_url, ':return_url'=>$return_url, ':domain'=>$domain, ':clientip'=>$clientip, ':param'=>$param, ':version'=>$version]))echojsonmsg('创建订单失败，请返回重试！');
-            invalidateListReadCache('payment', $pid);
+        try{
+            $oldorder = self::loadOrCreateOrder([':out_trade_no'=>$out_trade_no, ':uid'=>$pid, ':name'=>$name, ':money'=>$money, ':notify_url'=>$notify_url, ':return_url'=>$return_url, ':domain'=>$domain, ':clientip'=>$clientip, ':param'=>$param, ':version'=>defined('API_INIT') ? 1 : 0]);
+        }catch(Exception $e){
+            echojsonmsg($e->getMessage());
         }
+        $trade_no = $oldorder['trade_no'];
+        $firstGetChannel = $oldorder['channel'] == 0;
 
         if(\lib\Shop\ConfigService::shouldRecordMerchant($pid)){
             try{
@@ -396,12 +409,21 @@ class Pay
                     }
                 }
             }
+            if(!empty($conf['pay_payaddstart'])&&$conf['pay_payaddstart']!=0&&!empty($conf['pay_payaddmin'])&&$conf['pay_payaddmin']!=0&&!empty($conf['pay_payaddmax'])&&$conf['pay_payaddmax']!=0&&$realmoney>=$conf['pay_payaddstart'])$realmoney = round($realmoney + randomFloat(round($conf['pay_payaddmin'],2),round($conf['pay_payaddmax'],2)), 2);
         }else{
-            $submitData = \lib\Channel::info($oldorder['channel']);
-            $submitData['typename'] = $type;
-            $submitData['subchannel'] = $oldorder['subchannel'];
-            $realmoney = $oldorder['realmoney'];
-            $getmoney = $oldorder['getmoney'];
+            $submitData = ['typeid'=>$DB->getColumn('SELECT id FROM pre_type WHERE name=:name LIMIT 1', [':name'=>$type]), 'typename'=>$type];
+            try{
+                \lib\PaymentRoute::restore($oldorder, $submitData, $realmoney, $getmoney);
+            }catch(Exception $e){
+                echojsonmsg($e->getMessage());
+            }
+        }
+        if($firstGetChannel){
+            try{
+                $firstGetChannel = \lib\PaymentRoute::claim($trade_no, $submitData, $realmoney, $getmoney);
+            }catch(Exception $e){
+                echojsonmsg($e->getMessage());
+            }
         }
 
         // 判断通道单笔支付限额
@@ -417,10 +439,6 @@ class Pay
         }
 
         if($firstGetChannel){
-            // 随机增减金额
-            if(!empty($conf['pay_payaddstart'])&&$conf['pay_payaddstart']!=0&&!empty($conf['pay_payaddmin'])&&$conf['pay_payaddmin']!=0&&!empty($conf['pay_payaddmax'])&&$conf['pay_payaddmax']!=0&&$realmoney>=$conf['pay_payaddstart'])$realmoney = $realmoney + randomFloat(round($conf['pay_payaddmin'],2),round($conf['pay_payaddmax'],2));
-
-            $DB->update('order', ['type'=>$submitData['typeid'], 'channel'=>$submitData['channel'], 'subchannel'=>$submitData['subchannel'], 'realmoney'=>$realmoney, 'getmoney'=>$getmoney], ['trade_no'=>$trade_no]);
             invalidateListReadCache('payment', $pid);
             try{
                 \lib\Shop\OrderService::syncPaymentRoute($trade_no);

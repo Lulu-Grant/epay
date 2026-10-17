@@ -1,0 +1,124 @@
+/**
+ * lp-dark / shopping.css
+ * 覆盖: shopping.php shop_render_header() 内联 class
+ * 禁止: 改商城下单/支付参数
+ * theme: public
+ */
+
+html.lp-dark body {
+  background: #0B0F14;
+  background: var(--lp-bg-0);
+  color: #E8EEF5;
+  color: var(--lp-text);
+}
+html.lp-dark .top {
+  background: #11161D;
+  background: var(--lp-bg-1);
+  color: #E8EEF5;
+  color: var(--lp-text);
+}
+html.lp-dark .brand {
+  color: #E8EEF5;
+  color: var(--lp-text);
+}
+html.lp-dark .nav a {
+  color: #B4C0CE;
+  color: var(--lp-text-2);
+}
+html.lp-dark .wrap {
+  color: #E8EEF5;
+  color: var(--lp-text);
+}
+html.lp-dark .hero,
+html.lp-dark .card,
+html.lp-dark .form,
+html.lp-dark .pay-panel {
+  background: #171E27;
+  background: var(--lp-bg-2);
+  border-color: #2C3848;
+  border-color: var(--lp-line);
+  color: #E8EEF5;
+  color: var(--lp-text);
+}
+html.lp-dark .thumb {
+  background: #1E2733;
+  background: var(--lp-bg-3);
+  color: #7E8C9C;
+  color: var(--lp-text-3);
+}
+html.lp-dark .price {
+  color: #FFB020 !important;
+  color: var(--lp-money) !important;
+}
+html.lp-dark .btn,
+html.lp-dark .button {
+  background: #3D6FE6;
+  background: var(--lp-brand-press);
+  color: #fff;
+}
+html.lp-dark .btn-default {
+  background: #1E2733;
+  background: var(--lp-bg-3);
+  color: #E8EEF5;
+  color: var(--lp-text);
+}
+html.lp-dark .field input,
+html.lp-dark .field textarea,
+html.lp-dark .field select {
+  background: #1E2733;
+  background: var(--lp-bg-3);
+  border-color: #2C3848;
+  border-color: var(--lp-line);
+  color: #E8EEF5;
+  color: var(--lp-text);
+}
+html.lp-dark .pay-option {
+  background: #1E2733;
+  background: var(--lp-bg-3);
+  border-color: #3A4A5E;
+  border-color: var(--lp-line-2);
+  color: #5B8CFF;
+  color: var(--lp-brand);
+}
+html.lp-dark .table {
+  background: #171E27;
+  background: var(--lp-bg-2);
+  color: #E8EEF5;
+  color: var(--lp-text);
+}
+html.lp-dark .table th,
+html.lp-dark .table td {
+  border-color: #2C3848;
+  border-color: var(--lp-line);
+}
+html.lp-dark .footer {
+  color: #7E8C9C;
+  color: var(--lp-text-3);
+}
+html.lp-dark .muted {
+  color: #B4C0CE;
+  color: var(--lp-text-2);
+}
+html.lp-dark .field-help {
+  color: #B4C0CE;
+  color: var(--lp-text-2);
+}
+html.lp-dark .detail-next {
+  background: #1E2733;
+  background: var(--lp-bg-3);
+  border-left-color: #5B8CFF;
+  border-left-color: var(--lp-brand);
+}
+html.lp-dark .thumb,
+html.lp-dark .detail-img {
+  background: #1E2733;
+  background: var(--lp-bg-3);
+}
+html.lp-dark .box {
+  background: #171E27;
+  background: var(--lp-bg-2);
+  border-color: #2C3848;
+  border-color: var(--lp-line);
+  color: #E8EEF5;
+  color: var(--lp-text);
+}
