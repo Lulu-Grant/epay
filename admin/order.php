@@ -13,6 +13,7 @@ foreach($rs as $row){
 	$type_select .= '<option value="'.$row['id'].'">'.$row['showname'].'</option>';
 }
 unset($rs);
+$orderRecent = \lib\ListQueryFilter::recentWindow();
 ?>
 <style>
 #orderItem .orderTitle{word-break:keep-all;}
@@ -29,6 +30,7 @@ unset($rs);
 .order-summary-table td{font-size:15px;line-height:28px;}
 .order-summary-table b{font-size:16px;}
 .order-summary-note{padding:12px 0 2px;color:#777;}
+#orderDateHint{display:block;width:100%;clear:both;box-sizing:border-box;margin:8px 0 4px;padding:6px 10px;line-height:1.6;overflow-wrap:anywhere;color:var(--lp-info);background:var(--lp-bg-3);border:1px solid var(--lp-line);border-radius:4px;}
 </style>
 <link href="../assets/css/datepicker.css" rel="stylesheet">
   <div class="container-fluid" style="padding-top:70px;">
@@ -53,10 +55,12 @@ unset($rs);
     <input type="text" class="form-control" name="channel" style="width: 80px;" placeholder="通道ID" value="">
   </div>
   <div class="input-group input-daterange">
-	<input type="text" id="starttime" name="starttime" class="form-control dates" placeholder="开始日期" autocomplete="off" title="留空则不限时间范围">
-	<span class="input-group-addon" onclick="$('#starttime').val('');$('#endtime').val('');" title="清除"><i class="fa fa-chevron-right"></i></span>
-	<input type="text" id="endtime" name="endtime" class="form-control dates" placeholder="结束日期" autocomplete="off" title="留空则不限时间范围">
+	<input type="text" id="starttime" name="starttime" class="form-control dates" placeholder="开始日期" autocomplete="off" title="默认最近7天" value="<?php echo htmlspecialchars($orderRecent['start'], ENT_QUOTES, 'UTF-8'); ?>">
+	<span class="input-group-addon" onclick="resetOrderDatesToRecent();return false;" title="恢复最近7天"><i class="fa fa-chevron-right"></i></span>
+	<input type="text" id="endtime" name="endtime" class="form-control dates" placeholder="结束日期" autocomplete="off" title="默认最近7天" value="<?php echo htmlspecialchars($orderRecent['end'], ENT_QUOTES, 'UTF-8'); ?>">
   </div>
+  <button type="button" class="btn btn-default" id="btnOrderAllDates" title="不按创建时间过滤">全部日期</button>
+  <input type="hidden" name="date_scope" id="date_scope" value="recent">
   <div class="form-group">
 	<select name="dstatus" class="form-control"><option value="-1">全部状态</option><option value="0">状态未支付</option><option value="1">状态已支付</option><option value="2">状态已退款</option><option value="3">状态已冻结</option><option value="4">状态预授权</option></select>
   </div>
@@ -67,6 +71,7 @@ unset($rs);
 	<button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">批量操作 <span class="caret"></span></button>
 	<ul class="dropdown-menu"><li><a href="javascript:operation(0)">改未完成</a></li><li><a href="javascript:operation(1)">改已完成</a></li><li><a href="javascript:operation(2)">冻结订单</a></li><li><a href="javascript:operation(3)">解冻订单</a></li><li><a href="javascript:operation(4)">删除订单</a></li></ul>
   </div>
+  <div id="orderDateHint"></div>
 </form>
 
       <table id="listTable">
@@ -80,10 +85,113 @@ unset($rs);
 <script src="../assets/js/bootstrap-table.min.js"></script>
 <script src="../assets/js/bootstrap-table-page-jump-to.min.js"></script>
 <script src="../assets/js/custom.js"></script>
-<script src="../assets/js/list-read-ui.js?v=1"></script>
 <script>
+function searchClear(){
+	$('#searchToolbar').find('input[name]').each(function() {
+		$(this).val('');
+	});
+	$('#searchToolbar').find('select[name]').each(function() {
+		$(this).find('option:first').prop('selected', 'selected');
+	});
+	if(typeof resetOrderDatesToRecent === 'function') resetOrderDatesToRecent();
+	$('#listTable').bootstrapTable('refresh');
+}
+</script>
+<script src="../assets/js/list-read-ui.js?v=2"></script>
+<script>
+var ORDER_DATE_DEFAULT = <?php echo json_encode(['start'=>$orderRecent['start'], 'end'=>$orderRecent['end']], JSON_UNESCAPED_UNICODE); ?>;
+var orderDateLock = false;
+function withOrderDateLock(fn){
+	orderDateLock = true;
+	try { fn(); } finally { orderDateLock = false; }
+}
+function setOrderDateInput(selector, value){
+	var $el = $(selector);
+	$el.val(value);
+	if($el.data('datepicker')) $el.datepicker('update', value || '');
+}
+function isExactOrderColumn(column){
+	return column === 'trade_no' || column === 'out_trade_no' || column === 'api_trade_no';
+}
+function currentOrderDateMeta(){
+	var column = $('select[name="column"]').val();
+	var value = $.trim($('input[name="value"]').val() || '');
+	var scope = $('#date_scope').val();
+	if(scope === 'all') return {date_scope:'all', date_start:'', date_end:''};
+	if(value !== '' && isExactOrderColumn(column) && scope !== 'custom') return {date_scope:'exact', date_start:'', date_end:''};
+	if(scope === 'custom') return {date_scope:'custom', date_start:$('#starttime').val(), date_end:$('#endtime').val()};
+	return {date_scope:'recent', date_start:ORDER_DATE_DEFAULT.start, date_end:ORDER_DATE_DEFAULT.end};
+}
+function renderOrderDateHint(meta){
+	if(!meta) meta = currentOrderDateMeta();
+	var scope = meta.date_scope || meta.dateScope;
+	var start = meta.date_start || meta.dateStart || '';
+	var end = meta.date_end || meta.dateEnd || '';
+	var text;
+	if(scope === 'exact') text = '按订单号精确查询，不限制创建时间。';
+	else if(scope === 'all') text = '当前查询全部日期。';
+	else if(scope === 'recent') text = '默认查询最近7天（' + start + ' 至 ' + end + '）。点「全部日期」可查全部；按订单号、商户订单号或接口订单号精确查询时不受此限制。';
+	else if(start && end) text = '当前查询 ' + start + ' 至 ' + end + '。';
+	else if(start) text = '当前查询 ' + start + ' 及之后。';
+	else if(end) text = '当前查询 ' + end + ' 及之前。';
+	else text = '当前未限制创建时间。';
+	$('#orderDateHint').text(text);
+	$('#btnOrderAllDates').toggleClass('btn-info', scope === 'all').toggleClass('btn-default', scope !== 'all');
+}
+function resetOrderDatesToRecent(){
+	withOrderDateLock(function(){
+		setOrderDateInput('#starttime', ORDER_DATE_DEFAULT.start);
+		setOrderDateInput('#endtime', ORDER_DATE_DEFAULT.end);
+		$('#date_scope').val('recent');
+	});
+	renderOrderDateHint(currentOrderDateMeta());
+}
+function initOrderDateFilter(){
+	var g = window.$_GET || {};
+	var scopeInUrl = typeof g.date_scope !== 'undefined';
+	var startInUrl = typeof g.starttime !== 'undefined';
+	var endInUrl = typeof g.endtime !== 'undefined';
+	if(scopeInUrl && g.date_scope === 'all'){
+		withOrderDateLock(function(){
+			setOrderDateInput('#starttime', '');
+			setOrderDateInput('#endtime', '');
+			$('#date_scope').val('all');
+		});
+	}else if(startInUrl || endInUrl || (scopeInUrl && g.date_scope === 'custom')){
+		if(g.date_scope === 'recent'){
+			resetOrderDatesToRecent();
+			return;
+		}
+		withOrderDateLock(function(){
+			if(!startInUrl) setOrderDateInput('#starttime', '');
+			if(!endInUrl) setOrderDateInput('#endtime', '');
+			$('#date_scope').val('custom');
+		});
+	}else{
+		resetOrderDatesToRecent();
+		return;
+	}
+	renderOrderDateHint(currentOrderDateMeta());
+}
+function syncOrderDateScopeFromInputs(){
+	if(orderDateLock) return;
+	if($('#date_scope').val() === 'all' && $('#starttime').val() === '' && $('#endtime').val() === ''){
+		renderOrderDateHint(currentOrderDateMeta());
+		return;
+	}
+	var start = $('#starttime').val();
+	var end = $('#endtime').val();
+	if(start === '' && end === ''){
+		resetOrderDatesToRecent();
+		return;
+	}
+	if(start === ORDER_DATE_DEFAULT.start && end === ORDER_DATE_DEFAULT.end) $('#date_scope').val('recent');
+	else $('#date_scope').val('custom');
+	renderOrderDateHint(currentOrderDateMeta());
+}
 $(document).ready(function(){
 	updateToolbar();
+	initOrderDateFilter();
 	const defaultPageSize = 30;
 	const pageNumber = typeof window.$_GET['pageNumber'] != 'undefined' ? parseInt(window.$_GET['pageNumber']) : 1;
 	const pageSize = typeof window.$_GET['pageSize'] != 'undefined' ? parseInt(window.$_GET['pageSize']) : defaultPageSize;
@@ -221,6 +329,18 @@ $(document).ready(function(){
 			},
 		],
 		onLoadSuccess: function(data) {
+			var meta = data && data.meta;
+			if(meta && meta.date_scope === 'recent' && meta.date_start && meta.date_end){
+				ORDER_DATE_DEFAULT.start = meta.date_start;
+				ORDER_DATE_DEFAULT.end = meta.date_end;
+				if($('#date_scope').val() === 'recent'){
+					withOrderDateLock(function(){
+						setOrderDateInput('#starttime', meta.date_start);
+						setOrderDateInput('#endtime', meta.date_end);
+					});
+				}
+			}
+			if(meta && meta.date_scope) renderOrderDateHint(meta);
 			$('.dropdown-group').on('show.bs.dropdown', function (e) {
 				var btnPos = $(e.target)[0].getBoundingClientRect();
 				var screenWidth = $(window).width();
@@ -289,7 +409,7 @@ function showOrderSummary(fresh){
 			content += '<tr><td>已退款订单：<b>'+countText(data.refund_count)+'</b></td><td>冻结订单：<b>'+countText(data.frozen_count)+'</b></td><td>预授权订单：<b>'+countText(data.preauth_count)+'</b></td></tr>';
 			content += '<tr><td>通知异常订单：<b>'+countText(data.notify_bad_count)+'</b></td><td colspan="2">订单成功率：<b>'+percentText(data.success_rate)+'</b></td></tr>';
 			content += '</table>';
-			content += '<div class="order-summary-note">统计范围：当前订单列表筛选条件；时间筛选按订单创建时间计算。</div>';
+			content += '<div class="order-summary-note">统计范围：当前订单列表筛选条件。未改日期时默认最近7天；时间按订单创建时间计算。</div>';
             content += '<div class="order-summary-note">'+ListReadUI.summaryText(ret.meta)+' <button type="button" class="btn btn-default btn-sm" onclick="layer.closeAll();showOrderSummary(true)">刷新统计</button></div>';
 			content += '</div>';
 			layer.open({
@@ -774,5 +894,19 @@ $(document).ready(function(){
         clearBtn: true,
         language: 'zh-CN'
     });
+	$('#starttime,#endtime').on('change changeDate clearDate', syncOrderDateScopeFromInputs);
+	$('#btnOrderAllDates').on('click', function(){
+		withOrderDateLock(function(){
+			setOrderDateInput('#starttime', '');
+			setOrderDateInput('#endtime', '');
+			$('#date_scope').val('all');
+		});
+		renderOrderDateHint({date_scope:'all', date_start:'', date_end:''});
+		searchSubmit();
+	});
+	$('#searchToolbar').on('input change', 'input[name=value], select[name=column]', function(){
+		renderOrderDateHint(currentOrderDateMeta());
+	});
+	renderOrderDateHint(currentOrderDateMeta());
 })
 </script>

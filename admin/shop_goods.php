@@ -100,7 +100,7 @@ $csrf_token = $_SESSION['shop_csrf_token'];
 <script src="<?php echo $cdnpublic?>layer/3.1.1/layer.min.js"></script>
 <script src="../assets/js/bootstrap-table.min.js"></script>
 <script src="../assets/js/bootstrap-table-page-jump-to.min.js"></script>
-<script src="../assets/js/list-read-ui.js?v=1"></script>
+<script src="../assets/js/list-read-ui.js?v=2"></script>
 <script>
 var shopCsrfToken = <?php echo json_encode($csrf_token);?>;
 function escapeHtml(str){

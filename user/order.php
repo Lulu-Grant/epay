@@ -97,7 +97,7 @@ unset($rs);
 <script src="../assets/js/bootstrap-table.min.js"></script>
 <script src="../assets/js/bootstrap-table-page-jump-to.min.js"></script>
 <script src="../assets/js/custom.js"></script>
-<script src="../assets/js/list-read-ui.js?v=1"></script>
+<script src="../assets/js/list-read-ui.js?v=2"></script>
 <script>
 var is_user_refund = '<?php echo $conf['user_refund']?>';
 $(document).ready(function(){

@@ -64,24 +64,30 @@ mustExec($DB, "UPDATE pre_config SET v='0' WHERE k='captcha_open'");
 mustExec($DB, "UPDATE pre_cache SET v='' WHERE k='config'");
 
 $report = ['php'=>PHP_VERSION, 'database'=>$DB->getColumn('SELECT VERSION()'), 'payment_rows'=>100000, 'shop_rows'=>100000];
+// Admin order lists default to 7 days. Full-corpus checks opt into every date.
+$adminAll = ['date_scope'=>'all'];
 cacheControl(false);
-$off = ListQueryReader::paymentList($DB, ['offset'=>0, 'limit'=>30]);
+$off = ListQueryReader::paymentList($DB, $adminAll + ['offset'=>0, 'limit'=>30]);
 verify($off['total'] === 100000 && count($off['rows']) === 30, 'uncached payment result');
-$report['payment_uncached'] = benchmark(fn()=>ListQueryReader::paymentList($DB, ['offset'=>0, 'limit'=>30]));
+$report['payment_uncached'] = benchmark(fn()=>ListQueryReader::paymentList($DB, $adminAll + ['offset'=>0, 'limit'=>30]));
 cacheControl(true);
 $DB->queries = [];
-$report['payment_cached'] = benchmark(fn()=>ListQueryReader::paymentList($DB, ['offset'=>0, 'limit'=>30]));
+$report['payment_cached'] = benchmark(fn()=>ListQueryReader::paymentList($DB, $adminAll + ['offset'=>0, 'limit'=>30]));
 $aggregates = count(array_filter($DB->queries, fn($sql)=>str_contains($sql, 'COUNT(*)')));
 verify($aggregates <= 10, 'at least 90 percent fewer count queries');
 $report['payment_cached']['count_queries'] = $aggregates;
 verify(count(array_filter($DB->queries, fn($sql)=>str_contains($sql, 'FROM pre_type'))) === 1, 'display types reused');
 verify(count(array_filter($DB->queries, fn($sql)=>str_contains($sql, 'SELECT A.*,B.plugin'))) === 101, 'rows always queried live');
-$on = ListQueryReader::paymentList($DB, ['offset'=>0, 'limit'=>30]);
+$on = ListQueryReader::paymentList($DB, $adminAll + ['offset'=>0, 'limit'=>30]);
 verify($off['rows'] === $on['rows'], 'cached mode preserves rows and money types');
 $merchantA = ListQueryReader::paymentList($DB, ['uid'=>1001, 'offset'=>0, 'limit'=>20], 1000);
 $merchantB = ListQueryReader::paymentList($DB, ['uid'=>1000, 'offset'=>0, 'limit'=>20], 1001);
 verify(array_unique(array_column($merchantA['rows'], 'uid')) === ['1000'] || array_unique(array_column($merchantA['rows'], 'uid')) === [1000], 'merchant cannot override scope');
 verify($merchantA['total'] + $merchantB['total'] === 100000, 'merchant counts isolated');
+$recent = ListQueryReader::paymentList($DB, ['offset'=>0, 'limit'=>30]);
+verify($recent['meta']['date_scope'] === 'recent' && $recent['total'] > 0 && $recent['total'] < 100000 && count($recent['rows']) === 30, 'admin empty dates use the 7-day window');
+$exactOld = ListQueryReader::paymentList($DB, ['column'=>'trade_no', 'value'=>'0000000000000000011', 'limit'=>20]);
+verify($exactOld['meta']['date_scope'] === 'exact' && $exactOld['total'] === 1, 'exact trade_no is not limited by the default window');
 $adminSummary = ListQueryReader::paymentSummary($DB, []);
 $userSummary = ListQueryReader::paymentSummary($DB, [], 1000);
 verify(isset($adminSummary['data']['profit_money']) && !isset($userSummary['data']['profit_money']) && isset($userSummary['data']['get_money']), 'admin profit never leaks into merchant summary');
@@ -95,10 +101,10 @@ $report['summary_cached']['aggregate_queries']=$summaryLoads;
 foreach ([0,5000,50000] as $offset) {
     $legacySql = 'SELECT A.*,B.plugin FROM pre_order A LEFT JOIN pre_channel B ON A.channel=B.id ORDER BY A.trade_no DESC LIMIT '.$offset.',30';
     $expected = $DB->getAll($legacySql);
-    $actual = ListQueryReader::paymentList($DB, ['offset'=>$offset,'limit'=>30]);
+    $actual = ListQueryReader::paymentList($DB, $adminAll + ['offset'=>$offset,'limit'=>30]);
     foreach ($actual['rows'] as &$row) { unset($row['typename'], $row['typeshowname']); } unset($row);
     verify($expected === $actual['rows'], 'payment deep page preserves full order at offset '.$offset);
-    $report['deep_'.$offset] = benchmark(fn()=>ListQueryReader::paymentList($DB, ['offset'=>$offset,'limit'=>30]));
+    $report['deep_'.$offset] = benchmark(fn()=>ListQueryReader::paymentList($DB, $adminAll + ['offset'=>$offset,'limit'=>30]));
     $report['deep_legacy_rows_'.$offset] = benchmark(fn()=>$DB->getAll($legacySql));
 }
 

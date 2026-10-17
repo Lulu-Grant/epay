@@ -70,9 +70,9 @@ async function post(context, url, data = {}) {
     assert(concurrent.every(r=>r.rows.length===30),'20 concurrent requests succeed');
     const fresh=await post(admin,endpoints[0][0],{...endpoints[0][1],fresh:1});
     assert(!fresh.meta.total_cached,'HTTP force refresh bypasses cache');
-    const paidBefore=await post(admin,endpoints[0][0],{dstatus:1,limit:20});
+    const paidBefore=await post(admin,endpoints[0][0],{dstatus:1,limit:20,date_scope:'all'});
     await post(admin,'/admin/ajax_order.php?act=setStatus&trade_no=0000000000000000011&status=3');
-    const paidAfter=await post(admin,endpoints[0][0],{dstatus:1,limit:20});
+    const paidAfter=await post(admin,endpoints[0][0],{dstatus:1,limit:20,date_scope:'all'});
     assert(paidAfter.total===paidBefore.total-1,'admin status mutation invalidates across HTTP workers');
     await post(admin,'/admin/ajax_order.php?act=setStatus&trade_no=0000000000000000011&status=1');
     await post(admin,'/admin/ajax_pay.php?act=savePayType',{action:'edit',id:1,name:'alipay',showname:'Fixture renamed',device:0});
