@@ -234,6 +234,9 @@ if(!empty($admin_sso_session)){
                 </a>
               </li>
 			  <?php }?>
+              <li class="<?php echo checkIfActive('defense')?>">
+                <a href="defense.php"><i class="glyphicon glyphicon-shield"></i><span>支付防御</span></a>
+              </li>
         <?php if(!empty($conf['merchant_complain_view_enabled'])){?>
               <li class="<?php echo checkIfActive('complain,complain_info')?>">
                 <a href="complain.php">

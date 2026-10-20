@@ -8,6 +8,7 @@ on:
       - 'upgrade/**'
       - 'codex/p5-shop-shadow-repair'
       - 'feature/p5-list-query-cache'
+      - 'feature/merchant-defense'
 
 jobs:
   shop-browser:
@@ -153,6 +154,28 @@ jobs:
           EPAY_DB_USER: root
           EPAY_DB_PASSWORD: epay_test
         run: php tools/php84/db-fixture-check.php
+
+      - name: Merchant defense MariaDB and process concurrency regression
+        env:
+          EPAY_DEFENSE_TEST_PORT: '3306'
+        run: |
+          php scripts/merchant-defense-regression.php
+          php scripts/merchant-defense-concurrency.php
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install merchant defense browser fixture
+        run: |
+          npm install --prefix "$RUNNER_TEMP/merchant-defense-browser" --no-audit --no-fund playwright@1.51.1
+          "$RUNNER_TEMP/merchant-defense-browser/node_modules/.bin/playwright" install --with-deps chromium
+
+      - name: Merchant defense browser regression
+        env:
+          EPAY_DEFENSE_TEST_PORT: '3306'
+          EPAY_PLAYWRIGHT_MODULE: ${{ runner.temp }}/merchant-defense-browser/node_modules/playwright
+        run: node scripts/merchant-defense-browser.spec.cjs
 
       - name: Payment route native MySQL races and migration rehearsal
         env:

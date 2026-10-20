@@ -139,11 +139,13 @@ class Pay
         }
         $trade_no = $oldorder['trade_no'];
         $firstGetChannel = $oldorder['channel'] == 0;
+        try{$defenseEnabled = class_exists('\\lib\\Defense\\Runtime') && \lib\Defense\Runtime::enabled($pid);}
+        catch(Exception $e){sysmsg($e->getMessage());}
 
         if(\lib\Shop\ConfigService::shouldRecordMerchant($pid)){
             try{
                 $shopOrder = \lib\Shop\OrderService::recordPaymentOrder($trade_no, $type);
-                if($shopOrder && \lib\Shop\ConfigService::shouldUseCheckout($pid)){
+                if($shopOrder && !$defenseEnabled && \lib\Shop\ConfigService::shouldUseCheckout($pid)){
                     echo '<script>window.location.replace('.json_encode($shopOrder['checkout_url'], JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE).');</script>';
                     exit;
                 }
@@ -156,6 +158,13 @@ class Pay
         }
 
 
+        if($defenseEnabled){
+            header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+            header('Referrer-Policy: no-referrer');
+            try{\lib\Payment::echoDefault(\lib\Defense\Runtime::initial($trade_no,$type,$clientip));}
+            catch(Exception $e){sysmsg($e->getMessage());}
+            return;
+        }
         if(empty($type)){
             echo "<script>window.location.replace('./cashier.php?trade_no={$trade_no}&sitename={$sitename}');</script>";
             exit;
@@ -361,11 +370,13 @@ class Pay
         }
         $trade_no = $oldorder['trade_no'];
         $firstGetChannel = $oldorder['channel'] == 0;
+        try{$defenseEnabled = class_exists('\\lib\\Defense\\Runtime') && \lib\Defense\Runtime::enabled($pid);}
+        catch(Exception $e){echojsonmsg($e->getMessage());}
 
         if(\lib\Shop\ConfigService::shouldRecordMerchant($pid)){
             try{
                 $shopOrder = \lib\Shop\OrderService::recordPaymentOrder($trade_no, $type);
-                if($shopOrder && \lib\Shop\ConfigService::shouldUseCheckout($pid)){
+                if($shopOrder && !$defenseEnabled && \lib\Shop\ConfigService::shouldUseCheckout($pid)){
                     define("TRADE_NO", $trade_no);
                     \lib\Payment::echoJson(['type'=>'jump','url'=>$shopOrder['checkout_url']]);
                 }
@@ -377,6 +388,14 @@ class Pay
             }
         }
 
+        if($defenseEnabled){
+            define('TRADE_NO',$trade_no);
+            header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+            header('Referrer-Policy: no-referrer');
+            try{\lib\Payment::echoJson(\lib\Defense\Runtime::initial($trade_no,$type,$clientip));}
+            catch(Exception $e){echojsonmsg($e->getMessage());}
+            return;
+        }
         if(empty($type)){
             define("TRADE_NO", $trade_no);
             \lib\Payment::echoJson(['type'=>'jump','url'=>$conf['payurl'].'cashier.php?trade_no='.$trade_no.'&sitename='.$sitename]);

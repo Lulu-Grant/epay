@@ -95,6 +95,10 @@ class Plugin {
 			if(!defined("IN_PLUGIN")) define("IN_PLUGIN", true);
             define("PAY_ROOT", PLUGIN_ROOT.$plugin.'/');
             define("TRADE_NO", $trade_no);
+            if(class_exists('\\lib\\Defense\\Runtime')){
+                $defenseResult = \lib\Defense\Runtime::beforePlugin($plugin, $func, $trade_no);
+                if($defenseResult !== null)return $defenseResult;
+            }
             include $filename;
             if (class_exists($classname, false) && method_exists($classname, $func)) {
                 return $classname::$func();

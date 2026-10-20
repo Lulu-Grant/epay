@@ -89,6 +89,7 @@ class CommUtil
     public static function autoHandle($trade_no, $status){
         global $DB, $conf;
         if(empty($trade_no)) return;
+        if(class_exists('\\lib\\Defense\\Runtime'))\lib\Defense\Runtime::complaintsForTrade($trade_no);
 
         //自动冻结订单
         if($conf['complain_freeze_order']==1){

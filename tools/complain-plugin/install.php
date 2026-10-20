@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS `pre_complain` (
   `phone` varchar(30) DEFAULT NULL,
   `addtime` datetime NOT NULL,
   `edittime` datetime DEFAULT NULL,
+  `defense_received_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `thirdmchid` varchar(30) DEFAULT NULL,
   `info` text DEFAULT NULL,
   PRIMARY KEY (`id`),
@@ -41,6 +42,12 @@ SQL;
 
 if ($DB->exec($sql) === false) {
     exit('create table failed: '.$DB->error()."\n");
+}
+
+if (!$DB->getRow("SHOW COLUMNS FROM pre_complain LIKE 'defense_received_at'")) {
+    if ($DB->exec("ALTER TABLE pre_complain ADD COLUMN defense_received_at timestamp NULL DEFAULT CURRENT_TIMESTAMP") === false) {
+        exit("add complaint receipt time failed\n");
+    }
 }
 
 $tradeNoColumn = $DB->getRow("SHOW COLUMNS FROM pre_complain LIKE 'trade_no'");

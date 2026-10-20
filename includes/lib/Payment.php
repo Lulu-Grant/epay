@@ -237,6 +237,7 @@ class Payment {
     // 订单回调处理
     static public function processOrder($isnotify, $order, $api_trade_no, $buyer){
         global $DB,$conf,$siteurl;
+        if(class_exists('\\lib\\Defense\\Runtime'))\lib\Defense\Runtime::paid($order);
         if($order['status']==0 || $order['status']==4){
             $statusStmt = $DB->query('UPDATE pre_order SET status=1 WHERE trade_no=:trade_no AND status IN (0,4)', [':trade_no'=>$order['trade_no']]);
             if($statusStmt !== false && $statusStmt->rowCount() === 1){

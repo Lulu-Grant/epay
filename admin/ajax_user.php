@@ -8,6 +8,18 @@ if(!checkRefererHost())exit('{"code":403}');
 @header('Content-Type: application/json; charset=UTF-8');
 
 switch($act){
+case 'getMerchantDefense':
+case 'setMerchantDefense':
+case 'releaseMerchantDefense':
+    try{
+        if(($_SERVER['REQUEST_METHOD']??'')!=='POST')throw new \lib\Defense\DefenseException('DEFENSE_VERIFY_FAILED');
+        $result=\lib\Defense\AdminController::handle($act,$_POST,$_SESSION,$islogin==1,(string)($conf['admin_user']??'admin'),$conf);
+    }catch(Throwable $e){
+        $error=$e instanceof \lib\Defense\DefenseException?$e:new \lib\Defense\DefenseException('DEFENSE_TEMP_UNAVAILABLE');
+        $result=['code'=>-1,'reason'=>$error->reason,'msg'=>$error->getMessage()];
+    }
+    exit(json_encode($result,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES));
+break;
 case 'userList':
 	$usergroup = [0=>'默认用户组'];
 	$rs = $DB->getAll("SELECT * FROM pre_group");

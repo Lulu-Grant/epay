@@ -6,6 +6,9 @@ include("../includes/common.php");
 $title='商户列表';
 include './head.php';
 if($islogin==1){}else exit("<script language='javascript'>window.location.href='./login.php';</script>");
+if(empty($_SESSION['merchant_defense_csrf']))$_SESSION['merchant_defense_csrf']=bin2hex(random_bytes(32));
+echo '<meta name="merchant-defense-csrf" content="'.htmlspecialchars($_SESSION['merchant_defense_csrf'],ENT_QUOTES,'UTF-8').'">';
+echo '<script src="/assets/js/merchant-defense-admin.js?v=1" defer></script>';
 
 $select = '';
 $rs = $DB->getAll("SELECT * FROM pre_group");
@@ -162,6 +165,15 @@ $(document).ready(function(){
 						html += '<a href="javascript:setStatus('+row.uid+',\'settle\',1)"><font color=red><i class="fa fa-times-circle"></i>结算</font></a>';
 					}
 					return html;
+				}
+			},
+			{
+				field: 'defense_mode',
+				title: '防御模式',
+				formatter: function(value, row) {
+					if(typeof value === 'undefined')return '<span class="text-muted">尚未安装</span>';
+					var enabled = Number(value) === 1;
+					return '<button type="button" class="btn btn-xs '+(enabled?'btn-success':'btn-default')+' merchant-defense-toggle" data-uid="'+Number(row.uid)+'" data-target="'+(enabled?0:1)+'" data-revision="'+Number(row.defense_revision)+'">'+(enabled?'防御开启':'防御关闭')+'</button><br/><a href="./merchant_defense.php?uid='+Number(row.uid)+'">规则与记录</a>';
 				}
 			},
 			{
