@@ -52,7 +52,7 @@ function defenseFixtureCreate($fresh = false)
     $pdo->exec(str_replace('pre_','pay_',$create));
     if($fresh){
         $install=file_get_contents(dirname(__DIR__,2).'/install/install.sql');
-        preg_match_all('/CREATE TABLE IF NOT EXISTS pre_merchant_defense_[a-z_]+ \([\s\S]+?\) ENGINE=[^;]+;/',$install,$tables);
+        preg_match_all('/CREATE TABLE IF NOT EXISTS `?pre_merchant_defense_[a-z_]+`? \([\s\S]+?\) ENGINE=[^;]+;/',$install,$tables);
         foreach($tables[0] as $table)$pdo->exec(str_replace('pre_','pay_',$table));
         $pdo->exec("INSERT INTO pay_config (k,v) VALUES ('merchant_defense_version','1'),('merchant_defense_cursor','0')");
     }else defenseFixtureSql($pdo,file_get_contents(dirname(__DIR__,2).'/install/migrations/20261020_merchant_defense.sql'));
