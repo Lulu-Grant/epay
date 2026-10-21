@@ -45,6 +45,11 @@ namespace {
     if(getenv('EPAY_PAYER_IP_FIXTURE')==='1'){
         $conf+=['payer_ip_version'=>'1','payer_ip_enabled'=>'1','payer_ip_esa_verified'=>'1','payer_ip_header'=>'Ali-Cdn-Real-Ip','payer_ip_esa_cidrs'=>'8.8.8.0/24'];
         $_SERVER['REMOTE_ADDR']=($_SERVER['HTTP_X_FIXTURE_ESA_PEER']??'')==='untrusted'?'1.1.1.1':'8.8.8.8';
+        if(getenv('EPAY_PAYER_IP_AUTH_FIXTURE')==='1'){
+            $conf['payer_ip_trust_mode']='origin_auth';$conf['payer_ip_esa_cidrs']='';
+            $_SERVER['EPAY_ESA_ORIGIN_AUTH']=$_SERVER['REMOTE_ADDR']==='8.8.8.8' && ($_SERVER['HTTP_X_FIXTURE_ORIGIN_AUTH']??'')!=='deny'?'1':'0';
+            $_SERVER['EPAY_ESA_ORIGIN_TLS']=($_SERVER['HTTP_X_FIXTURE_ORIGIN_TLS']??'')==='off'?'':'on';
+        }
     }
     $path=parse_url($_SERVER['REQUEST_URI'],PHP_URL_PATH);
     if($path==='/__fixture/state'){

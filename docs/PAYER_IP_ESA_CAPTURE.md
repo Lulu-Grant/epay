@@ -24,13 +24,15 @@
 
 ## 信任边界
 
-解析器只用 PHP `REMOTE_ADDR` 与已核实的本站 ESA 回源网段比对。命中后只读配置选定的一个真实 IP 请求头，绝不自动回退到 XFF、X-Real-IP、CF 或商户传入值。头值必须是单个公网 IPv4 或 IPv6；列表、端口、空值、私网、回环、保留地址、异常空白一律跳过。IPv6 和 IPv4 映射地址先规范化。
+默认 `cidr` 模式使用 PHP `REMOTE_ADDR` 与已核实的本站 ESA 回源网段比对。新增的 `origin_auth` 模式可替代网段校验：源站 Nginx 校验 ESA 覆盖写入的共享鉴权头，并确认连接实际使用 TLS，再通过 FastCGI 参数 `EPAY_ESA_ORIGIN_AUTH=1`、`EPAY_ESA_ORIGIN_TLS=on` 向 PHP 传递证明。应用不读取共享密值，也不把 HTTP 请求头、X-Forwarded-Proto 或本机健康检查豁免当成证明。示例见 `tools/nginx/payer-ip-origin-auth-fastcgi.conf.example`；此模式的部署及链路验证须单独完成后才启用。
+
+两种模式均只读配置选定的一个真实 IP 请求头，绝不自动回退到 XFF、X-Real-IP、CF 或商户传入值。头值必须是单个公网 IPv4 或 IPv6；列表、端口、空值、私网、回环、保留地址、异常空白一律跳过。IPv6 和 IPv4 映射地址先规范化。`origin_auth` 不需要配置 ESA 网段，但仍需验证真实 IP 头由 ESA 注入并覆盖访客传入值。
 
 头名存在产品差异：阿里云 CDN 官方文档使用 `Ali-Cdn-Real-Ip`，ESA 托管转换默认使用 `Ali-Real-Client-Ip`。本功能按本次需求默认选前者；后者必须经运维核实后显式配置，不同时读取两个头。[CDN 请求头说明](https://help.aliyun.com/zh/cdn/user-guide/configure-custom-request-headers/)、[ESA 托管转换说明](https://help.aliyun.com/zh/edge-security-acceleration/esa/user-guide/managed-conversion/)。
 
 上线前应完成这些核实：
 
-1. 从本站 ESA 控制台或只读 `GetOriginProtection` 获取实际 IPv4 和 IPv6 回源列表，核对当前回源模式与节点覆盖；不能从日志样本猜整个网段，不能信任所有阿里云地址。[ESA 回源保护说明](https://www.alibabacloud.com/help/en/edge-security-acceleration/esa/user-guide/origin-protection)、[GetOriginProtection API](https://www.alibabacloud.com/help/tc/edge-security-acceleration/esa/api-esa-2024-09-10-getoriginprotection)。
+1. 选择 `cidr` 时，从本站 ESA 控制台或只读 `GetOriginProtection` 获取实际 IPv4 和 IPv6 回源列表，核对当前回源模式与节点覆盖；不能从日志样本猜整个网段，不能信任所有阿里云地址。[ESA 回源保护说明](https://www.alibabacloud.com/help/en/edge-security-acceleration/esa/user-guide/origin-protection)、[GetOriginProtection API](https://www.alibabacloud.com/help/tc/edge-security-acceleration/esa/api-esa-2024-09-10-getoriginprotection)。选择 `origin_auth` 时，改为验证共享密值、HTTPS 回源和 Nginx 的 FastCGI 证明；ESA 支持覆盖式添加回源请求头和配置 HTTPS 回源。[请求头规则](https://help.aliyun.com/zh/edge-security-acceleration/esa/user-guide/modify-outgoing-request-header)、[回源协议](https://help.aliyun.com/zh/edge-security-acceleration/esa/user-guide/back-to-source-protocols-and-ports)。
 2. 确认 ESA 删除或覆盖访客传入的同名真实 IP 头；实际测试伪造头不能改变到源站的观察地址。
 3. 确认到 PHP 的 `REMOTE_ADDR` 仍是实际 ESA 连接对端。若 Nginx 已通过 `real_ip_header` 改写，或前面还有其他代理，本实现不能直接把改写后的地址当 ESA 对端；需先单独设计并核验保留原连接地址的链路。
 4. 回源共享网段不是站点身份证明，仍需核实本站回源 Host 与既有源站访问边界。不要为了本功能自动开启 ESA 回源保护或修改防火墙，否则可能改变现有流量路径。
@@ -57,9 +59,12 @@
 | `payer_ip_enabled` | `0` | 运维明确设为 `1` 才采集 |
 | `payer_ip_esa_verified` | `0` | 完成上述链路核验后设为 `1` |
 | `payer_ip_esa_cidrs` | 空 | 本站经核验的完整回源网段，逗号或空白分隔 |
+| `payer_ip_trust_mode` | `cidr` | `cidr` 或 `origin_auth`，显式选定，未知值拒绝 |
 | `payer_ip_header` | `Ali-Cdn-Real-Ip` | 只允许此值或 `Ali-Real-Client-Ip`，显式选一个 |
 
-配置由既有配置存储加载，新增键不会替换生产 `config.php`，也不包含密钥。
+配置由既有配置存储加载，新增键不会替换生产 `config.php`，也不包含密钥。已有环境通过 `install/migrations/20261022_payer_ip_origin_auth.sql` 添加默认信任模式，该迁移不会开启采集或防御。
+
+`origin_auth` 的共享密值只存放在 ESA 与服务器 root 私有 Nginx 配置，不进入应用配置表、PHP 请求头、URL、日志或响应。ESA 使用“添加”操作覆盖同名头，源站完整核验密值。先准备源站证书与 HTTPS 监听，再由 ESA 切换并开启源站证书校验；确认真实 IP 头与缓存旁路后，才开启公网拒绝规则和采集。保留限定的本机健康检查、计划任务及证书续期通路，逐个验收实际域名。缺少任一 FastCGI 证明时只跳过采集，不自动降级为 CIDR 或 XFF。
 
 ## 与防御模式的关系
 
@@ -74,6 +79,7 @@
 ```powershell
 php scripts/payer-ip-regression.php
 node scripts/payer-ip-http-regression.cjs
+node scripts/payer-ip-http-regression.cjs --origin-auth
 php scripts/merchant-defense-regression.php
 php scripts/merchant-defense-concurrency.php
 node scripts/merchant-defense-browser.spec.cjs
@@ -81,7 +87,7 @@ node scripts/merchant-defense-browser.spec.cjs
 
 Windows 如 PHP 默认扩展目录不匹配，可对 PHP 指定 `-d extension_dir=本机PHP的ext目录 -d extension=pdo_mysql`；Node 脚本接受 `EPAY_PHP_TEST_BIN` 和 `EPAY_PHP_TEST_EXT_DIR`。浏览器回归还需 Playwright 和 Chromium；可指定 `EPAY_PLAYWRIGHT_MODULE`、`EPAY_TEST_CHROME`。
 
-新增用例覆盖新装与升级结构一致、旧 IP 不回填、关闭时零采集查询、源站伪造头、头名严格选择、IPv6、MAPI 不误记、真实 HTTP 页面入口、并发首次写入、状态竞态和存储异常。CI 已加入新增脚本。数据库回归 101 项、HTTP 回归 33 项、原防御回归 88 项、浏览器回归 28 项及原 20 进程防御并发测试均需通过。
+新增用例覆盖新装与升级结构一致、旧 IP 不回填、关闭时零采集查询、源站伪造头、头名严格选择、IPv6、MAPI 不误记、真实 HTTP 页面入口、并发首次写入、状态竞态和存储异常。鉴权模式额外验证伪造 HTTP 证明、缺少实际 TLS、无效鉴权、未知模式和空网段。CI 已加入新增脚本。数据库回归 118 项、CIDR HTTP 回归 33 项、鉴权 HTTP 回归 37 项、原防御回归 88 项、浏览器回归 28 项及原 20 进程防御并发测试均需通过。
 
 ## 上线与回退顺序
 

@@ -6,6 +6,7 @@ const path = require('node:path');
 const root = path.resolve(__dirname, '..');
 const fixture = path.join(__dirname, 'fixtures/merchant-defense-browser-router.php');
 const php = process.env.EPAY_PHP_TEST_BIN || 'php';
+const authMode = process.argv.includes('--origin-auth');
 const flags = process.env.EPAY_PHP_TEST_EXT_DIR ? ['-d', 'extension_dir=' + process.env.EPAY_PHP_TEST_EXT_DIR, '-d', 'extension=pdo_mysql'] : [];
 const html = { 'User-Agent': 'Mozilla/5.0 Chrome/131.0.0.0 Safari/537.36', Accept: 'text/html', 'Ali-Cdn-Real-Ip': '9.9.9.9', 'Sec-Fetch-Dest': 'document' };
 function cli(args) {
@@ -25,7 +26,7 @@ async function freePort() {
         database = JSON.parse(cli(['--setup'])).database;
         const port = await freePort(); const origin = 'http://127.0.0.1:' + port;
         server = spawn(php, [...flags, '-S', '127.0.0.1:' + port, fixture], { cwd: root, windowsHide: true,
-            env: { ...process.env, EPAY_DEFENSE_TEST_DATABASE: database, EPAY_PAYER_IP_FIXTURE: '1' }, stdio: ['ignore', 'ignore', 'pipe'] });
+            env: { ...process.env, EPAY_DEFENSE_TEST_DATABASE: database, EPAY_PAYER_IP_FIXTURE: '1', EPAY_PAYER_IP_AUTH_FIXTURE: authMode ? '1' : '0' }, stdio: ['ignore', 'ignore', 'pipe'] });
         server.stderr.on('data', data => { log = (log + data).slice(-16000); });
         for (let attempt = 0; attempt < 80; attempt++) {
             try { if ((await fetch(origin + '/__fixture/ready')).ok) break; } catch (ignore) {}
@@ -67,13 +68,20 @@ async function freePort() {
         }
         const valid = await fetch(origin + route, { headers: html, redirect: 'manual' }); await valid.text();
         check((await row(number)).payer_ip === '9.9.9.9', 'trusted browser can capture after rejected probes');
+        if (authMode) {
+            number++; const guarded = await mapi(number); const guardedRoute = '/pay/submit/' + guarded.trade_no + '/';
+            for (const headers of [{ ...html, 'X-Fixture-Origin-Auth': 'deny', 'Epay-Esa-Origin-Auth': '1', 'Epay-Esa-Origin-Tls': 'on' }, { ...html, 'X-Fixture-Origin-Tls': 'off', 'X-Forwarded-Proto': 'https' }]) {
+                const response = await fetch(origin + guardedRoute, { headers, redirect: 'manual' }); await response.text();
+                check((await row(number)).payer_ip === null, 'client claims cannot replace server auth and transport proof');
+            }
+        }
         number++;
         const web = await fetch(origin + '/__fixture/submit', { method: 'POST', headers: { ...html, 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams(fields(number)), redirect: 'manual' });
         const webText = await web.text(); const webOrder = await row(number);
         check(web.status < 400 && webOrder?.payer_ip === '9.9.9.9', 'actual browser POST submit captures payer; status=' + web.status + '; order=' + JSON.stringify(webOrder) + '; response=' + webText.slice(0, 800));
         check((await state()).contexts.length === 0, 'passive observations do not become defense verification contexts');
         check(!/Fatal error|Uncaught|capture_storage_failed/.test(log), 'HTTP fixture has no application or capture storage failure');
-        console.log('Payer IP HTTP regression: ' + checks + ' checks passed; real MAPI, submit/qrcode, cashier, submit2 and browser POST; loopback only.');
+        console.log('Payer IP HTTP regression (' + (authMode ? 'origin auth' : 'CIDR') + '): ' + checks + ' checks passed; real MAPI, submit/qrcode, cashier, submit2 and browser POST; loopback only.');
     } catch (error) { throw new Error(error.message + '\nSynthetic fixture server tail:\n' + log.slice(-4000)); }
     finally {
         if (server && server.exitCode === null && server.signalCode === null) await Promise.race([new Promise(resolve => { server.once('exit', resolve); server.kill(); }), new Promise(resolve => setTimeout(resolve, 5000))]);

@@ -17,6 +17,9 @@ class PayerIp
             || ($conf['payer_ip_esa_verified']??'')!=='1')return false;
         $header=strtolower((string)($conf['payer_ip_header']??''));
         if(!isset(self::HEADERS[$header]))return false;
+        $mode=$conf['payer_ip_trust_mode']??'cidr';
+        if($mode==='origin_auth')return true;
+        if($mode!=='cidr')return false;
         $ranges=self::ranges($conf);
         if(!$ranges || count($ranges)>4096)return false;
         foreach($ranges as $range){
@@ -34,13 +37,16 @@ class PayerIp
         return preg_split('/[\s,]+/',trim($raw),-1,PREG_SPLIT_NO_EMPTY);
     }
 
-    /** Only the actual connection peer authorizes the one explicitly selected ESA header. */
+    /** Trust either verified connection ranges or Nginx-generated auth and transport proofs. */
     public static function resolve(array $server, array $conf)
     {
         if(!self::configured($conf))return null;
         try{
             $peer=ClientIp::normalize($server['REMOTE_ADDR']??'');
-            if(!ClientIp::trusted($peer,self::ranges($conf)))return null;
+            if(($conf['payer_ip_trust_mode']??'cidr')==='origin_auth'){
+                // These are FastCGI parameters, never HTTP_* headers or forwarded HTTPS claims.
+                if(($server['EPAY_ESA_ORIGIN_AUTH']??null)!=='1' || ($server['EPAY_ESA_ORIGIN_TLS']??null)!=='on')return null;
+            }elseif(!ClientIp::trusted($peer,self::ranges($conf)))return null;
             $header=strtolower($conf['payer_ip_header']);
             $value=$server[self::HEADERS[$header]]??null;
             if(!is_string($value)||strlen($value)>45 || $value!==trim($value)

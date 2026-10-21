@@ -180,6 +180,7 @@ jobs:
         run: |
           node scripts/merchant-defense-browser.spec.cjs
           node scripts/payer-ip-http-regression.cjs
+          node scripts/payer-ip-http-regression.cjs --origin-auth
 
       - name: Payment route native MySQL races and migration rehearsal
         env:

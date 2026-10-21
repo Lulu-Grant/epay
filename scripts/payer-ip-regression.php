@@ -62,6 +62,21 @@ try{
     payerSame('9.9.9.9',PayerIp::resolve($mapped,$config)['ip'],'mapped IPv4 canonicalized');
     $ipv6['REMOTE_ADDR']='2606:4700::1';$v6config=$config;$v6config['payer_ip_esa_cidrs']='2606:4700::/32';
     payerSame('2606:4700::1',PayerIp::resolve($ipv6,$v6config)['peer'],'IPv6 origin range');
+    $auth=$config;$auth['payer_ip_trust_mode']='origin_auth';$auth['payer_ip_esa_cidrs']='';
+    $proof=$server;$proof['REMOTE_ADDR']='1.1.1.1';$proof['EPAY_ESA_ORIGIN_AUTH']='1';$proof['EPAY_ESA_ORIGIN_TLS']='on';
+    payerSame(true,PayerIp::configured($auth),'explicit auth mode does not require CIDR list');
+    payerSame('9.9.9.9',PayerIp::resolve($proof,$auth)['ip'],'verified HTTPS origin auth replaces CIDR matching');
+    foreach([['EPAY_ESA_ORIGIN_AUTH','0'],['EPAY_ESA_ORIGIN_AUTH',1],['EPAY_ESA_ORIGIN_AUTH',''],['EPAY_ESA_ORIGIN_TLS',''],['EPAY_ESA_ORIGIN_TLS','off'],['EPAY_ESA_ORIGIN_TLS',true]] as [$key,$value]){
+        $bad=$proof;$bad[$key]=$value;payerSame(null,PayerIp::resolve($bad,$auth),'auth proof requires exact server values');
+    }
+    $spoof=$server+['HTTP_EPAY_ESA_ORIGIN_AUTH'=>'1','HTTP_EPAY_ESA_ORIGIN_TLS'=>'on','HTTP_X_LP_ORIGIN_AUTH'=>'fixture-only-secret','HTTPS'=>'on','HTTP_X_FORWARDED_PROTO'=>'https'];
+    payerSame(null,PayerIp::resolve($spoof,$auth),'client HTTP headers and forwarded HTTPS cannot create FastCGI proof');
+    $bad=$proof;unset($bad['EPAY_ESA_ORIGIN_AUTH']);payerSame(null,PayerIp::resolve($bad,$auth),'missing server auth proof rejected');
+    $bad=$proof;unset($bad['EPAY_ESA_ORIGIN_TLS']);payerSame(null,PayerIp::resolve($bad,$auth),'missing actual origin TLS proof rejected');
+    $bad=$proof;$bad['HTTP_ALI_CDN_REAL_IP']='127.0.0.1';payerSame(null,PayerIp::resolve($bad,$auth),'origin auth does not bypass IP validation');
+    $bad=$proof;unset($bad['HTTP_ALI_CDN_REAL_IP']);$bad['HTTP_X_FORWARDED_FOR']='9.9.9.9';payerSame(null,PayerIp::resolve($bad,$auth),'origin auth never falls back to XFF');
+    $bad=$auth;$bad['payer_ip_trust_mode']='unknown';payerSame(false,PayerIp::configured($bad),'unknown trust mode rejected');
+    $bad=$auth;$bad['payer_ip_esa_verified']='0';payerSame(null,PayerIp::resolve($proof,$bad),'auth mode still requires explicit verification');
     $number=10;
     foreach(['pay_submit','pay_qrcode','web_submit','cashier','submit2'] as $entry){
         $order=defenseFixtureOrder($pdo,$number++);$original=$order;
@@ -76,6 +91,9 @@ try{
     payerSame(true,PayerIp::capture($order,'web_submit',$post,$config,$DB),'browser form POST supported');
     $partial=defenseFixtureOrder($pdo,$number++);unset($partial['status']);
     payerSame(true,PayerIp::capture($partial,'web_submit',$post,$config,$DB),'legacy web submit partial order uses authoritative DB status');
+    $authOrder=defenseFixtureOrder($pdo,$number++);
+    payerSame(true,PayerIp::capture($authOrder,'pay_submit',$proof,$auth,$DB),'verified origin-auth browser page captures');
+    payerSame('1.1.1.1',payerRead($pdo,$authOrder['trade_no'])['payer_ip_peer'],'auth observation preserves actual connection peer');
     foreach(['mapi','notify','return','refund','preauth','unknown'] as $entry){$copy=$first;payerSame(false,PayerIp::capture($copy,$entry,$server,$config,null),'non-page ignored '.$entry);}
     foreach([['REQUEST_METHOD','POST'],['HTTP_USER_AGENT','curl/8.0.0'],['HTTP_ACCEPT','application/json'],['HTTP_SEC_FETCH_DEST','empty']] as [$key,$value]){
         $bad=$server;$bad[$key]=$value;$copy=$first;payerSame(false,PayerIp::capture($copy,'pay_submit',$bad,$config,null),'non-browser ignored '.$key);

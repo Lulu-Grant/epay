@@ -729,3 +729,4 @@ INSERT IGNORE INTO `pre_config` (k,v) VALUES ('merchant_defense_ip_mode',''),('m
 -- Passive payer IP collection requires a verified ESA origin list. Keep it disabled by default.
 INSERT IGNORE INTO `pre_config` (k,v) VALUES ('payer_ip_enabled','0'),('payer_ip_esa_verified','0'),('payer_ip_esa_cidrs',''),('payer_ip_header','Ali-Cdn-Real-Ip');
 INSERT IGNORE INTO `pre_config` (k,v) VALUES ('payer_ip_version','1');
+INSERT IGNORE INTO `pre_config` (k,v) VALUES ('payer_ip_trust_mode','cidr');
