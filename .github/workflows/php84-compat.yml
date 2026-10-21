@@ -9,6 +9,7 @@ on:
       - 'codex/p5-shop-shadow-repair'
       - 'feature/p5-list-query-cache'
       - 'feature/merchant-defense'
+      - 'feature/payer-ip-esa'
 
 jobs:
   shop-browser:
@@ -161,6 +162,7 @@ jobs:
         run: |
           php scripts/merchant-defense-regression.php
           php scripts/merchant-defense-concurrency.php
+          php scripts/payer-ip-regression.php
 
       - uses: actions/setup-node@v4
         with:
@@ -175,7 +177,9 @@ jobs:
         env:
           EPAY_DEFENSE_TEST_PORT: '3306'
           EPAY_PLAYWRIGHT_MODULE: ${{ runner.temp }}/merchant-defense-browser/node_modules/playwright
-        run: node scripts/merchant-defense-browser.spec.cjs
+        run: |
+          node scripts/merchant-defense-browser.spec.cjs
+          node scripts/payer-ip-http-regression.cjs
 
       - name: Payment route native MySQL races and migration rehearsal
         env:

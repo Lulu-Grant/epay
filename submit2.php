@@ -10,6 +10,7 @@ $typeid=intval($_GET['typeid']);
 $trade_no=daddslashes($_GET['trade_no']);
 $order=$DB->getRow("SELECT * FROM pre_order WHERE trade_no='{$trade_no}' LIMIT 1");
 if(!$order)sysmsg('该订单号不存在，请返回来源地重新发起请求！');
+if(class_exists('\\lib\\PayerIp'))\lib\PayerIp::observe($order,'submit2');
 if($order['status']>0){
 	sysmsg('该订单('.$order['out_trade_no'].')已完成支付，请勿重复发起支付');
 }

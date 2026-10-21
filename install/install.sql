@@ -190,6 +190,10 @@ CREATE TABLE `pre_order` (
   `domain` varchar(64) DEFAULT NULL,
   `domain2` varchar(64) DEFAULT NULL,
   `ip` varchar(20) DEFAULT NULL,
+  `payer_ip` varchar(45) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL,
+  `payer_ip_at` datetime DEFAULT NULL,
+  `payer_ip_peer` varchar(45) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL,
+  `payer_ip_source` varchar(32) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL,
   `buyer` varchar(30) DEFAULT NULL,
   `status` tinyint(1) NOT NULL DEFAULT '0',
   `notify` int(5) NOT NULL DEFAULT '0',
@@ -721,3 +725,7 @@ CREATE TABLE IF NOT EXISTS `pre_merchant_defense_audit` (
 INSERT IGNORE INTO `pre_config` (k,v) VALUES ('merchant_defense_cursor','0');
 INSERT IGNORE INTO `pre_config` (k,v) VALUES ('merchant_defense_version','1');
 INSERT IGNORE INTO `pre_config` (k,v) VALUES ('merchant_defense_ip_mode',''),('merchant_defense_net_verified','0'),('merchant_defense_trusted_proxies','');
+
+-- Passive payer IP collection requires a verified ESA origin list. Keep it disabled by default.
+INSERT IGNORE INTO `pre_config` (k,v) VALUES ('payer_ip_enabled','0'),('payer_ip_esa_verified','0'),('payer_ip_esa_cidrs',''),('payer_ip_header','Ali-Cdn-Real-Ip');
+INSERT IGNORE INTO `pre_config` (k,v) VALUES ('payer_ip_version','1');

@@ -59,6 +59,9 @@ class Plugin {
 				$ordername = !empty($conf['ordername'])?ordername_replace($conf['ordername'],$order['name'],$order['uid'],$trade_no,$order['out_trade_no']):$order['name'];
 			}
 
+            if($order && in_array($func,['submit','qrcode'],true) && class_exists('\\lib\\PayerIp')){
+                \lib\PayerIp::observe($order,$func==='submit'?'pay_submit':'pay_qrcode');
+            }
 			$result = self::loadClass($channel['plugin'], $func, $trade_no);
 			if($func == 'submit') {
 				$result['submit'] = true;
@@ -82,6 +85,7 @@ class Plugin {
 			if(!empty($userrow['ordername']))$conf['ordername']=$userrow['ordername'];
 			$ordername = !empty($conf['ordername'])?ordername_replace($conf['ordername'],$order['name'],$order['uid'],$trade_no,$order['out_trade_no']):$order['name'];
 
+            if(!$ismapi && class_exists('\\lib\\PayerIp'))\lib\PayerIp::observe($order,'web_submit');
 			return self::loadClass($plugin, $func, $trade_no);
 		}else{
 			throw new Exception('URL参数不符合规范');

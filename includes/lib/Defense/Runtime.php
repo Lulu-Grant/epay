@@ -16,6 +16,11 @@ class Runtime
     {
         global $conf;
         if(!(new PolicyService(self::store(),$conf))->networkReady())throw new DefenseException('DEFENSE_TEMP_UNAVAILABLE');
+        if(($conf['merchant_defense_ip_mode']??'')==='esa'){
+            $observed=\lib\PayerIp::resolve($_SERVER,$conf);
+            if(!$observed)throw new DefenseException('DEFENSE_VERIFY_FAILED');
+            return $observed['ip'];
+        }
         return ClientIp::resolve($_SERVER,($conf['merchant_defense_ip_mode']??'')==='trusted_proxy'?ClientIp::ranges($conf):[]);
     }
     public static function initial($trade, $type, $reportedIp)

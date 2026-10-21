@@ -24,7 +24,8 @@ class PolicyService
             }
         }
         return ($this->conf['merchant_defense_net_verified']??'')==='1'
-            && ($mode==='direct' || ($mode==='trusted_proxy' && ClientIp::ranges($this->conf)));
+            && ($mode==='direct' || ($mode==='trusted_proxy' && ClientIp::ranges($this->conf))
+                || ($mode==='esa' && \lib\PayerIp::configured($this->conf)));
     }
     public function eligibleChannels(array $merchant)
     {
