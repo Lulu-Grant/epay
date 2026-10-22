@@ -2,7 +2,7 @@
 
 日期：2026-10-21。维护环境：PHP 8.4.x。开发分支：`feature/merchant-defense`。
 
-2026-10-22 后续开发见 [通道适配与旧订单接管](MERCHANT_DEFENSE_CHANNEL_TAKEOVER.md)：生产仅同步 ESA 防御网络核验；新分支增加官方 H5、Weilaile 本地阻断与持续占位、逐项状态和旧单工具，尚未部署。以下首版交付及发布记录保留原验收范围。
+2026-10-22 后续交付见 [通道适配与旧订单接管](MERCHANT_DEFENSE_CHANNEL_TAKEOVER.md)：ESA 防御网络核验、官方 H5、Weilaile 本地阻断与持续占位、逐项状态和旧单工具已部署 P5，商户保持关闭；结果见 [后续发布记录](MERCHANT_DEFENSE_CHANNEL_TAKEOVER_P5_RELEASE.md)。以下首版交付及发布记录保留原验收范围。
 
 开发阶段完成本地功能实现、迁移演练及自动回归。代码位于独立工作树 `C:\Users\winadmin\Documents\epay-merchant-defense`，保留原工作树的既有未提交修改；该阶段没有部署或使用真实渠道密钥。用户随后授权推送及部署，P5 发布已完成，商户仍全部关闭；实际结果及剩余启用门槛见 [P5 发布记录](MERCHANT_DEFENSE_MODE_P5_RELEASE.md)。
 
