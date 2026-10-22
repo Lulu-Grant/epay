@@ -9,7 +9,7 @@ class AlipayQrAdapter
     private $appId;
     public function __construct(array $channel, array $conf, array $order, $service = null)
     {
-        if(!PolicyService::channelSupported($channel))throw new DefenseException('DEFENSE_CHANNEL_UNSUPPORTED');
+        if(!PolicyService::channelCanClose($channel))throw new DefenseException('DEFENSE_CHANNEL_UNSUPPORTED');
         $this->wap=($channel['apptype']??'')==='2' || ($channel['apptype']??[])===['2'];
         $this->appId=(string)($channel['appid']??'');
         if($service){$this->service=$service;return;}

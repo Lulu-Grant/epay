@@ -8,6 +8,7 @@ const root = path.resolve(__dirname, '..');
 const php = process.env.EPAY_PHP_TEST_BIN || 'php';
 const flags = process.env.EPAY_PHP_TEST_EXT_DIR ? ['-d', 'extension_dir=' + process.env.EPAY_PHP_TEST_EXT_DIR, '-d', 'extension=pdo_mysql'] : [];
 const fixture = path.join(__dirname, 'fixtures/merchant-defense-browser-router.php');
+const localHold = process.argv.includes('--local-hold');
 function command(args) {
     const r = spawnSync(php, [...flags, fixture, ...args], { cwd: root, encoding: 'utf8', windowsHide: true });
     if (r.status !== 0) throw new Error('Synthetic fixture failed: ' + r.stderr);
@@ -17,12 +18,12 @@ function command(args) {
     let database, server, browser, checks = 0, log = '';
     const check = (ok, message) => { if (!ok) throw new Error(message); checks++; };
     try {
-        database = JSON.parse(command(['--setup-h5'])).database;
+        database = JSON.parse(command([localHold ? '--setup-local-hold' : '--setup-h5'])).database;
         const socket = net.createServer(); await new Promise(r => socket.listen(0, '127.0.0.1', r));
         const port = socket.address().port; await new Promise(r => socket.close(r));
         const origin = 'http://127.0.0.1:' + port;
         server = spawn(php, [...flags, '-S', '127.0.0.1:' + port, fixture], { cwd: root, windowsHide: true,
-            env: { ...process.env, EPAY_DEFENSE_TEST_DATABASE: database }, stdio: ['ignore', 'ignore', 'pipe'] });
+            env: { ...process.env, EPAY_DEFENSE_TEST_DATABASE: database, EPAY_WEILAILE_DEFENSE_FIXTURE: localHold ? '1' : '0' }, stdio: ['ignore', 'ignore', 'pipe'] });
         server.stderr.on('data', data => { log = (log + data).slice(-12000); });
         for (let i = 0; i < 80; i++) {
             try { if ((await fetch(origin + '/__fixture/ready')).ok) break; } catch (ignore) {}
@@ -43,12 +44,17 @@ function command(args) {
             await context.route('https://**/*', route => route.abort());
             await context.route('**/submit2.php?*', async route => {
                 const response = await route.fetch({ maxRedirects: 0 });
-                check(response.status() === 303, 'real local handoff uses HTTP 303');
-                const url = new URL(response.headers().location);
-                check(url.origin === 'https://openapi.alipay.com' && url.pathname === '/gateway.do', 'official gateway pinned');
+                if (localHold) {
+                    check(response.status() === 200, 'local-gated Weilaile jump generated');
+                    check((await response.text()).includes('window.location.replace("https://fixture.invalid/pay/fixture")'), 'mock PSP link only issued after challenge');
+                } else {
+                    check(response.status() === 303, 'real local handoff uses HTTP 303');
+                    const url = new URL(response.headers().location);
+                    check(url.origin === 'https://openapi.alipay.com' && url.pathname === '/gateway.do', 'official gateway pinned');
+                    const biz = JSON.parse(url.searchParams.get('biz_content'));
+                    check(biz.total_amount === '1.00' && biz.timeout_express === '30m' && biz.product_code === 'QUICK_WAP_WAY', 'H5 gateway amount and timeout bound');
+                }
                 gatewayHits++;
-                const biz = JSON.parse(url.searchParams.get('biz_content'));
-                check(biz.total_amount === '1.00' && biz.timeout_express === '30m' && biz.product_code === 'QUICK_WAP_WAY', 'H5 gateway amount and timeout bound');
                 await route.fulfill({ status: 200, contentType: 'text/html', body: '<p>fixture captured 303</p>' });
             });
             const page = await context.newPage();
@@ -60,17 +66,18 @@ function command(args) {
             await page.goto(origin + '/submit2.php?typeid=1&trade_no=' + trade);
             await page.getByText('fixture captured 303', { exact: true }).waitFor({ timeout: 15000 });
             check(gatewayHits === 2 && (await state()).calls === expectedCalls, 'same browser retry reuses signed WAP result');
-            await fetch(origin + '/pay.php?s=' + encodeURIComponent('submitwap/' + trade + '/'), { headers: { 'User-Agent': 'Mozilla/5.0 Chrome/131.0.0.0' } });
+            await fetch(origin + '/pay.php?s=' + encodeURIComponent((localHold ? 'alipay/' : 'submitwap/') + trade + '/'), { headers: { 'User-Agent': 'Mozilla/5.0 Chrome/131.0.0.0' } });
             check((await state()).calls === expectedCalls, 'direct H5 route without verified cookie denied');
             await context.addCookies([{ name: 'fixture_admin', value: '1', url: origin }]);
             await page.goto(origin + '/admin/merchant_defense.php?uid=2');
             await page.locator('#defense-readiness').getByText('防御网络：已核验，模式：direct', { exact: true }).waitFor();
             check(await page.locator('#defense-readiness').getByText('旧订单接管工具：已安装', { exact: true }).count() === 1, 'structured readiness renders');
+            if (localHold) check(await page.locator('#defense-readiness').getByText(/本地阻断；上游无法关单/).count() === 1, 'local hold boundary shown to operator');
             check(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 2), 'readiness fits viewport');
             await context.close();
         }
         check(!/Fatal error|Uncaught|Parse error/.test(log), 'no local application fatal errors');
-        console.log('Merchant defense H5 browser regression: ' + checks + ' checks passed; desktop/mobile; 303 captured without external requests.');
+        console.log('Merchant defense ' + (localHold ? 'Weilaile local hold' : 'H5') + ' browser regression: ' + checks + ' checks passed; desktop/mobile; handoff captured without external requests.');
     } catch (e) { throw new Error(e.message + '\nSynthetic server: ' + log.slice(-2000)); }
     finally {
         if (browser) await browser.close();

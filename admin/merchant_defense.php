@@ -12,6 +12,7 @@ $uid=(int)($_GET['uid']??0);
 <div class="panel-heading"><h3 class="panel-title">商户 <?=$uid?> 支付防御</h3></div>
 <div class="panel-body">
 <p>按本商户的付款 IP 独立执行：浏览器验证、每天成功最多 5 单、投诉封禁 48 小时。失败不计成功，待确认订单暂占名额；MAPI 将返回平台验证收银台链接。</p>
+<p>Weilaile 使用平台本地阻断：已发出的上游链接无法撤销，结果不明时名额持续占用，跨日也不自动释放；本地阻断不代表上游关单。</p>
 <p id="defense-admin-status" role="status" aria-live="polite">正在加载…</p>
 <button type="button" class="btn btn-primary merchant-defense-toggle" id="defense-detail-toggle" disabled>加载中</button>
 <a class="btn btn-default" href="./ulist.php">返回商户列表</a>
@@ -25,4 +26,4 @@ $uid=(int)($_GET['uid']??0);
 <div class="panel panel-default"><div class="panel-heading">最近 100 条操作记录</div>
 <div class="table-responsive"><table class="table"><thead><tr><th>时间</th><th>动作</th><th>原因</th><th>操作者</th></tr></thead><tbody id="defense-audit"></tbody></table></div></div>
 </div>
-<script src="/assets/js/merchant-defense-admin.js?v=2" defer></script>
+<script src="/assets/js/merchant-defense-admin.js?v=3" defer></script>

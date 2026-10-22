@@ -20,14 +20,25 @@ namespace Alipay {
 }
 namespace {
     require __DIR__.'/merchant-defense-db.php';
+    if(PHP_SAPI==='cli-server'&&getenv('EPAY_WEILAILE_DEFENSE_FIXTURE')==='1'){
+        class WeilaileClient {
+            public function __construct($pid,$key){}
+            public function pay($params){
+                $GLOBALS['DB']->query("INSERT INTO pre_config (k,v) VALUES ('fixture_upstream_calls','1') ON DUPLICATE KEY UPDATE v=CAST(v AS UNSIGNED)+1",[]);
+                return ['type'=>'jump','value'=>'https://fixture.invalid/pay/fixture','trade_no'=>'UP-'.$params['out_trade_no']];
+            }
+            public static function validPayUrl($url,$type){return $type==='jump'&&$url==='https://fixture.invalid/pay/fixture';}
+        }
+    }
     if(PHP_SAPI==='cli'){
-        if(in_array($argv[1]??'',['--setup','--setup-h5'],true)){
+        if(in_array($argv[1]??'',['--setup','--setup-h5','--setup-local-hold'],true)){
             [$database,$pdo,$admin]=defenseFixtureCreate();defenseFixtureSeed($pdo,time());
             $pdo->exec("UPDATE pay_user SET status=1,`key`='fixture-only-key',money=1000");
             $pdo->exec('UPDATE pay_user SET defense_mode=0 WHERE uid=2');
             $pdo->prepare('UPDATE pay_channel SET config=? WHERE id=100')->execute([json_encode(['appid'=>'2021000000000001','appkey'=>'fixture-only-key','appsecret'=>'fixture-only-key'])]);
-            if($argv[1]==='--setup-h5'){
-                $pdo->exec("UPDATE pay_channel SET apptype='2' WHERE id=100");
+            if(in_array($argv[1],['--setup-h5','--setup-local-hold'],true)){
+                if($argv[1]==='--setup-h5')$pdo->exec("UPDATE pay_channel SET apptype='2' WHERE id=100");
+                else $pdo->exec("UPDATE pay_channel SET plugin='weilaile',apptype=NULL WHERE id=100");
                 defenseFixtureSql($pdo,file_get_contents(dirname(__DIR__,2).'/install/migrations/20261022_merchant_defense_legacy.sql'));
             }
             echo json_encode(['database'=>$database]);exit;

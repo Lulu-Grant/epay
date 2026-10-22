@@ -33,7 +33,7 @@ try{
     defenseReject('DEFENSE_VERSION_CONFLICT',fn()=>$policy->set(1,0,1,'fixture-admin'),'stale version');
     defenseReject('DEFENSE_VERIFY_FAILED',fn()=>AdminController::handle('setMerchantDefense',['uid'=>'1','target'=>'0','revision'=>'2'],[],true,'fixture-admin',$conf),'missing CSRF');
     defenseReject('DEFENSE_VERIFY_FAILED',fn()=>AdminController::handle('getMerchantDefense',['uid'=>'1'],[],false,'fixture-admin',$conf),'non admin');
-    defenseSame(false,PolicyService::channelSupported(['plugin'=>'weilaile','type'=>1,'apptype'=>'3','mode'=>0]),'unsupported gateway not advertised');
+    defenseSame('local_hold',PolicyService::channelMode(['plugin'=>'weilaile','type'=>1,'apptype'=>'3','mode'=>0]),'gateway supports local hold without claiming closure');
     defenseSame(false,PolicyService::channelSupported(['plugin'=>'alipay','type'=>1,'apptype'=>'2,3','mode'=>0]),'mixed modes not advertised');
 
     $order=defenseFixtureOrder($pdo,1);$cookie=str_repeat('a',64);$ua='Fixture Chrome Browser';$ip='203.0.113.1';
@@ -122,7 +122,7 @@ try{
     $fake->money='9.00';defenseReject('DEFENSE_TEMP_UNAVAILABLE',fn()=>$adapter->query($order),'query amount mismatch');
 
     defenseFixtureSeed($pdo,$now);
-    $pdo->exec("UPDATE pay_channel SET plugin='weilaile' WHERE id=100");
+    $pdo->exec("UPDATE pay_channel SET plugin='epay' WHERE id=100");
     $pdo->exec('UPDATE pay_user SET defense_mode=0');
     defenseReject('DEFENSE_CHANNEL_UNSUPPORTED',fn()=>$policy->set(1,1,1,'fixture-admin'),'unsupported route blocks activation');
     defenseSame(0,(int)$store->merchant(1)['defense_mode'],'failed activation remains off');

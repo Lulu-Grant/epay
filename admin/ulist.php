@@ -8,7 +8,7 @@ include './head.php';
 if($islogin==1){}else exit("<script language='javascript'>window.location.href='./login.php';</script>");
 if(empty($_SESSION['merchant_defense_csrf']))$_SESSION['merchant_defense_csrf']=bin2hex(random_bytes(32));
 echo '<meta name="merchant-defense-csrf" content="'.htmlspecialchars($_SESSION['merchant_defense_csrf'],ENT_QUOTES,'UTF-8').'">';
-echo '<script src="/assets/js/merchant-defense-admin.js?v=2" defer></script>';
+echo '<script src="/assets/js/merchant-defense-admin.js?v=3" defer></script>';
 
 $select = '';
 $rs = $DB->getAll("SELECT * FROM pre_group");

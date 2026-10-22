@@ -15,7 +15,7 @@ try{
  $channel=['id'=>100,'plugin'=>'alipay','type'=>1,'apptype'=>'2','mode'=>0];
  takeoverCheck(PolicyService::channelSupported($channel),'single H5 capability');
  foreach(['2,3','1','4','2,4'] as $types){$bad=$channel;$bad['apptype']=$types;takeoverCheck(!PolicyService::channelSupported($bad),'unsupported combination '.$types);}
- $bad=$channel;$bad['plugin']='weilaile';takeoverCheck(!PolicyService::channelSupported($bad),'no fabricated Weilaile close support');
+ $bad=$channel;$bad['plugin']='weilaile';takeoverCheck(PolicyService::channelSupported($bad)&&!PolicyService::channelCanClose($bad),'local hold does not fabricate Weilaile close support');
  $conf=['payer_ip_version'=>'1','payer_ip_enabled'=>'1','payer_ip_esa_verified'=>'1','payer_ip_trust_mode'=>'origin_auth','payer_ip_header'=>'Ali-Real-Client-Ip','merchant_defense_ip_mode'=>'esa','merchant_defense_net_verified'=>'1'];
  takeoverCheck((new PolicyService($store,$conf))->networkReady(),'ESA defense uses verified collector');$badConf=$conf;$badConf['merchant_defense_net_verified']='0';takeoverCheck(!(new PolicyService($store,$badConf))->networkReady(),'capture alone cannot certify defense');
  $order=defenseFixtureOrder($pdo,501);$service=new class {

@@ -68,18 +68,19 @@ class Runtime
         if($plugin==='alipay' && $method==='return')return ['type'=>'page','page'=>'return'];
         if($confirmation)return null;
         try{
-            if(!in_array($method,['submit','mapi','qrcode','submitwap'],true) || !PolicyService::channelSupported($channel)
-                || $plugin!=='alipay' || (int)$order['tid']!==0)throw new DefenseException('DEFENSE_CHANNEL_UNSUPPORTED');
+            $methods=$plugin==='weilaile'?['submit','mapi','alipay','qrcode']:['submit','mapi','qrcode','submitwap'];
+            if(!in_array($method,$methods,true) || !PolicyService::channelSupported($channel)
+                || $plugin!==($channel['plugin']??'') || (int)$order['tid']!==0)throw new DefenseException('DEFENSE_CHANNEL_UNSUPPORTED');
             $store=self::store();$ip=self::ip();
             $context=(new SessionService($store))->context($order,$ip,$_COOKIE[self::COOKIE]??'',$_SERVER['HTTP_USER_AGENT']??'');
-            $context['account_scope']='alipay:'.(string)($channel['appid']??'');
+            $context['account_scope']=AdapterFactory::accountScope($channel);
             $quota=new QuotaService($store);$reservation=$quota->reserve($order,$context);
             if($reservation['pay_result']){
                 $result=json_decode($reservation['pay_result'],true,8,JSON_THROW_ON_ERROR);
-                if(!AlipayQrAdapter::validResult($result,$order,(string)($channel['appid']??'')))throw new DefenseException('DEFENSE_TEMP_UNAVAILABLE');
+                if(!AdapterFactory::validResult($result,$order,$channel))throw new DefenseException('DEFENSE_TEMP_UNAVAILABLE');
                 return $result;
             }
-            $adapter=new AlipayQrAdapter($channel,$conf,$order);
+            $adapter=AdapterFactory::make($channel,$conf,$order);
             if(!$quota->attempt($trade))throw new DefenseException('DEFENSE_PENDING_LIMIT');
             $clientip=$ip;
             $result=$adapter->pay($order,!empty($ordername)?$ordername:$order['name'],$ip);

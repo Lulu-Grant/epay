@@ -45,7 +45,7 @@ class LegacyOrderService
             if((int)$order['subchannel']>0||(int)$order['tid']!==0)$channel=null;
             $paid=in_array((int)$order['status'],[1,2,3],true);
             $items[]=['trade_no'=>$order['trade_no'],'status'=>(int)$order['status'],'channel'=>(int)$order['channel'],
-                'fingerprint'=>$this->snapshot($order),'action'=>$paid?'wait_next_day_or_manual_accounting':($channel&&PolicyService::channelSupported($channel)?'query_then_close':'unsupported_channel_review'),
+                'fingerprint'=>$this->snapshot($order),'action'=>$paid?'wait_next_day_or_manual_accounting':($channel&&PolicyService::channelCanClose($channel)?'query_then_close':($channel&&PolicyService::channelSupported($channel)?'block_local_keep_review':'unsupported_channel_review')),
                 'trusted_page_ip_present'=>!empty($order['payer_ip'])];
         }
         return ['summary'=>$this->summary($uid),'orders'=>$items,'next_after'=>count($rows)===$limit?end($rows)['trade_no']:null];
@@ -54,12 +54,12 @@ class LegacyOrderService
     {
         return $this->installed()&&(bool)$this->store->row('SELECT trade_no FROM pre_merchant_defense_legacy WHERE trade_no=:trade',[':trade'=>$trade]);
     }
-    public function retire($uid,$trade,$fingerprint,$actor,callable $adapterFactory)
+    public function retire($uid,$trade,$fingerprint,$actor,callable $adapterFactory,$localOnly=false)
     {
         if(!$this->installed()||!is_string($fingerprint)||!preg_match('/^[a-f0-9]{64}$/D',$fingerprint)
             ||!is_string($trade)||!preg_match('/^[A-Za-z0-9]{1,32}$/D',$trade))throw new DefenseException('DEFENSE_VERIFY_FAILED');
         // Fence new plugin handoffs under the same merchant lock used by activation and legacy handoffs.
-        $order=$this->store->transaction(function()use($uid,$trade,$fingerprint,$actor){
+        $order=$this->store->transaction(function()use($uid,$trade,$fingerprint,$actor,$localOnly){
             $merchant=$this->store->merchant($uid,true);
             if((int)$merchant['defense_mode'])throw new DefenseException('DEFENSE_VERSION_CONFLICT','接管旧链接前须保持本商户防御关闭');
             $order=$this->store->row('SELECT * FROM pre_order WHERE trade_no=:trade AND uid=:uid FOR UPDATE',[':trade'=>$trade,':uid'=>(int)$uid]);
@@ -67,15 +67,20 @@ class LegacyOrderService
                 ||(int)$order['subchannel']>0||(int)$order['tid']!==0||AlipayQrAdapter::cents($order['realmoney'])===null||AlipayQrAdapter::cents($order['realmoney'])<=0)throw new DefenseException('DEFENSE_VERIFY_FAILED');
             if($this->store->row('SELECT trade_no FROM pre_merchant_defense_order WHERE trade_no=:trade',[':trade'=>$trade]))throw new DefenseException('DEFENSE_VERIFY_FAILED','已纳管订单应由补偿任务处理');
             $channel=$this->store->row('SELECT id,plugin,type,apptype,mode FROM pre_channel WHERE id=:id',[':id'=>$order['channel']]);
-            if(!$channel||!PolicyService::channelSupported($channel))throw new DefenseException('DEFENSE_CHANNEL_UNSUPPORTED');
+            if(!$channel||!PolicyService::channelSupported($channel)||(!$localOnly&&!PolicyService::channelCanClose($channel)))throw new DefenseException('DEFENSE_CHANNEL_UNSUPPORTED');
             $this->store->query("INSERT IGNORE INTO pre_merchant_defense_legacy (trade_no,uid,channel,amount_cents,fingerprint,state,created_at,updated_at) VALUES (:trade,:uid,:channel,:amount,:fingerprint,'closing',:now,:updated)",
                 [':trade'=>$trade,':uid'=>(int)$uid,':channel'=>$order['channel'],':amount'=>AlipayQrAdapter::cents($order['realmoney']),':fingerprint'=>$fingerprint,':now'=>$this->store->now(),':updated'=>$this->store->now()]);
             $old=$this->store->row('SELECT * FROM pre_merchant_defense_legacy WHERE trade_no=:trade FOR UPDATE',[':trade'=>$trade]);
             if(!hash_equals($old['fingerprint'],$fingerprint))throw new DefenseException('DEFENSE_VERSION_CONFLICT');
             $order['_legacy_already_closed']=$old['state']==='closed_unpaid';
+            if($localOnly&&!$order['_legacy_already_closed']){
+                $this->store->query("UPDATE pre_merchant_defense_legacy SET state='local_blocked',updated_at=:now WHERE trade_no=:trade",[':now'=>$this->store->now(),':trade'=>$trade]);
+                $this->store->audit($uid,$trade,'legacy_local_block','external_link_unresolved_keep_blocker',$actor);
+            }
             $this->store->audit($uid,$trade,'legacy_retire','handoff_fenced',$actor);return $order;
         });
         if($order['_legacy_already_closed'])return ['state'=>'closed_unpaid'];
+        if($localOnly)return ['state'=>'local_blocked','upstream_closed'=>false,'quota_released'=>false];
         try{
             // No database transaction is held during upstream requests. Factory supplies the real adapter.
             $adapter=call_user_func($adapterFactory,$order);$result=$adapter->query($order);

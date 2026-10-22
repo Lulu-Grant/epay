@@ -14,8 +14,8 @@ try{
             $merchant=$DB->find('user','channelinfo',['uid'=>$order['uid']]);
             $channel=\lib\Channel::get($order['channel'],$merchant?$merchant['channelinfo']:null);
             if(!$channel)throw new \lib\Defense\DefenseException('DEFENSE_CHANNEL_UNSUPPORTED');
-            if(($order['defense_account_scope']??'')!==('alipay:'.(string)($channel['appid']??'')))throw new \lib\Defense\DefenseException('DEFENSE_CHANNEL_UNSUPPORTED');
-            return new \lib\Defense\AlipayQrAdapter($channel,$conf,$order);
+            if(($order['defense_account_scope']??'')!==\lib\Defense\AdapterFactory::accountScope($channel))throw new \lib\Defense\DefenseException('DEFENSE_CHANNEL_UNSUPPORTED');
+            return \lib\Defense\AdapterFactory::make($channel,$conf,$order);
         },
         function($order,$upstream){processNotify($order,$upstream);}
     );

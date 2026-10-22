@@ -10,6 +10,7 @@ on:
       - 'feature/p5-list-query-cache'
       - 'feature/merchant-defense'
       - 'feature/payer-ip-esa'
+      - 'feature/defense-channel-takeover'
 
 jobs:
   shop-browser:
@@ -162,6 +163,7 @@ jobs:
         run: |
           php scripts/merchant-defense-regression.php
           php scripts/merchant-defense-takeover-regression.php
+          php scripts/merchant-defense-local-hold-regression.php
           php scripts/merchant-defense-concurrency.php
           php scripts/payer-ip-regression.php
 
@@ -181,6 +183,7 @@ jobs:
         run: |
           node scripts/merchant-defense-browser.spec.cjs
           node scripts/merchant-defense-h5.spec.cjs
+          node scripts/merchant-defense-h5.spec.cjs --local-hold
           node scripts/payer-ip-http-regression.cjs
           node scripts/payer-ip-http-regression.cjs --origin-auth
 

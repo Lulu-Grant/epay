@@ -79,7 +79,8 @@ class WeilaileClient
         throw new WeilaileException('Weilaile 网关未返回付款信息');
     }
 
-    private static function validPayUrl($url, $type)
+    /** Shared by live responses and bound defense-result replay. */
+    public static function validPayUrl($url, $type)
     {
         // Existing cashier templates interpolate URLs into JavaScript strings.
         if(preg_match('/[\x00-\x20\x7f\x27\x22<>\\\\]/', $url))return false;

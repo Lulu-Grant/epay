@@ -2,7 +2,7 @@
 
 2026-10-22，PHP 8.4.x。分支 `feature/defense-channel-takeover`。本轮依次处理网络核验、现用通道适配及旧订单接管；保留每商户每日每 IP 最多成功 5 单、投诉封禁 48 小时的既有规则。
 
-生产已将经实际验证的 ESA 链路同步为 `merchant_defense_ip_mode=esa`、`merchant_defense_net_verified=1`，清除并复核配置缓存，10:29 的只读复核确认网络就绪、缓存一致。商户防御开关仍全部关闭。本文所述 H5、后台提示和旧单工具属于新分支开发结果，尚未部署；新增迁移尚未在生产执行，未对生产订单执行关单或接管。
+生产已将经实际验证的 ESA 链路同步为 `merchant_defense_ip_mode=esa`、`merchant_defense_net_verified=1`，清除并复核配置缓存，10:29 的只读复核确认网络就绪、缓存一致。商户防御开关仍全部关闭。本文所述 H5、Weilaile 本地阻断、后台提示和旧单工具属于新分支开发结果，尚未部署；新增迁移尚未在生产执行，未对生产订单执行关单或接管。
 
 ## 网络状态与后台提示
 
@@ -20,11 +20,17 @@ H5 签名地址生成不代表支付宝已经建立交易。**查询不存在、
 
 `timeout_express` 是上游交易的相对时限，不能用来推导本地签名链接必定已经失效。接口依据：[支付宝手机网站支付参数](https://developer.alibaba.com/docs/doc.htm?articleId=107090&docType=1&treeId=193)。真实收款、真实查单和关单权限仍须受控验收后才启用商户。
 
-## Weilaile 能力边界
+## Weilaile 本地阻断与持续占位
 
-2026-10-22 读取的 [Weilaile 开发文档](https://yun.weilaile.xyz/developer_v1.php) 提供 MAPI、GET 通知、`api.php?act=order` 查单和 `act=refund` 退款，未提供可核验的关单协议。退款不是关闭未支付交易，查单失败也不能证明旧链接不能继续付款。因此该插件保持严格防御启用阻断，后台显示明确原因，不臆造 `act=close` 或自动换通道。
+2026-10-22 读取的 [Weilaile 开发文档](https://yun.weilaile.xyz/developer_v1.php) 提供 MAPI、GET 通知、`api.php?act=order` 查单和 `act=refund` 退款，未提供可核验的关单协议。用户明确选择自行在平台阻断，因此 `plugin=weilaile`、`type=1`、`mode=0`、无子通道可采用 `local_hold` 模式，不再仅因缺少上游关单接口而阻止新商户启用。旧订单、可信网络和其他启用检查继续生效。
 
-后续适配需要渠道方提供：关单接口及授权方式、未支付/已支付/退款/不存在的完整状态语义、关单后旧链接或重复提交能否重新创建交易、可信查单响应及并发付款与关单的行为。在这些条件明确前，不使用真实 PID/KEY 试探未公开接口。
+网页、MAPI、`/pay/alipay/` 等插件入口统一先验证浏览器、可信 IP、投诉封禁和额度，再原子申请一次上游调用资格。生成结果绑定本地订单号、金额和 Weilaile PID，重复打开复用结果，不再次向上游建单；账户变更后不能复用旧结果。保留网关既有的跳转、二维码、scheme 和 HTML 返回类型，失败不记录为成功。
+
+已经发出的上游链接无法由平台撤销。本地阻断只停止平台再次发放付款能力，不能拒绝或丢弃已经真实支付的通知。规则为：当日成功数加全部待确认占位不能超过 5；占位跨日保留，不凭页面关闭、接口失败、本地超时或查询不存在释放。五笔都没有确认结果时，即使成功数仍是 0，也会暂停发新链接；这是避免迟到付款突破上限的必要约束。
+
+补偿任务对本地已可信确认的支付幂等记账；其他 Weilaile 占位报告 `held` 并保留容量，不伪造查单、关单或退款，也不把待确认当成任务执行故障。本轮没有接入未明确响应结构的上游查询兜底；漏通知须通过现有对账流程人工核实，不能把未支付状态当作最终失败。投诉封禁仍基于平台已接收、能关联验证上下文的新投诉，不承诺 Weilaile 新增投诉接口已接入。
+
+后台逐项状态和开启确认明确显示本地模式及持续占位边界。没有真实付款 IP 的历史未纳管链接仍不能被假定安全：仅本地阻断不会使它们自动通过启用检查。将来如有可靠的关单协议，可另行扩展释放规则；本轮不使用真实 PID/KEY 试探未公开接口。
 
 ## 旧订单工具
 
@@ -55,6 +61,8 @@ php scripts/merchant-defense-legacy.php --uid=1001 \
 4. 仅当未支付关单证明有效、订单及收款配置快照未变时，标记 `closed_unpaid` 并排除该旧单阻断。重复执行已确认记录不再次关单。
 5. 任何结果不明、金额/订单不符、支付已成功、退款关闭或回调竞态，返回 `review`，保留标记和审计，退出码为 3。预检及正常成功退出码为 0，参数或执行拒绝为非零。
 
+对不能上游关单的 Weilaile 旧单，预检建议 `block_local_keep_review`。在上述单订单执行命令上追加 `--block-local`，只保存 `local_blocked` 和审计，不调用任何上游接口。结果明确返回 `upstream_closed=false`、`quota_released=false`。平台在商户防御关闭时也会拒绝该旧单再次生成付款信息，真实回调继续处理；原上游链接是否仍可付款保持未知，因此该记录仍属于旧单启用阻断，不会当作 `closed_unpaid` 排除。
+
 该工具不删除旧订单、不改支付状态或资金、不退款、不伪造可信 IP、不自动启用商户。没有可信 IP 的当日成功记录继续阻断；次日不再属于“当日成功”条件，但其他旧链接和通道条件仍须通过。不能通过清表、改日期或把商户服务器 IP 当付款 IP 消除阻断。
 
 ## 验收与部署顺序
@@ -63,17 +71,21 @@ php scripts/merchant-defense-legacy.php --uid=1001 \
 
 本轮本地结果：新增服务回归 42 项、H5 浏览器 27 项、原防御服务 88 项、原桌面/移动浏览器 28 项、付款 IP 服务 118 项、两种 IP 信任模式 HTTP 回归 33/37 项全部通过；20 进程资格申请只授予 5 个，重复成功确认只记 5 单，重复投诉仅生成一个 48 小时事件。既有 Weilaile 80 项、订单号、通道竞态和回调回归通过。远端 CI 尚未运行，不能将本地结果写成 GitHub 验收通过。
 
+本地阻断扩展另通过 51 项服务回归和 25 项桌面/移动浏览器回归，覆盖跨日不释放、五笔占位拒绝第六笔、重复付款计数、48 小时投诉封禁、缓存订单/金额/PID 绑定、跳转/二维码/scheme/HTML 兼容、下单失败不伪造关单、仅本地阻断不调用渠道且不消除旧单阻断。模拟上游只在环回 fixture 内返回，浏览器支付交接截获后不继续访问外站。原 Weilaile 80 项服务和 6 项 HTTP 传输回归继续通过。
+
 既有独立进程通道绑定回归在 SQLite fixture 下完成 25 轮，每轮两个独立进程；没有将该结果替代 MySQL 原生竞态和迁移验收。生产网络配置同步后的匿名健康检查与基线一致，检查窗口没有新增 PHP 错误。
 
 ```powershell
 php -d extension=pdo_mysql scripts/merchant-defense-takeover-regression.php
+php -d extension=pdo_mysql scripts/merchant-defense-local-hold-regression.php
 php -d extension=pdo_mysql scripts/merchant-defense-regression.php
 php -d extension=pdo_mysql scripts/merchant-defense-concurrency.php
 # 浏览器沿用 IMPLEMENTATION 文档中的 Playwright、PHP 和 Chrome 环境变量。
 node scripts/merchant-defense-h5.spec.cjs
+node scripts/merchant-defense-h5.spec.cjs --local-hold
 node scripts/merchant-defense-browser.spec.cjs
 ```
 
-部署时先保留现网 UI 覆盖层和已上线修复，部署全部相关类及界面文件，再执行已核查表前缀的增量迁移并检查默认状态。先运行只读预检，逐商户评估；不批量关单，不自动开启全部商户。Weilaile 继续阻断。启用前还须完成有效订单路径的 CDN 不缓存、真机和商城结账验收。
+部署时先保留现网 UI 覆盖层和已上线修复，部署全部相关类及界面文件，再执行已核查表前缀的增量迁移并检查默认状态。先运行只读预检，逐商户评估；不批量关单，不自动开启全部商户。Weilaile 可采用本地持续占位模式，但不得绕过历史不明链接的核对。启用前还须完成有效订单路径的 CDN 不缓存、真机和商城结账验收。
 
 一旦执行过旧单退役，回退代码必须保留退役入口检查及接管记录，避免再次发出旧付款链接；不能切回没有此检查的旧版本后继续对这些订单发放支付信息。保留增量表和原始财务订单，不恢复整库覆盖新交易。

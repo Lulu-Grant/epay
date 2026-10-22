@@ -75,7 +75,7 @@
         var data, action;
         if (toggle) {
             var enabled = toggle.dataset.target === '1';
-            if (!window.confirm(enabled ? '开启后将验证浏览器、限制每日成功 5 单并对新投诉封禁 IP 48 小时；MAPI 将返回验证收银台链接。继续？' : '关闭后保留计数和投诉记录，已有付款仍正常确认。继续？')) return;
+            if (!window.confirm(enabled ? '开启后将验证浏览器、限制每日成功 5 单并对新投诉封禁 IP 48 小时；MAPI 将返回验证收银台链接。不支持上游关单的通道，已发链接结果不明时名额持续占用，跨日也不自动释放。继续？' : '关闭后保留计数和投诉记录，已有付款仍正常确认。继续？')) return;
             action = 'setMerchantDefense'; data = { uid: toggle.dataset.uid, target: toggle.dataset.target, revision: toggle.dataset.revision };
         } else {
             var reason = window.prompt('请输入人工解除此投诉封禁的原因（其他有效封禁不会一并解除）');

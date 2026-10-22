@@ -13,7 +13,7 @@ class Reconciler
     public function run($limit = 100)
     {
         $limit=max(1,min(200,(int)$limit));
-        $stats=['checked'=>0,'paid'=>0,'closed'=>0,'complaints'=>0,'failed'=>0];
+        $stats=['checked'=>0,'paid'=>0,'closed'=>0,'complaints'=>0,'failed'=>0,'held'=>0];
         $lock=$this->store->row("SELECT GET_LOCK(CONCAT(DATABASE(),'.merchant_defense_worker'),0) acquired");
         if((int)$lock['acquired']!==1)return $stats;
         try{
@@ -30,6 +30,10 @@ class Reconciler
                         $quota->paid($order['trade_no'],strtotime($order['endtime']));continue;
                     }
                     $adapter=call_user_func($this->adapterFactory,$order);
+                    if(method_exists($adapter,'localHold')&&$adapter->localHold()){
+                        $this->store->noteOnce($order['uid'],$order['trade_no'],'local_hold','issued_link_without_close_keep_capacity');
+                        $stats['held']++;continue;
+                    }
                     $result=$adapter->query($order);
                     if($result['trade_status']==='WAIT_BUYER_PAY' && $this->store->now()-(int)$order['defense_created_at']>=900)$result=$adapter->close($order);
                     if(in_array($result['trade_status'],['TRADE_SUCCESS','TRADE_FINISHED'],true)){

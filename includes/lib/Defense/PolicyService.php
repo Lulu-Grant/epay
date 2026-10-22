@@ -8,11 +8,20 @@ class PolicyService
     public function __construct(Repository $store, array $conf){$this->store=$store;$this->conf=$conf;}
     public static function channelSupported(array $channel)
     {
+        return self::channelMode($channel)!=='unsupported';
+    }
+    public static function channelCanClose(array $channel)
+    {
+        return self::channelMode($channel)==='verified_close';
+    }
+    public static function channelMode(array $channel)
+    {
+        if((int)($channel['type']??0)!==1||(int)($channel['mode']??0)!==0||!empty($channel['subid']))return 'unsupported';
+        if(($channel['plugin']??'')==='weilaile')return 'local_hold';
         $types=$channel['apptype']??'';
         if(!is_array($types))$types=explode(',',(string)$types);
         sort($types);
-        return ($channel['plugin']??'')==='alipay' && (int)($channel['type']??0)===1
-            && in_array($types,[['2'],['3']],true) && (int)($channel['mode']??0)===0 && empty($channel['subid']);
+        return ($channel['plugin']??'')==='alipay' && in_array($types,[['2'],['3']],true)?'verified_close':'unsupported';
     }
     public function networkReady()
     {
@@ -68,7 +77,7 @@ class PolicyService
         try{
             $channels=$this->eligibleChannels($merchant);
             if(!$channels)$reasons[]='没有可验证的支付通道';
-            foreach($channels as $channel)if(!self::channelSupported($channel))$reasons[]='通道 '.(int)$channel['id'].' 未支持严格查单关单流程（支持支付宝官方单一 H5 或当面付扫码；Weilaile 尚缺关单协议）';
+            foreach($channels as $channel)if(!self::channelSupported($channel))$reasons[]='通道 '.(int)$channel['id'].' 尚未适配防御（支持支付宝官方单一 H5/扫码，以及 Weilaile 本地阻断与持续占位）';
         }catch(DefenseException $e){$reasons[]=$e->getMessage();}
         // A locking read sees handoffs committed after earlier capability reads in this transaction.
         $legacy=$this->store->row('SELECT o.trade_no FROM pre_order o WHERE o.uid=:uid AND '.(new LegacyOrderService($this->store))->predicate().' LIMIT 1 FOR UPDATE', [':uid'=>$merchant['uid'],':day'=>Repository::day($this->store->now())]);
@@ -78,8 +87,8 @@ class PolicyService
     public function readiness(array $merchant)
     {
         $channels=[];
-        try{foreach($this->eligibleChannels($merchant) as $channel)$channels[]=['id'=>(int)$channel['id'],'plugin'=>$channel['plugin'],'supported'=>self::channelSupported($channel),
-            'reason'=>self::channelSupported($channel)?'已适配，仍需真实渠道验收':(($channel['plugin']??'')==='weilaile'?'公开文档缺少可信关单协议，保持阻断':'该接口组合尚未适配')];}
+        try{foreach($this->eligibleChannels($merchant) as $channel)$channels[]=['id'=>(int)$channel['id'],'plugin'=>$channel['plugin'],'supported'=>self::channelSupported($channel),'mode'=>self::channelMode($channel),
+            'reason'=>self::channelMode($channel)==='local_hold'?'本地阻断；上游无法关单，已发链接结果不明时持续占位':(self::channelSupported($channel)?'已适配，仍需真实渠道验收':'该接口组合尚未适配')];}
         catch(DefenseException $e){$channels[]=['id'=>0,'supported'=>false,'reason'=>$e->getMessage()];}
         return ['network'=>['ready'=>$this->networkReady(),'mode'=>$this->conf['merchant_defense_ip_mode']??'',
             'payer_capture'=>\lib\PayerIp::configured($this->conf),'verified'=>($this->conf['merchant_defense_net_verified']??'')==='1'],
