@@ -35,6 +35,17 @@
         (result.blockers.length ? result.blockers : ['当前启用条件检查通过']).forEach(function (text) {
             var item = document.createElement('li'); item.textContent = text; blockers.appendChild(item);
         });
+        var readiness = document.getElementById('defense-readiness');
+        if (readiness && result.readiness) {
+            readiness.replaceChildren();
+            var info = result.readiness;
+            var lines = ['付款 IP 采集：' + (info.network.payer_capture ? '已配置' : '未就绪'),
+                '防御网络：' + (info.network.ready ? '已核验' : '未就绪') + '，模式：' + (info.network.mode || '未设置'),
+                '未纳管待支付候选：' + info.legacy.issued_unpaid + '；当日未纳管成功记录：' + info.legacy.today_success,
+                '旧订单接管工具：' + (info.legacy.takeover_installed ? '已安装' : '尚未迁移')];
+            info.channels.forEach(function (channel) { lines.push('通道 ' + channel.id + '：' + channel.reason); });
+            lines.forEach(function (text) { var item = document.createElement('li'); item.textContent = text; readiness.appendChild(item); });
+        }
         var bans = document.getElementById('defense-bans'); bans.replaceChildren();
         result.bans.forEach(function (ban) {
             var row = document.createElement('tr'); textCell(row, ban.ip); textCell(row, ban.trade_no);

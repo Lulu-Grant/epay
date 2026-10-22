@@ -12,7 +12,8 @@ class AdminController
         $store=Runtime::store();
         if($action==='getMerchantDefense'){
             $merchant=$store->merchant($uid);
-            return ['code'=>0,'merchant'=>$merchant,'blockers'=>(new PolicyService($store,$conf))->blockers($merchant),
+            $policy=new PolicyService($store,$conf);
+            return ['code'=>0,'merchant'=>$merchant,'blockers'=>$policy->blockers($merchant),'readiness'=>$policy->readiness($merchant),
                 'bans'=>$store->rows('SELECT event_key,complaint_id,trade_no,ip,observed_at,expires_at,released_at,release_reason FROM pre_merchant_defense_complaint WHERE uid=:uid ORDER BY observed_at DESC LIMIT 100',[':uid'=>$uid]),
                 'audit'=>$store->rows('SELECT action,reason,actor,created_at FROM pre_merchant_defense_audit WHERE uid=:uid ORDER BY id DESC LIMIT 100',[':uid'=>$uid])];
         }

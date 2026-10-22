@@ -161,6 +161,7 @@ jobs:
           EPAY_DEFENSE_TEST_PORT: '3306'
         run: |
           php scripts/merchant-defense-regression.php
+          php scripts/merchant-defense-takeover-regression.php
           php scripts/merchant-defense-concurrency.php
           php scripts/payer-ip-regression.php
 
@@ -179,6 +180,7 @@ jobs:
           EPAY_PLAYWRIGHT_MODULE: ${{ runner.temp }}/merchant-defense-browser/node_modules/playwright
         run: |
           node scripts/merchant-defense-browser.spec.cjs
+          node scripts/merchant-defense-h5.spec.cjs
           node scripts/payer-ip-http-regression.cjs
           node scripts/payer-ip-http-regression.cjs --origin-auth
 

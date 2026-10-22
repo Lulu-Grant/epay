@@ -722,6 +722,18 @@ CREATE TABLE IF NOT EXISTS `pre_merchant_defense_audit` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 
+CREATE TABLE IF NOT EXISTS `pre_merchant_defense_legacy` (
+  trade_no varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  uid int unsigned NOT NULL,
+  channel int unsigned NOT NULL,
+  amount_cents bigint unsigned NOT NULL,
+  fingerprint char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  state varchar(24) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  created_at bigint unsigned NOT NULL,
+  updated_at bigint unsigned NOT NULL,
+  PRIMARY KEY (trade_no), KEY merchant_state (uid,state)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+INSERT IGNORE INTO `pre_config` (k,v) VALUES ('merchant_defense_legacy_version','1');
 INSERT IGNORE INTO `pre_config` (k,v) VALUES ('merchant_defense_cursor','0');
 INSERT IGNORE INTO `pre_config` (k,v) VALUES ('merchant_defense_version','1');
 INSERT IGNORE INTO `pre_config` (k,v) VALUES ('merchant_defense_ip_mode',''),('merchant_defense_net_verified','0'),('merchant_defense_trusted_proxies','');

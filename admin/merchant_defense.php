@@ -16,6 +16,8 @@ $uid=(int)($_GET['uid']??0);
 <button type="button" class="btn btn-primary merchant-defense-toggle" id="defense-detail-toggle" disabled>加载中</button>
 <a class="btn btn-default" href="./ulist.php">返回商户列表</a>
 <h4>启用条件</h4><ul id="defense-blockers"></ul>
+<h4>逐项核验</h4><ul id="defense-readiness"></ul>
+<p class="text-muted">旧订单先只读核对；安全接管须逐单确认查单和关单结果，不删除订单，不伪造付款 IP，也不自动开启防御。</p>
 <p class="text-muted">已付款订单继续正常验签和入账。关闭开关不清空当日计数、原投诉事件或全站黑名单。</p>
 </div></div>
 <div class="panel panel-default"><div class="panel-heading">最近 100 条投诉 IP 封禁事件</div>
@@ -23,4 +25,4 @@ $uid=(int)($_GET['uid']??0);
 <div class="panel panel-default"><div class="panel-heading">最近 100 条操作记录</div>
 <div class="table-responsive"><table class="table"><thead><tr><th>时间</th><th>动作</th><th>原因</th><th>操作者</th></tr></thead><tbody id="defense-audit"></tbody></table></div></div>
 </div>
-<script src="/assets/js/merchant-defense-admin.js?v=1" defer></script>
+<script src="/assets/js/merchant-defense-admin.js?v=2" defer></script>

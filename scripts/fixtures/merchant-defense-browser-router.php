@@ -11,16 +11,25 @@ namespace Alipay {
             $GLOBALS['DB']->query("INSERT INTO pre_config (k,v) VALUES ('fixture_upstream_calls','1') ON DUPLICATE KEY UPDATE v=CAST(v AS UNSIGNED)+1",[]);
             return ['out_trade_no'=>$params['out_trade_no'],'qr_code'=>'https://qr.alipay.com/fixture'];
         }
+        public function wapPay($params){
+            $GLOBALS['DB']->query("INSERT INTO pre_config (k,v) VALUES ('fixture_upstream_calls','1') ON DUPLICATE KEY UPDATE v=CAST(v AS UNSIGNED)+1",[]);
+            $params['product_code']='QUICK_WAP_WAY';
+            return 'https://openapi.alipay.com/gateway.do?'.http_build_query(['app_id'=>'2021000000000001','method'=>'alipay.trade.wap.pay','sign_type'=>'RSA2','sign'=>'fixture-signature','biz_content'=>json_encode($params)]);
+        }
     }
 }
 namespace {
     require __DIR__.'/merchant-defense-db.php';
     if(PHP_SAPI==='cli'){
-        if(($argv[1]??'')==='--setup'){
+        if(in_array($argv[1]??'',['--setup','--setup-h5'],true)){
             [$database,$pdo,$admin]=defenseFixtureCreate();defenseFixtureSeed($pdo,time());
             $pdo->exec("UPDATE pay_user SET status=1,`key`='fixture-only-key',money=1000");
             $pdo->exec('UPDATE pay_user SET defense_mode=0 WHERE uid=2');
             $pdo->prepare('UPDATE pay_channel SET config=? WHERE id=100')->execute([json_encode(['appid'=>'2021000000000001','appkey'=>'fixture-only-key','appsecret'=>'fixture-only-key'])]);
+            if($argv[1]==='--setup-h5'){
+                $pdo->exec("UPDATE pay_channel SET apptype='2' WHERE id=100");
+                defenseFixtureSql($pdo,file_get_contents(dirname(__DIR__,2).'/install/migrations/20261022_merchant_defense_legacy.sql'));
+            }
             echo json_encode(['database'=>$database]);exit;
         }
         if(($argv[1]??'')==='--drop'){

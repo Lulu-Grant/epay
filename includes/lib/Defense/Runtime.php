@@ -58,6 +58,7 @@ class Runtime
             // activation must see that live link before admitting this merchant. No network IO under lock.
             $merchant=$store->transaction(function()use($store,$order,$trade){
                 $merchant=$store->merchant($order['uid'],true);
+                if((new LegacyOrderService($store))->retired($trade))throw new DefenseException('DEFENSE_ORDER_RETIRED');
                 if(!(int)$merchant['defense_mode'])$store->query("UPDATE pre_merchant_defense_order SET state='unmanaged',unsafe_exposure=1,pay_result=NULL WHERE trade_no=:trade AND state<>'paid'",[':trade'=>$trade]);
                 return $merchant;
             });
@@ -67,7 +68,7 @@ class Runtime
         if($plugin==='alipay' && $method==='return')return ['type'=>'page','page'=>'return'];
         if($confirmation)return null;
         try{
-            if(!in_array($method,['submit','mapi','qrcode'],true) || !PolicyService::channelSupported($channel)
+            if(!in_array($method,['submit','mapi','qrcode','submitwap'],true) || !PolicyService::channelSupported($channel)
                 || $plugin!=='alipay' || (int)$order['tid']!==0)throw new DefenseException('DEFENSE_CHANNEL_UNSUPPORTED');
             $store=self::store();$ip=self::ip();
             $context=(new SessionService($store))->context($order,$ip,$_COOKIE[self::COOKIE]??'',$_SERVER['HTTP_USER_AGENT']??'');
@@ -75,7 +76,7 @@ class Runtime
             $quota=new QuotaService($store);$reservation=$quota->reserve($order,$context);
             if($reservation['pay_result']){
                 $result=json_decode($reservation['pay_result'],true,8,JSON_THROW_ON_ERROR);
-                if(!is_array($result)||($result['type']??'')!=='qrcode'||($result['page']??'')!=='alipay_qrcode')throw new DefenseException('DEFENSE_TEMP_UNAVAILABLE');
+                if(!AlipayQrAdapter::validResult($result,$order,(string)($channel['appid']??'')))throw new DefenseException('DEFENSE_TEMP_UNAVAILABLE');
                 return $result;
             }
             $adapter=new AlipayQrAdapter($channel,$conf,$order);

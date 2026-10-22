@@ -12,7 +12,7 @@ class PolicyService
         if(!is_array($types))$types=explode(',',(string)$types);
         sort($types);
         return ($channel['plugin']??'')==='alipay' && (int)($channel['type']??0)===1
-            && $types===['3'] && (int)($channel['mode']??0)===0 && empty($channel['subid']);
+            && in_array($types,[['2'],['3']],true) && (int)($channel['mode']??0)===0 && empty($channel['subid']);
     }
     public function networkReady()
     {
@@ -54,7 +54,7 @@ class PolicyService
     public function blockers(array $merchant)
     {
         $reasons=[];
-        if(!$this->networkReady())$reasons[]='可信代理或直连 IP 模式尚未完成核验';
+        if(!$this->networkReady())$reasons[]='防御网络模式尚未核验（ESA 付款 IP 采集与防御核验需分别配置）';
         $unique=[];
         foreach($this->store->rows('SHOW INDEX FROM pre_order') as $index){
             if((int)$index['Non_unique']===0)$unique[$index['Key_name']][(int)$index['Seq_in_index']]=$index['Column_name'];
@@ -68,12 +68,22 @@ class PolicyService
         try{
             $channels=$this->eligibleChannels($merchant);
             if(!$channels)$reasons[]='没有可验证的支付通道';
-            foreach($channels as $channel)if(!self::channelSupported($channel))$reasons[]='通道 '.(int)$channel['id'].' 未支持严格查单关单流程（目前仅支持支付宝官方单一当面付扫码）';
+            foreach($channels as $channel)if(!self::channelSupported($channel))$reasons[]='通道 '.(int)$channel['id'].' 未支持严格查单关单流程（支持支付宝官方单一 H5 或当面付扫码；Weilaile 尚缺关单协议）';
         }catch(DefenseException $e){$reasons[]=$e->getMessage();}
         // A locking read sees handoffs committed after earlier capability reads in this transaction.
-        $legacy=$this->store->row("SELECT o.trade_no FROM pre_order o WHERE o.uid=:uid AND ((o.status IN (0,4) AND (o.channel>0 OR o.ext IS NOT NULL OR o.payurl IS NOT NULL)) OR (o.date=:day AND o.status IN (1,2,3))) AND NOT EXISTS (SELECT 1 FROM pre_merchant_defense_order d WHERE d.trade_no=o.trade_no AND d.unsafe_exposure=0 AND d.channel=o.channel) LIMIT 1 FOR UPDATE", [':uid'=>$merchant['uid'],':day'=>Repository::day($this->store->now())]);
+        $legacy=$this->store->row('SELECT o.trade_no FROM pre_order o WHERE o.uid=:uid AND '.(new LegacyOrderService($this->store))->predicate().' LIMIT 1 FOR UPDATE', [':uid'=>$merchant['uid'],':day'=>Repository::day($this->store->now())]);
         if($legacy)$reasons[]='存在未纳管付款链接或当日成功记录，需先完成核对和安全接管';
         return array_values(array_unique($reasons));
+    }
+    public function readiness(array $merchant)
+    {
+        $channels=[];
+        try{foreach($this->eligibleChannels($merchant) as $channel)$channels[]=['id'=>(int)$channel['id'],'plugin'=>$channel['plugin'],'supported'=>self::channelSupported($channel),
+            'reason'=>self::channelSupported($channel)?'已适配，仍需真实渠道验收':(($channel['plugin']??'')==='weilaile'?'公开文档缺少可信关单协议，保持阻断':'该接口组合尚未适配')];}
+        catch(DefenseException $e){$channels[]=['id'=>0,'supported'=>false,'reason'=>$e->getMessage()];}
+        return ['network'=>['ready'=>$this->networkReady(),'mode'=>$this->conf['merchant_defense_ip_mode']??'',
+            'payer_capture'=>\lib\PayerIp::configured($this->conf),'verified'=>($this->conf['merchant_defense_net_verified']??'')==='1'],
+            'channels'=>$channels,'legacy'=>(new LegacyOrderService($this->store))->summary($merchant['uid'])];
     }
     public function set($uid, $target, $revision, $actor)
     {
