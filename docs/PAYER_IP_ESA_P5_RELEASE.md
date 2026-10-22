@@ -2,6 +2,8 @@
 
 2026 年 10 月 22 日，Asia/Singapore。经用户“推送 部署”授权，运行代码 `e7c3a71938762da999f3cd154ab38b7870eb1990` 已从 `feature/payer-ip-esa` 推送并部署至 P5。采集保持关闭，ESA 网段与真实 IP 头尚待核验，不代表已完成付款人 IP 链路验收。
 
+这是首次发布时的历史记录。后续版本 `a2599d9` 已改用回源鉴权并完成启用，当前状态见 [回源鉴权发布与启用记录](PAYER_IP_ORIGIN_AUTH_P5_RELEASE.md)。
+
 [GitHub 提交](https://github.com/Lulu-Grant/epay/commit/e7c3a71938762da999f3cd154ab38b7870eb1990) 与 [完整 CI](https://github.com/Lulu-Grant/epay/actions/runs/39651355150)。CI 的 PHP 8.4 静态检查、数据库回归、商城缓存关闭／开启／故障三组验收全部通过，含十万订单列表与浏览器检查。
 
 ## 发布范围
