@@ -164,6 +164,7 @@ jobs:
           php scripts/merchant-defense-regression.php
           php scripts/merchant-defense-takeover-regression.php
           php scripts/merchant-defense-local-hold-regression.php
+          php scripts/merchant-defense-cutover-regression.php
           php scripts/merchant-defense-concurrency.php
           php scripts/payer-ip-regression.php
 

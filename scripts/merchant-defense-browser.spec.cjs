@@ -121,11 +121,11 @@ async function freePort() {
         await page.goto(origin + '/admin/ulist.php');
         const rowToggle = page.locator('.merchant-defense-toggle[data-uid="2"]');
         await rowToggle.waitFor(); check((await rowToggle.textContent()).trim() === '防御关闭', 'merchant list contains individual defense switch');
-        const denyActivation = page.waitForResponse(response => response.url().includes('act=setMerchantDefense'));
+        const activation = page.waitForResponse(response => response.url().includes('act=setMerchantDefense'));
         page.on('dialog', dialog => dialog.accept()); await rowToggle.click();
-        check((await (await denyActivation).json()).reason === 'DEFENSE_CHANNEL_UNSUPPORTED', 'unsafe legacy link prevents list activation');
-        await page.waitForFunction(() => !document.querySelector('.merchant-defense-toggle[data-uid="2"]').disabled);
-        check((await rowToggle.textContent()).trim() === '防御关闭', 'failed activation does not falsely change list state');
+        check((await (await activation).json()).code === 0, 'historical link permits new-order activation');
+        await page.waitForFunction(() => document.querySelector('.merchant-defense-toggle[data-uid="2"]').textContent.trim() === '防御开启');
+        check((await rowToggle.textContent()).trim() === '防御开启', 'list shows server-confirmed activation');
         await desktop.addCookies([{ name: 'fixture_uid', value: '2', url: origin }]);
         await page.goto(origin + '/user/defense.php?uid=1');
         check(await page.locator('#content').getByText(/商户 2：/).count() === 1, 'merchant view ignores foreign UID query');

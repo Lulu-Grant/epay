@@ -18,6 +18,7 @@ class DefenseException extends \RuntimeException
             'DEFENSE_TEMP_UNAVAILABLE'=>'安全校验暂不可用，请稍后重试',
             'DEFENSE_VERSION_CONFLICT'=>'商户防御状态已变化，请刷新后重试',
             'DEFENSE_ORDER_RETIRED'=>'该付款资格已关闭，请返回商户重新创建订单',
+            'DEFENSE_LEGACY_ORDER'=>'该订单创建于防御启用前或曾未经防御发放付款信息，请返回商户重新创建订单',
         ];
         parent::__construct($message ?? ($messages[$reason] ?? $messages['DEFENSE_TEMP_UNAVAILABLE']));
     }

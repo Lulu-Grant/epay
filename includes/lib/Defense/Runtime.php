@@ -27,7 +27,15 @@ class Runtime
     {
         global $conf;
         $store=self::store();$order=$store->row('SELECT * FROM pre_order WHERE trade_no=:trade', [':trade'=>$trade]);
-        if(!$order || !self::enabled($order['uid']))return null;
+        if(!$order || !self::installed())return null;
+        $active=$store->transaction(function()use($store,$order){
+            $merchant=$store->merchant($order['uid'],true);
+            if(!(int)$merchant['defense_mode'])return false;
+            $legacy=new LegacyOrderService($store);
+            if($legacy->retired($order['trade_no']))throw new DefenseException('DEFENSE_ORDER_RETIRED');
+            $legacy->assertIssuable($order,$merchant);return true;
+        });
+        if(!$active)return null;
         $payType=$type===''?null:$store->row('SELECT id FROM pre_type WHERE name=:name AND status=1', [':name'=>$type]);
         $access=(new EntryService($store))->issue($order,(int)($payType['id']??0),$reportedIp);
         $base=rtrim((string)($conf['payurl']??$conf['localurl']??''),'/');
@@ -54,11 +62,12 @@ class Runtime
         $store=self::store();
         if($confirmation){$merchant=$store->merchant($order['uid']);}
         else{
-            // Serialize the legacy handoff with activation. The channel is already persisted here;
-            // activation must see that live link before admitting this merchant. No network IO under lock.
+            // Serialize handoff with activation. A pre-activation handoff may already be in flight;
+            // its callback remains valid, but no new capability is issued for that old order.
             $merchant=$store->transaction(function()use($store,$order,$trade){
                 $merchant=$store->merchant($order['uid'],true);
                 if((new LegacyOrderService($store))->retired($trade))throw new DefenseException('DEFENSE_ORDER_RETIRED');
+                (new LegacyOrderService($store))->assertIssuable($order,$merchant);
                 if(!(int)$merchant['defense_mode'])$store->query("UPDATE pre_merchant_defense_order SET state='unmanaged',unsafe_exposure=1,pay_result=NULL WHERE trade_no=:trade AND state<>'paid'",[':trade'=>$trade]);
                 return $merchant;
             });

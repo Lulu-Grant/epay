@@ -41,7 +41,8 @@
             var info = result.readiness;
             var lines = ['付款 IP 采集：' + (info.network.payer_capture ? '已配置' : '未就绪'),
                 '防御网络：' + (info.network.ready ? '已核验' : '未就绪') + '，模式：' + (info.network.mode || '未设置'),
-                '未纳管待支付候选：' + info.legacy.issued_unpaid + '；当日未纳管成功记录：' + info.legacy.today_success,
+                '防御范围：启用后的新订单；启用时间：' + (time(info.scope && info.scope.enabled_at) || '尚未启用'),
+                '历史核对参考（不阻止启用）：待支付候选 ' + info.legacy.issued_unpaid + '；当日未纳管成功记录 ' + info.legacy.today_success,
                 '旧订单接管工具：' + (info.legacy.takeover_installed ? '已安装' : '尚未迁移')];
             info.channels.forEach(function (channel) { lines.push('通道 ' + channel.id + '：' + channel.reason); });
             lines.forEach(function (text) { var item = document.createElement('li'); item.textContent = text; readiness.appendChild(item); });
@@ -75,7 +76,7 @@
         var data, action;
         if (toggle) {
             var enabled = toggle.dataset.target === '1';
-            if (!window.confirm(enabled ? '开启后将验证浏览器、限制每日成功 5 单并对新投诉封禁 IP 48 小时；MAPI 将返回验证收银台链接。不支持上游关单的通道，已发链接结果不明时名额持续占用，跨日也不自动释放。继续？' : '关闭后保留计数和投诉记录，已有付款仍正常确认。继续？')) return;
+            if (!window.confirm(enabled ? '开启后对新订单验证浏览器、限制每日成功 5 单并对新投诉封禁 IP 48 小时；MAPI 返回验证收银台链接。旧未纳管订单须重新下单，历史付款不追补额度，已发出的上游链接无法撤销，真实到账仍正常处理。已纳管订单的计数和占位保留；无法上游关单时，结果不明的名额跨日也不释放。继续？' : '关闭后保留计数和投诉记录，已有付款仍正常确认。继续？')) return;
             action = 'setMerchantDefense'; data = { uid: toggle.dataset.uid, target: toggle.dataset.target, revision: toggle.dataset.revision };
         } else {
             var reason = window.prompt('请输入人工解除此投诉封禁的原因（其他有效封禁不会一并解除）');

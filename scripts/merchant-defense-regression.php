@@ -128,7 +128,7 @@ try{
     defenseSame(0,(int)$store->merchant(1)['defense_mode'],'failed activation remains off');
     $pdo->exec("UPDATE pay_channel SET plugin='alipay' WHERE id=100");
     defenseFixtureOrder($pdo,50);
-    defenseReject('DEFENSE_CHANNEL_UNSUPPORTED',fn()=>$policy->set(1,1,1,'fixture-admin'),'unmanaged old link blocks activation');
+    defenseSame(1,(int)$policy->set(1,1,1,'fixture-admin')['defense_mode'],'historical links do not block new-order activation');
 
     defenseFixtureSeed($pdo,$now);$order=defenseFixtureOrder($pdo,51);
     $pdo->exec('UPDATE pay_user SET defense_mode=0');
@@ -138,7 +138,7 @@ try{
         $pdo->query('SELECT trade_no FROM pay_order')->fetchAll(); // Establish an older repeatable-read snapshot.
         $handoff=defenseFixtureConnection($database);
         $handoff->exec('UPDATE pay_order SET channel=100');
-        defenseSame(true,(bool)array_filter($policy->blockers($store->merchant(1)),static fn($reason)=>str_contains($reason,'未纳管')),'activation observes legacy handoff newer than capability snapshot');
+        defenseSame([],$policy->blockers($store->merchant(1)),'concurrent historical handoff does not block new-order scope');
     }finally{$pdo->rollBack();}
 
     defenseFixtureSeed($pdo,$now);
@@ -180,7 +180,8 @@ try{
     $pdo->exec('UPDATE pay_user SET defense_mode=0 WHERE uid=1');
     \lib\Defense\Runtime::beforePlugin('alipay','submit',$order['trade_no']);
     defenseSame(1,(int)$store->row('SELECT unsafe_exposure FROM pre_merchant_defense_order WHERE trade_no=:trade',[':trade'=>$order['trade_no']])['unsafe_exposure'],'off-mode payment exposure is tracked');
-    defenseReject('DEFENSE_CHANNEL_UNSUPPORTED',fn()=>$policy->set(1,1,1,'fixture-admin'),'off/on does not bypass uncontrolled links');
+    defenseSame(1,(int)$policy->set(1,1,1,'fixture-admin')['defense_mode'],'off/on starts new-order scope without clearing existing holds');
+    defenseReject('DEFENSE_LEGACY_ORDER',fn()=>$quota->reserve($order,['ip'=>$ip,'revision'=>2]),'off-mode exposed order cannot reenter managed issuance');
 
     defenseFixtureSeed($pdo,$now);$order=defenseFixtureOrder($pdo,75);
     $preauth=\lib\Defense\Runtime::beforePlugin('alipay','preauthnotify',$order['trade_no']);

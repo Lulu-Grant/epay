@@ -25,6 +25,7 @@ class SessionService
         return $this->store->transaction(function()use($order,$ip,$sessionHash,$browserHash){
             $merchant=$this->store->merchant($order['uid'],true);
             if(!(int)$merchant['defense_mode'])throw new DefenseException('DEFENSE_VERSION_CONFLICT');
+            (new LegacyOrderService($this->store))->assertIssuable($order,$merchant);
             if((new QuotaService($this->store))->blocked($order['uid'],$ip))throw new DefenseException('DEFENSE_IP_BLOCKED');
             $recent=$this->store->row('SELECT COUNT(*) n FROM pre_merchant_defense_challenge WHERE trade_no=:trade AND created_at>:since', [':trade'=>$order['trade_no'],':since'=>$this->store->now()-60]);
             if((int)$recent['n']>=10)throw new DefenseException('DEFENSE_TEMP_UNAVAILABLE');

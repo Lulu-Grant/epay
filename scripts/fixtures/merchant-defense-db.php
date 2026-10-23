@@ -61,6 +61,8 @@ function defenseFixtureCreate($fresh = false)
 }
 function defenseFixtureSeed(PDO $pdo, $now)
 {
+    // Keep synthetic order creation on the test clock, including tests which advance several days.
+    $GLOBALS['defense_fixture_created_at']=$now+1;
     foreach(['merchant_defense_audit','merchant_defense_complaint','merchant_defense_entry','merchant_defense_challenge','merchant_defense_context','merchant_defense_order','merchant_defense_quota','complain','order','user','group','type','channel','roll'] as $table)$pdo->exec('DELETE FROM pay_'.$table);
     $pdo->exec("UPDATE pay_config SET v='0' WHERE k='merchant_defense_cursor'");
     $pdo->exec("INSERT INTO pay_type (id,name,showname,status) VALUES (1,'alipay','Fixture Alipay',1)");
@@ -71,7 +73,7 @@ function defenseFixtureSeed(PDO $pdo, $now)
 function defenseFixtureOrder(PDO $pdo, $number, $uid = 1)
 {
     $trade='LP'.str_pad((string)$number,19,'0',STR_PAD_LEFT);
-    $pdo->prepare("INSERT INTO pay_order (trade_no,out_trade_no,uid,channel,type,tid,name,money,realmoney,getmoney,ip,notify_url,return_url,addtime) VALUES (?,?,?,100,1,0,'Synthetic item',1,1,1,'203.0.113.9','https://fixture.invalid/notify','https://fixture.invalid/return',NOW())")->execute([$trade,'D-'.$number,$uid]);
+    $pdo->prepare("INSERT INTO pay_order (trade_no,out_trade_no,uid,channel,type,tid,name,money,realmoney,getmoney,ip,notify_url,return_url,addtime) VALUES (?,?,?,100,1,0,'Synthetic item',1,1,1,'203.0.113.9','https://fixture.invalid/notify','https://fixture.invalid/return',FROM_UNIXTIME(?))")->execute([$trade,'D-'.$number,$uid,$GLOBALS['defense_fixture_created_at']??time()]);
     $stmt=$pdo->prepare('SELECT * FROM pay_order WHERE trade_no=?');$stmt->execute([$trade]);return $stmt->fetch(PDO::FETCH_ASSOC);
 }
 function defenseFixtureCommand(array $arguments)

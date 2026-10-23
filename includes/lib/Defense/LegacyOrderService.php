@@ -45,7 +45,7 @@ class LegacyOrderService
             if((int)$order['subchannel']>0||(int)$order['tid']!==0)$channel=null;
             $paid=in_array((int)$order['status'],[1,2,3],true);
             $items[]=['trade_no'=>$order['trade_no'],'status'=>(int)$order['status'],'channel'=>(int)$order['channel'],
-                'fingerprint'=>$this->snapshot($order),'action'=>$paid?'wait_next_day_or_manual_accounting':($channel&&PolicyService::channelCanClose($channel)?'query_then_close':($channel&&PolicyService::channelSupported($channel)?'block_local_keep_review':'unsupported_channel_review')),
+                'fingerprint'=>$this->snapshot($order),'action'=>$paid?'review_legacy_payment':($channel&&PolicyService::channelCanClose($channel)?'query_then_close':($channel&&PolicyService::channelSupported($channel)?'block_local_keep_review':'unsupported_channel_review')),
                 'trusted_page_ip_present'=>!empty($order['payer_ip'])];
         }
         return ['summary'=>$this->summary($uid),'orders'=>$items,'next_after'=>count($rows)===$limit?end($rows)['trade_no']:null];
@@ -53,6 +53,23 @@ class LegacyOrderService
     public function retired($trade)
     {
         return $this->installed()&&(bool)$this->store->row('SELECT trade_no FROM pre_merchant_defense_legacy WHERE trade_no=:trade',[':trade'=>$trade]);
+    }
+    /** Caller holds the merchant lock. Check the persisted order, never a caller-supplied timestamp. */
+    public function assertIssuable(array $order,array $merchant)
+    {
+        if(!(int)$merchant['defense_mode'])return;
+        $since=(int)($merchant['defense_enabled_at']??0);
+        if($since<=0)throw new DefenseException('DEFENSE_TEMP_UNAVAILABLE');
+        $row=$this->store->row('SELECT o.status,(o.addtime>FROM_UNIXTIME(:since)) after_cutover,d.trade_no managed_trade,d.unsafe_exposure,d.uid managed_uid,d.channel managed_channel FROM pre_order o LEFT JOIN pre_merchant_defense_order d ON d.trade_no=o.trade_no WHERE o.trade_no=:trade AND o.uid=:uid',
+            [':since'=>$since,':trade'=>$order['trade_no'],':uid'=>$merchant['uid']]);
+        if(!$row || !in_array((int)$row['status'],[0,4],true))throw new DefenseException('DEFENSE_ORDER_RETIRED');
+        // Existing safe reservations keep quota ownership across off/on cycles.
+        if($row['managed_trade']!==null){
+            if((int)$row['unsafe_exposure']===0 && (int)$row['managed_uid']===(int)$merchant['uid'] && (int)$row['managed_channel']===(int)$order['channel'])return;
+            throw new DefenseException('DEFENSE_LEGACY_ORDER');
+        }
+        // DATETIME has second precision: conservatively fence the whole activation second.
+        if(empty($row['after_cutover']))throw new DefenseException('DEFENSE_LEGACY_ORDER');
     }
     public function retire($uid,$trade,$fingerprint,$actor,callable $adapterFactory,$localOnly=false)
     {

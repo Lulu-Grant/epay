@@ -8,7 +8,7 @@ $checks=0;$database=null;$admin=null;
 function holdCheck($ok,$label){global $checks;if(!$ok)throw new RuntimeException('FAIL '.$label);$checks++;}
 function holdReject($reason,callable $fn,$label){try{$fn();}catch(DefenseException $e){holdCheck($e->reason===$reason,$label);return;}throw new RuntimeException('Expected rejection '.$label);}
 try{
- [$database,$pdo,$admin]=defenseFixtureCreate();$DB=defenseFixtureWrapper($pdo);$now=strtotime('2026-10-22 12:00:00');$store=new Repository($DB,function()use(&$now){return $now;});defenseFixtureSeed($pdo,$now);
+ [$database,$pdo,$admin]=defenseFixtureCreate();$DB=defenseFixtureWrapper($pdo);$now=time();$store=new Repository($DB,function()use(&$now){return $now;});defenseFixtureSeed($pdo,$now);
  defenseFixtureSql($pdo,file_get_contents(dirname(__DIR__).'/install/migrations/20261022_merchant_defense_legacy.sql'));
  $pdo->exec("UPDATE pay_channel SET plugin='weilaile',apptype=NULL,config='{\"appid\":\"9001\",\"appkey\":\"fixture-only-key\"}' WHERE id=100");
  $channel=['id'=>100,'plugin'=>'weilaile','type'=>1,'mode'=>0,'apptype'=>null,'appid'=>'9001','appkey'=>'fixture-only-key'];
@@ -53,7 +53,7 @@ try{
  holdReject('DEFENSE_CHANNEL_UNSUPPORTED',fn()=>$legacy->retire(1,$old['trade_no'],$snapshot,'fixture-admin',fn()=>null),'upstream retirement not available for local mode');
  $factoryCalls=0;$blocked=$legacy->retire(1,$old['trade_no'],$snapshot,'fixture-admin',function()use(&$factoryCalls){$factoryCalls++;throw new RuntimeException();},true);
  holdCheck($blocked['state']==='local_blocked'&&!$blocked['upstream_closed']&&!$blocked['quota_released'],'local block never masquerades as upstream close');holdCheck($factoryCalls===0,'local block never calls adapter');
- holdCheck($legacy->summary(1)['issued_unpaid']>=1,'unknown legacy links remain activation blockers');
+ holdCheck($legacy->summary(1)['issued_unpaid']>=1,'unknown legacy links remain visible for review');
  holdReject('DEFENSE_ORDER_RETIRED',fn()=>Runtime::beforePlugin('weilaile','alipay',$old['trade_no']),'blocked old link cannot generate MAPI again with defense off');
  holdCheck(Runtime::beforePlugin('weilaile','notify',$old['trade_no'])===null,'late real callback still admitted');
  foreach(['qrcode'=>['qrcode','https://fixture.invalid/qr/mock'],'urlscheme'=>['scheme','alipays://platformapi/startapp?appId=20000067'],'html'=>['html','<form>synthetic gateway form</form>']] as $field=>$case){

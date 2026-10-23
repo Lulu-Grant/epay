@@ -13,12 +13,13 @@ $uid=(int)($_GET['uid']??0);
 <div class="panel-body">
 <p>按本商户的付款 IP 独立执行：浏览器验证、每天成功最多 5 单、投诉封禁 48 小时。失败不计成功，待确认订单暂占名额；MAPI 将返回平台验证收银台链接。</p>
 <p>Weilaile 使用平台本地阻断：已发出的上游链接无法撤销，结果不明时名额持续占用，跨日也不自动释放；本地阻断不代表上游关单。</p>
+<p>防御从启用后的新订单开始生效。历史订单数量不阻止开启；旧未纳管订单在开启后不能再获取付款信息，请重新下单。已发出的上游链接无法撤销，历史付款不追补进防御额度，真实到账继续正常处理；已纳管订单的计数和占位保留。</p>
 <p id="defense-admin-status" role="status" aria-live="polite">正在加载…</p>
 <button type="button" class="btn btn-primary merchant-defense-toggle" id="defense-detail-toggle" disabled>加载中</button>
 <a class="btn btn-default" href="./ulist.php">返回商户列表</a>
 <h4>启用条件</h4><ul id="defense-blockers"></ul>
 <h4>逐项核验</h4><ul id="defense-readiness"></ul>
-<p class="text-muted">旧订单先只读核对；安全接管须逐单确认查单和关单结果，不删除订单，不伪造付款 IP，也不自动开启防御。</p>
+<p class="text-muted">历史数量仅供核对，不属于启用条件。旧链接如需上游关单，仍须逐单确认；不删除订单，不伪造付款 IP，也不自动开启防御。</p>
 <p class="text-muted">已付款订单继续正常验签和入账。关闭开关不清空当日计数、原投诉事件或全站黑名单。</p>
 </div></div>
 <div class="panel panel-default"><div class="panel-heading">最近 100 条投诉 IP 封禁事件</div>
@@ -26,4 +27,4 @@ $uid=(int)($_GET['uid']??0);
 <div class="panel panel-default"><div class="panel-heading">最近 100 条操作记录</div>
 <div class="table-responsive"><table class="table"><thead><tr><th>时间</th><th>动作</th><th>原因</th><th>操作者</th></tr></thead><tbody id="defense-audit"></tbody></table></div></div>
 </div>
-<script src="/assets/js/merchant-defense-admin.js?v=3" defer></script>
+<script src="/assets/js/merchant-defense-admin.js?v=4" defer></script>

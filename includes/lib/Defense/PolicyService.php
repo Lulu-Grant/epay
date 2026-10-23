@@ -79,9 +79,8 @@ class PolicyService
             if(!$channels)$reasons[]='没有可验证的支付通道';
             foreach($channels as $channel)if(!self::channelSupported($channel))$reasons[]='通道 '.(int)$channel['id'].' 尚未适配防御（支持支付宝官方单一 H5/扫码，以及 Weilaile 本地阻断与持续占位）';
         }catch(DefenseException $e){$reasons[]=$e->getMessage();}
-        // A locking read sees handoffs committed after earlier capability reads in this transaction.
-        $legacy=$this->store->row('SELECT o.trade_no FROM pre_order o WHERE o.uid=:uid AND '.(new LegacyOrderService($this->store))->predicate().' LIMIT 1 FOR UPDATE', [':uid'=>$merchant['uid'],':day'=>Repository::day($this->store->now())]);
-        if($legacy)$reasons[]='存在未纳管付款链接或当日成功记录，需先完成核对和安全接管';
+        // Activation starts a new-order boundary. Runtime and quota reservation fence unmanaged
+        // old orders instead of indefinitely preventing protection for an active merchant's new orders.
         return array_values(array_unique($reasons));
     }
     public function readiness(array $merchant)
@@ -90,7 +89,8 @@ class PolicyService
         try{foreach($this->eligibleChannels($merchant) as $channel)$channels[]=['id'=>(int)$channel['id'],'plugin'=>$channel['plugin'],'supported'=>self::channelSupported($channel),'mode'=>self::channelMode($channel),
             'reason'=>self::channelMode($channel)==='local_hold'?'本地阻断；上游无法关单，已发链接结果不明时持续占位':(self::channelSupported($channel)?'已适配，仍需真实渠道验收':'该接口组合尚未适配')];}
         catch(DefenseException $e){$channels[]=['id'=>0,'supported'=>false,'reason'=>$e->getMessage()];}
-        return ['network'=>['ready'=>$this->networkReady(),'mode'=>$this->conf['merchant_defense_ip_mode']??'',
+        return ['scope'=>['mode'=>'new_orders','enabled_at'=>(int)($merchant['defense_enabled_at']??0),'legacy_blocks_activation'=>false],
+            'network'=>['ready'=>$this->networkReady(),'mode'=>$this->conf['merchant_defense_ip_mode']??'',
             'payer_capture'=>\lib\PayerIp::configured($this->conf),'verified'=>($this->conf['merchant_defense_net_verified']??'')==='1'],
             'channels'=>$channels,'legacy'=>(new LegacyOrderService($this->store))->summary($merchant['uid'])];
     }
@@ -105,6 +105,7 @@ class PolicyService
             $this->store->query('UPDATE pre_user SET defense_mode=:mode,defense_revision=defense_revision+1,defense_enabled_at=IF(:enabled=1,:now,defense_enabled_at) WHERE uid=:uid AND defense_revision=:revision',
                 [':mode'=>$target,':enabled'=>$target,':now'=>$this->store->now(),':uid'=>$uid,':revision'=>$revision]);
             $this->store->audit($uid,'','switch',$target?'enabled':'disabled',$actor);
+            if($target)$this->store->audit($uid,'','activation_scope','new_orders_only_legacy_callbacks_preserved',$actor);
             return $this->store->merchant($uid);
         });
     }

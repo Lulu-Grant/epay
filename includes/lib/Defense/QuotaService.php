@@ -33,6 +33,9 @@ class QuotaService
             // Merchant -> IP quota -> payment reservation is the common mutation lock order.
             $merchant = $this->store->merchant($uid, true);
             if(!(int)$merchant['defense_mode'] || (int)$merchant['defense_revision'] !== (int)$context['revision'])throw new DefenseException('DEFENSE_VERSION_CONFLICT');
+            $legacy=new LegacyOrderService($this->store);
+            if($legacy->retired($order['trade_no']))throw new DefenseException('DEFENSE_ORDER_RETIRED');
+            $legacy->assertIssuable($order,$merchant);
             $quota = $this->lock($uid, $ip);
             if((int)$quota['faulted'])throw new DefenseException('DEFENSE_TEMP_UNAVAILABLE');
             if($this->blocked($uid,$ip))throw new DefenseException('DEFENSE_IP_BLOCKED');

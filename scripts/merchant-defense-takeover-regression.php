@@ -55,7 +55,7 @@ try{
  $ambiguous=defenseFixtureOrder($pdo,503);$closed=new class {public function query($o){return ['trade_status'=>'TRADE_CLOSED'];}};
  takeoverCheck($legacy->retire(1,$ambiguous['trade_no'],$legacy->snapshot($ambiguous),'fixture-admin',fn()=>$closed)['state']==='review','closed query without unpaid ack not enough');
  $paid=defenseFixtureOrder($pdo,504);$pdo->prepare('UPDATE pay_order SET status=1,date=? WHERE trade_no=?')->execute([Repository::day($now),$paid['trade_no']]);
- takeoverCheck($legacy->summary(1)['today_success']===1,'unknown-IP paid records remain blockers');
+ takeoverCheck($legacy->summary(1)['today_success']===1,'unknown-IP paid records remain visible for review');
  $paid=$store->row('SELECT * FROM pre_order WHERE trade_no=:t',[':t'=>$paid['trade_no']]);
  takeoverReject(fn()=>$legacy->retire(1,$paid['trade_no'],$legacy->snapshot($paid),'fixture-admin',fn()=>$adapter),'paid order cannot be retired');
  // A real adapter validates amount/order/state before returning an unpaid-close proof.
