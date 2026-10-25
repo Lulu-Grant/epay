@@ -19,6 +19,34 @@
         row.appendChild(cell); return cell;
     }
     function time(value) { return value ? new Date(Number(value) * 1000).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' }) : ''; }
+    function actionText(value) {
+        return ({ switch: '开关变更', activation_scope: '防御生效范围', payment_denied: '支付验证拦截',
+            reconcile_waiting: '等待付款结果', reconcile_failure: '对账异常', closure_review: '关单待核对',
+            local_hold: '保留付款名额', quota_violation: '额度异常待核对', legacy_review: '旧单待核对',
+            legacy_retire: '旧单阻断', legacy_local_block: '旧单本地阻断', legacy_closed: '旧单关单确认' })[value] || value;
+    }
+    function reasonText(value) {
+        var labels = {
+            enabled: '已开启', disabled: '已关闭', new_orders_only_legacy_callbacks_preserved: '保护启用后的新订单，旧单真实到账继续处理',
+            upstream_trade_not_created: '上游暂未查到交易，继续保留名额并降低查询频率', awaiting_buyer_payment: '等待买家付款，名额暂时保留',
+            closed_without_unpaid_close_ack: '查到关闭状态，但缺少未支付关单证明，需核对', issued_link_without_close_keep_capacity: '上游无法关单，已发链接结果待确认，名额继续保留',
+            payment_reconciliation_error: '历史对账异常（旧版未细分原因）', reconcile_adapter_error: '通道初始化异常，等待重试',
+            reconcile_query_error: '支付结果查询异常，等待重试', reconcile_close_error: '关单请求异常，名额继续保留',
+            reconcile_confirm_error: '已查到付款，财务处理需要重试', reconcile_accounting_error: '付款计数处理异常，等待重试',
+            DEFENSE_BROWSER_REQUIRED: '需要完成浏览器验证', DEFENSE_VERIFY_FAILED: '验证已失效或请求未通过校验，请重新验证',
+            DEFENSE_IP_BLOCKED: '付款 IP 处于投诉封禁期', DEFENSE_DAILY_LIMIT: '该付款 IP 今天已成功支付 5 单',
+            DEFENSE_PENDING_LIMIT: '付款结果待确认的订单已占满可用名额', DEFENSE_CHANNEL_UNSUPPORTED: '当前通道或收款账户不符合防御要求',
+            DEFENSE_TEMP_UNAVAILABLE: '安全校验或数据访问暂不可用，等待重试', DEFENSE_VERSION_CONFLICT: '防御状态已变化，请重新验证',
+            DEFENSE_QUERY_MISMATCH: '查单结果与本地订单不符，保留名额等待核对', DEFENSE_CLOSE_UNCONFIRMED: '未取得可信关单确认，名额继续保留',
+            DEFENSE_LEGACY_ORDER: '旧未纳管订单不能再次发放付款信息，请重新下单', DEFENSE_ORDER_RETIRED: '付款资格已关闭，请重新下单'
+        };
+        var text = String(value || '');
+        var parts = text.split('|');
+        if (parts.length === 3 && (parts[0] === 'alipay_query_failed' || parts[0] === 'alipay_close_failed')) {
+            return (parts[0] === 'alipay_query_failed' ? '支付宝查单失败' : '支付宝关单失败') + '（' + parts[1] + ' / ' + parts[2] + '），等待重试';
+        }
+        return labels[text] || text;
+    }
     async function refresh() {
         if (!detail) {
             if (window.jQuery) window.jQuery('#listTable').bootstrapTable('refresh', { silent: true });
@@ -64,7 +92,7 @@
         var audit = document.getElementById('defense-audit'); audit.replaceChildren();
         result.audit.forEach(function (event) {
             var row = document.createElement('tr');
-            [time(event.created_at), event.action, event.reason, event.actor].forEach(function (text) { textCell(row, text); });
+            [time(event.created_at), actionText(event.action), reasonText(event.reason), event.actor].forEach(function (text) { textCell(row, text); });
             audit.appendChild(row);
         });
     }

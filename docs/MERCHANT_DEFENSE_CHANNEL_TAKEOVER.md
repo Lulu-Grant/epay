@@ -2,6 +2,8 @@
 
 2026-10-23 更新，PHP 8.4.x。分支 `feature/defense-channel-takeover`。网络核验、现用通道适配及旧订单核对保留；防御调整为从启用后的新订单开始执行，每商户每日每 IP 最多成功 5 单、投诉封禁 48 小时。历史付款不追补额度，已有纳管计数、占位及封禁不清空。
 
+2026-10-25 对账修复见 [待确认订单与对账重试](MERCHANT_DEFENSE_RECONCILIATION.md)：上游暂未查到交易改为等待状态，查询随等待时间放缓，真实错误保留阶段和安全错误码。原有额度、回调及新订单启用边界不变。
+
 生产已将经实际验证的 ESA 链路同步为 `merchant_defense_ip_mode=esa`、`merchant_defense_net_verified=1`，清除并复核配置缓存。H5、Weilaile 本地阻断及旧单工具于 2026-10-22 首次交付；2026-10-23 17:31 的新订单边界修复已部署 P5，运行提交 `808a249`，19 个商户启用条件均通过，开关均保持关闭，没有执行旧单关单或本地阻断。当前规则及发布结果见 [新订单启用边界](MERCHANT_DEFENSE_ACTIVATION_CUTOVER.md)；首次发布证据见 [10 月 22 日记录](MERCHANT_DEFENSE_CHANNEL_TAKEOVER_P5_RELEASE.md)。
 
 ## 网络状态与后台提示

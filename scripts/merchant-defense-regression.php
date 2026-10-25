@@ -119,7 +119,7 @@ try{
     defenseSame('qrcode',$adapter->pay($order,'Fixture',$ip)['type'],'official QR adapter local fixture');
     defenseSame('WAIT_BUYER_PAY',$adapter->query($order)['trade_status'],'query waiting not success');
     defenseSame('TRADE_CLOSED',$adapter->close($order)['trade_status'],'close separately queried');
-    $fake->money='9.00';defenseReject('DEFENSE_TEMP_UNAVAILABLE',fn()=>$adapter->query($order),'query amount mismatch');
+    $fake->money='9.00';defenseReject('DEFENSE_QUERY_MISMATCH',fn()=>$adapter->query($order),'query amount mismatch');
 
     defenseFixtureSeed($pdo,$now);
     $pdo->exec("UPDATE pay_channel SET plugin='epay' WHERE id=100");
@@ -162,7 +162,8 @@ try{
             $pdo->prepare('UPDATE pay_order SET status=1,endtime=?,date=? WHERE trade_no=?')->execute([date('Y-m-d H:i:s',$now),Repository::day($now),$order['trade_no']]);
         });
     $result=$worker->run();
-    defenseSame(2,$result['failed'],'financial interruption and ambiguous closure retained for review');
+    defenseSame(1,$result['failed'],'financial interruption counted as failure');
+    defenseSame(1,$result['review'],'ambiguous closure remains a separate review condition');
     defenseSame(1,$result['closed'],'worker only releases confirmed closed pending order');
     defenseSame(1,$result['complaints'],'persisted complaint reconciled despite earlier side-effect failure');
     defenseSame($now-10+172800,$quota->blocked(1,$ip),'queue delay does not restart 48 hours');

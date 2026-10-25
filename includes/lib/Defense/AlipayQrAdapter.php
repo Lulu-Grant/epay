@@ -64,19 +64,25 @@ class AlipayQrAdapter
     }
     public function query(array $order)
     {
-        $result=$this->service->query(null,$order['trade_no']);
+        try{$result=$this->service->query(null,$order['trade_no']);}
+        catch(\Alipay\Aop\AlipayResponseException $e){
+            // A signed H5 link may not have created an upstream transaction yet. This response
+            // is not proof that the link can no longer be paid, so keep its qualification held.
+            if((string)$e->getRetCode()==='40004' && $e->getErrCode()==='ACQ.TRADE_NOT_EXIST')return ['out_trade_no'=>$order['trade_no'],'trade_status'=>'NOT_CREATED'];
+            throw $e;
+        }
         if(($result['out_trade_no']??'')!==$order['trade_no'] || self::cents($result['total_amount']??null)===null
-            || self::cents($result['total_amount'])!==self::cents($order['realmoney']))throw new DefenseException('DEFENSE_TEMP_UNAVAILABLE');
+            || self::cents($result['total_amount'])!==self::cents($order['realmoney']))throw new DefenseException('DEFENSE_QUERY_MISMATCH');
         $state=$result['trade_status']??'';
-        if(!in_array($state,['WAIT_BUYER_PAY','TRADE_SUCCESS','TRADE_FINISHED','TRADE_CLOSED'],true))throw new DefenseException('DEFENSE_TEMP_UNAVAILABLE');
-        if(in_array($state,['TRADE_SUCCESS','TRADE_FINISHED'],true) && (!is_string($result['trade_no']??null)||!preg_match('/^[0-9]{16,64}$/D',$result['trade_no'])))throw new DefenseException('DEFENSE_TEMP_UNAVAILABLE');
+        if(!in_array($state,['WAIT_BUYER_PAY','TRADE_SUCCESS','TRADE_FINISHED','TRADE_CLOSED'],true))throw new DefenseException('DEFENSE_QUERY_MISMATCH');
+        if(in_array($state,['TRADE_SUCCESS','TRADE_FINISHED'],true) && (!is_string($result['trade_no']??null)||!preg_match('/^[0-9]{16,64}$/D',$result['trade_no'])))throw new DefenseException('DEFENSE_QUERY_MISMATCH');
         unset($result['_defense_closed_unpaid']);
         return $result;
     }
     public function close(array $order)
     {
         $closed=$this->service->close(['out_trade_no'=>$order['trade_no']]);
-        if(($closed['out_trade_no']??'')!==$order['trade_no'] || (string)($closed['code']??'')!=='10000')throw new DefenseException('DEFENSE_TEMP_UNAVAILABLE');
+        if(($closed['out_trade_no']??'')!==$order['trade_no'] || (string)($closed['code']??'')!=='10000')throw new DefenseException('DEFENSE_CLOSE_UNCONFIRMED');
         // Only a separately verified terminal query can release a payment reservation.
         $result=$this->query($order);
         if($result['trade_status']==='TRADE_CLOSED')$result['_defense_closed_unpaid']=true;

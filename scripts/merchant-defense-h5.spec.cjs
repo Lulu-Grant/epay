@@ -72,6 +72,10 @@ function command(args) {
             await page.goto(origin + '/admin/merchant_defense.php?uid=2');
             await page.locator('#defense-readiness').getByText('防御网络：已核验，模式：direct', { exact: true }).waitFor();
             check(await page.locator('#defense-readiness').getByText('旧订单接管工具：已安装', { exact: true }).count() === 1, 'structured readiness renders');
+            check(await page.locator('#defense-audit').getByText('等待付款结果', { exact: true }).count() === 1, 'pending reconciliation has a readable action');
+            check(await page.locator('#defense-audit').getByText('上游暂未查到交易，继续保留名额并降低查询频率', { exact: true }).count() === 1, 'pending reason does not present normal waiting as failure');
+            check(await page.locator('#defense-audit').getByText('历史对账异常（旧版未细分原因）', { exact: true }).count() === 1, 'historical generic failures are preserved and identified');
+            check(await page.locator('#defense-audit').getByText('支付宝查单失败（20000 / ACQ.SYSTEM_ERROR），等待重试', { exact: true }).count() === 1, 'real gateway error shows safe diagnostic codes');
             if (localHold) check(await page.locator('#defense-readiness').getByText(/本地阻断；上游无法关单/).count() === 1, 'local hold boundary shown to operator');
             check(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 2), 'readiness fits viewport');
             await context.close();

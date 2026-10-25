@@ -40,6 +40,8 @@ namespace {
                 if($argv[1]==='--setup-h5')$pdo->exec("UPDATE pay_channel SET apptype='2' WHERE id=100");
                 else $pdo->exec("UPDATE pay_channel SET plugin='weilaile',apptype=NULL WHERE id=100");
                 defenseFixtureSql($pdo,file_get_contents(dirname(__DIR__,2).'/install/migrations/20261022_merchant_defense_legacy.sql'));
+                $audit=$pdo->prepare('INSERT INTO pay_merchant_defense_audit (uid,trade_no,action,reason,actor,created_at) VALUES (2,?,?,?,?,?)');
+                foreach([['reconcile_waiting','upstream_trade_not_created'],['reconcile_failure','payment_reconciliation_error'],['reconcile_failure','alipay_query_failed|20000|ACQ.SYSTEM_ERROR']] as $event)$audit->execute(['LP0000000000000000999',$event[0],$event[1],'fixture-admin',time()]);
             }
             echo json_encode(['database'=>$database]);exit;
         }

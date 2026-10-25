@@ -21,10 +21,11 @@ $uid=(int)($_GET['uid']??0);
 <h4>逐项核验</h4><ul id="defense-readiness"></ul>
 <p class="text-muted">历史数量仅供核对，不属于启用条件。旧链接如需上游关单，仍须逐单确认；不删除订单，不伪造付款 IP，也不自动开启防御。</p>
 <p class="text-muted">已付款订单继续正常验签和入账。关闭开关不清空当日计数、原投诉事件或全站黑名单。</p>
+<p class="text-muted">上游暂未查到交易属于待确认，不代表支付失败或已关单。自动查询随订单等待时间逐步放缓：前 15 分钟约每分钟、1 小时内每 5 分钟、1 天内每 30 分钟、之后每 6 小时；已收到的真实付款通知即时处理。历史异常记录保留供核对。</p>
 </div></div>
 <div class="panel panel-default"><div class="panel-heading">最近 100 条投诉 IP 封禁事件</div>
 <div class="table-responsive"><table class="table table-striped"><thead><tr><th>IP</th><th>订单</th><th>首次识别</th><th>到期</th><th>状态与操作</th></tr></thead><tbody id="defense-bans"></tbody></table></div></div>
 <div class="panel panel-default"><div class="panel-heading">最近 100 条操作记录</div>
 <div class="table-responsive"><table class="table"><thead><tr><th>时间</th><th>动作</th><th>原因</th><th>操作者</th></tr></thead><tbody id="defense-audit"></tbody></table></div></div>
 </div>
-<script src="/assets/js/merchant-defense-admin.js?v=4" defer></script>
+<script src="/assets/js/merchant-defense-admin.js?v=5" defer></script>
